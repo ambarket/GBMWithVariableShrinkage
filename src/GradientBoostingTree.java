@@ -6,7 +6,7 @@
 
 
 import java.util.Iterator;
-import java.util.Vector;
+import java.util.ArrayList;
 //import gbt.ranker.RegressionTree.TerminalType;
 
 public class GradientBoostingTree {
@@ -124,19 +124,19 @@ public class GradientBoostingTree {
 	public class ResultFunction {
 		// class members
 		public double m_init_value;
-		public Vector<RegressionTree> m_trees;
+		public ArrayList<RegressionTree> m_trees;
 		public double m_combine_weight;
 		
 		// construction function
 		ResultFunction(double learning_rate) {
 			m_init_value = 0.0;
 			m_combine_weight = learning_rate;
-			m_trees = new Vector<RegressionTree> ();
+			m_trees = new ArrayList<RegressionTree> ();
 		}
 		
 		
 		// the following function is used to estimate the function
-		public double get_value(Vector<Double> feature_x) {
+		public double get_value(ArrayList<Double> feature_x) {
 			double re_res = m_init_value;
 			
 			if (m_trees.size() == 0) {
@@ -147,7 +147,7 @@ public class GradientBoostingTree {
 			while (iter.hasNext()) {
 				RegressionTree tree = iter.next();
 				
-				re_res += m_combine_weight * tree.get_single_value(feature_x);
+				re_res += m_combine_weight * tree.getLearnedValue(feature_x);
 			}
 			
 			return re_res;
@@ -158,8 +158,8 @@ public class GradientBoostingTree {
 	 *  fit a regression function using the Gradient Boosting Tree method.
 	 *  On success, return function; otherwise, return null. 
 	 */
-	public ResultFunction gradient_boosting_tree(Vector<Vector<Double>> input_x, 
-			Vector<Double> input_y)
+	public ResultFunction gradient_boosting_tree(ArrayList<ArrayList<Double>> input_x, 
+			ArrayList<Double> input_y)
 	{
 		// initialize the final result
 		ResultFunction res_fun = new ResultFunction(m_learning_rate);
@@ -197,7 +197,7 @@ public class GradientBoostingTree {
 		while (iter_index < m_tree_number) {
 			
 			// calculate the gradient
-			Vector<Double> gradient = new Vector<Double>();
+			ArrayList<Double> gradient = new ArrayList<Double>();
 			iter = input_y.iterator();
 			index = 0;
 			while (iter.hasNext()) {
@@ -216,11 +216,11 @@ public class GradientBoostingTree {
 						(int)(m_sampling_size_ratio*feature_num));
 				
 				// get random index
-				Vector<Integer> sampled_index = sampler.get_sample_index();
+				ArrayList<Integer> sampled_index = sampler.get_sample_index();
 				
 				// data for growing trees
-				Vector<Vector<Double>> train_x = new Vector<Vector<Double>> (); 
-				Vector<Double> train_y = new Vector<Double> ();
+				ArrayList<ArrayList<Double>> train_x = new ArrayList<ArrayList<Double>> (); 
+				ArrayList<Double> train_y = new ArrayList<Double> ();
 				Iterator<Integer> sample_iter = sampled_index.iterator();
 				
 				while (sample_iter.hasNext()) {
@@ -235,17 +235,17 @@ public class GradientBoostingTree {
 				RegressionTree tree = new RegressionTree();
 				
 				if (m_tree_depth > 0) {
-					tree.set_depth(m_tree_depth);
+					tree.setMaxDepth(m_tree_depth);
 				}
 				
 				if (m_tree_min_nodes > 0) {
-					tree.set_min_nodes(m_tree_min_nodes);
+					tree.setMinObsInNode(m_tree_min_nodes);
 				}
 				
 				tree.build_regression_tree(train_x, train_y);
 				
 				// store tree information
-				if (tree.m_root == null) {
+				if (tree.root == null) {
 					// clear buffer
 					train_x.clear();
 					train_y.clear();
@@ -257,9 +257,8 @@ public class GradientBoostingTree {
 				// update h_value information, prepare for the next iteration
 				int sel_index = 0;
 				while (sel_index < feature_num) {
-					
 					h_value[sel_index] += m_learning_rate * 
-							tree.get_single_value(input_x.get(sel_index));
+							tree.getLearnedValue(input_x.get(sel_index));
 					
 					sel_index += 1;
 				}
@@ -271,16 +270,16 @@ public class GradientBoostingTree {
 				
 				// set parameters if needed
 				if (m_tree_depth > 0) {
-					tree.set_depth(m_tree_depth);
+					tree.setMaxDepth(m_tree_depth);
 				}
 				
 				if (m_tree_min_nodes > 0) {
-					tree.set_min_nodes(m_tree_min_nodes);
+					tree.setMinObsInNode(m_tree_min_nodes);
 				}
 				
 				tree.build_regression_tree(input_x, gradient);
 				
-				if (tree.m_root == null) {
+				if (tree.root == null) {
 					// cannot update any more
 					break;
 				}
@@ -290,7 +289,7 @@ public class GradientBoostingTree {
 				// update h_value information, prepare for the next iteration
 				for (int loop_index = 0; loop_index < feature_num; loop_index ++ ) {
 					h_value[loop_index] += m_learning_rate * 
-							tree.get_single_value(input_x.get(loop_index));
+							tree.getLearnedValue(input_x.get(loop_index));
 				}
 			}
 			
@@ -300,100 +299,6 @@ public class GradientBoostingTree {
 		
 		// set the learning rate and return
 		// res_fun.m_combine_weight = m_learning_rate;
-		
-		return res_fun;
-	}
-	
-	/*
-	 *  The function is used to learn a rank function from data
-	 *  Input: x is preferred over y.
-	 */
-	public ResultFunction gradient_boosting_ranker(Vector<Vector<Double>> input_x, 
-			Vector<Vector<Double>> input_y, double tau) {
-		ResultFunction res_fun = new ResultFunction(m_learning_rate);
-		
-		int feature_num = input_x.size();
-		
-		if (feature_num != input_y.size() || feature_num == 0) {
-			System.out.println("The size of input_x should be the same as the size " +
-		"of input_y");
-			
-			// exit
-			System.exit(0);
-		}
-		
-		double [] h_value_x = new double[feature_num];
-		double [] h_value_y = new double[feature_num];
-		
-		int iter_index = 0;
-		while (iter_index < m_tree_number) {
-			
-			// in the boosting ranker, randomly select half samples without replacement in each
-			// iteration
-			RandomSample sampler = new RandomSample(feature_num, 
-					(int)(0.5*feature_num));
-			
-			// get random index
-			Vector<Integer> sampled_index = sampler.get_sample_index();
-			
-			Vector<Vector<Double>> gradient_x = new Vector<Vector<Double>>();
-			Vector<Double> gradient_y = new Vector<Double>();
-			
-			Iterator<Integer> sample_iter = sampled_index.iterator();
-			while(sample_iter.hasNext()) {
-				int sel_index = sample_iter.next();
-				
-				gradient_x.add(input_x.get(sel_index));
-				gradient_x.add(input_y.get(sel_index));
-				
-				// get sample data
-				if (h_value_x[sel_index] < h_value_y[sel_index] + tau) {
-					double neg_gradient = h_value_y[sel_index] + tau - h_value_x[sel_index];
-					gradient_y.add(neg_gradient);
-					gradient_y.add(-1 * neg_gradient);
-				} else {
-					gradient_y.add(0.0);
-					gradient_y.add(0.0);
-				}
-				
-			}
-			
-			// fit a regression tree
-			RegressionTree tree = new RegressionTree();
-			//tree.set_type(TerminalType.MAXIMAL);
-			
-			
-			tree.build_regression_tree(gradient_x, gradient_y);
-			
-			// store tree information
-			if (tree.m_root == null) {
-				continue;
-			}
-			
-			// update information
-			res_fun.m_trees.add(tree);
-			
-			
-			double err = 0.0;
-			
-			for (int loop_index = 0; loop_index < feature_num; loop_index ++) {
-				h_value_x[loop_index] +=
-						m_learning_rate * tree.get_single_value(input_x.get(loop_index));
-				
-				h_value_y[loop_index] +=
-						m_learning_rate * tree.get_single_value(input_y.get(loop_index));
-				
-			    if (h_value_x[loop_index] < h_value_y[loop_index] + tau) {
-			    	err += (h_value_x[loop_index] - h_value_y[loop_index] - tau) * 
-			    			(h_value_x[loop_index] - h_value_y[loop_index] - tau);
-			    }
-			}
-			
-			System.out.println(String.format("%d-th iteration with error %f", iter_index + 1, err));
-			//System.out.println(err);
-			// next iteration
-			iter_index += 1;
-		}
 		
 		return res_fun;
 	}
