@@ -1,7 +1,10 @@
+/**
+ * Source: A stackoverflow article. TODO: Track this down again and give proper credit.
+ */
 package utilities;
 
 public class DoubleCompare {
-	private final static double EPSILON = 0.00001;
+	public final static double EPSILON = 0.00001;
 
 
 	/**

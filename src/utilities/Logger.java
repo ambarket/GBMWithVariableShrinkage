@@ -2,7 +2,7 @@ package utilities;
 
 public class Logger {
 	public enum LEVELS {DEBUG, INFO};
-	public static LEVELS level = LEVELS.DEBUG;
+	public static LEVELS level = LEVELS.INFO;
 	public static void println(LEVELS l, Object s) {
 		print (l, s + "\n");
 	}
@@ -24,9 +24,9 @@ public class Logger {
 	}
 	
 	public static void print(LEVELS l, String s) {
-		if (l == LEVELS.DEBUG) {
+		if (level == LEVELS.DEBUG) {
 			System.out.print(s.toString());
-		} else if (level == LEVELS.INFO){
+		} else if (l == LEVELS.INFO){
 			System.out.print(s.toString());
 		}
 	}

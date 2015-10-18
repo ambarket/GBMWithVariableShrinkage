@@ -91,34 +91,20 @@ public class RegressionTree {
 	}
 	
 	// build the regression tree
-	public RegressionTree build(ArrayList<ArrayList<Double>> instances_x, ArrayList<Double> labels_y) {
-		int numberOfInstances = instances_x.size();
-		
-		if (numberOfInstances != labels_y.size() || numberOfInstances == 0) {
-			Logger.println(Logger.LEVELS.DEBUG, "The number of instances does not match" + 
-		                  " with the nunber of observations or " + 
-					"the number of instances is 0");
-			System.exit(0);
-		}
-		
-		if (minObsInNode * 2 > numberOfInstances) {
-			Logger.println(Logger.LEVELS.DEBUG, "The number of instances is too small");
-			System.exit(0);
-		}
-		
+	public RegressionTree build(Dataset dataset, boolean[] inSample) {
 		// Calculate error before splitting
 		double mean = 0.0;
-		for (Double y : labels_y) {
+		for (Double y : dataset.responses_y) {
 			mean += y;
 		}
-		mean /= labels_y.size();
+		mean /= dataset.responses_y.size();
 		double squaredError = 0.0;
-		for (Double y : labels_y) {
+		for (Double y : dataset.responses_y) {
 			squaredError += (y - mean) * (y - mean);
 		}
 		// build the regression tree
 		//root = tree_builder(instances_x, labels_y, squaredError, 0);
-		root = tree_builder_interaction_depth(instances_x, labels_y, squaredError);
+		root = tree_builder_interaction_depth(dataset, inSample, squaredError);
 		if (root == null) {
 			// TODO: Instead could just make a node with arbitrary split and set both left and right to be the total mean.
 			Logger.println(Logger.LEVELS.DEBUG, "Failed to split root node and get less than the current error. Something is wrong.");
@@ -127,55 +113,10 @@ public class RegressionTree {
 		return this;
 	}
 	
-	/*
-	 *  The following function builds a regression tree from data
-	 */
-	private TreeNode tree_builder(ArrayList<ArrayList<Double>> instances_x, ArrayList<Double> labels_y, double squaredErrorBeforeSplit, int currentDepth) {
-		// Stop if maxDepth has been reached or there aren't enough instances to split again
-		if (currentDepth > maxDepth || minObsInNode * 2 > instances_x.size()) {
-			return null;
-		}
-		
-
-		// split the data at the split point. Null return value means no split was found that resulted in better error than currentSquaredError.
-		DataSplit dataSplit = DataSplit.splitDataIntoChildren(instances_x, labels_y, minObsInNode, squaredErrorBeforeSplit, terminalType);
-		if (dataSplit == null) {
-			return null;
-		}
-
-				
-		// append left and right side
-		dataSplit.node.leftChild = tree_builder(dataSplit.leftInstances, dataSplit.leftLabels, dataSplit.node.leftSquaredError, currentDepth + 1); 
-		dataSplit.node.rightChild = tree_builder(dataSplit.rightInstances, dataSplit.rightLabels, dataSplit.node.rightSquaredError, currentDepth + 1);
-		
-		return dataSplit.node;
-	}
-	
-	/*
-	 *  The following function builds a regression tree from data
-	 */
-	
-	class PossibleChild implements Comparable<PossibleChild>{
-		DataSplit parent;
-		DataSplit child;
-		boolean left;
-		double errorImprovement;
-		PossibleChild(DataSplit parent, DataSplit child, boolean left, double errorImprovement) {
-			this.parent = parent;
-			this.child = child;
-			this.left = left;
-			this.errorImprovement = errorImprovement;
-		}
-		
-		public int compareTo(PossibleChild that) {
-			return (int) Math.signum(that.errorImprovement - this.errorImprovement);
-		}
-	}
-
-	private TreeNode tree_builder_interaction_depth(ArrayList<ArrayList<Double>> instances_x, ArrayList<Double> labels_y, double squaredErrorBeforeSplit) {
+	private TreeNode tree_builder_interaction_depth(Dataset dataset, boolean[] inSample, double squaredErrorBeforeSplit) {
 		StopWatch timer = new StopWatch();
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(instances_x, labels_y, minObsInNode, squaredErrorBeforeSplit, terminalType);
+		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minObsInNode, squaredErrorBeforeSplit, terminalType);
 		if (rootSplit == null) {
 			return null;
 		}
@@ -187,13 +128,13 @@ public class RegressionTree {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
 				DataSplit left = null, right = null;
-				if (parent.node.leftChild == null && minObsInNode * 2 <= parent.leftInstances.size()) {
+				if (parent.node.leftChild == null && minObsInNode * 2 <= parent.node.leftInstanceCount) {
 					timer.start();
-					left = DataSplit.splitDataIntoChildren(parent.leftInstances, parent.leftLabels, minObsInNode, parent.node.leftSquaredError, terminalType);
+					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minObsInNode, parent.node.leftSquaredError, terminalType);
 					Logger.println(Logger.LEVELS.DEBUG, "\t\t Split data into children in " + timer.getElapsedSeconds());
 				}
-				if (parent.node.rightChild == null && minObsInNode * 2 <= parent.rightInstances.size()) {
-					right = DataSplit.splitDataIntoChildren(parent.rightInstances, parent.rightLabels, minObsInNode, parent.node.rightSquaredError, terminalType);
+				if (parent.node.rightChild == null && minObsInNode * 2 <= parent.node.rightInstanceCount) {
+					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minObsInNode, parent.node.rightSquaredError, terminalType);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, true, left.node.squaredErrorBeforeSplit - left.node.leftSquaredError + left.node.rightSquaredError));
@@ -215,15 +156,35 @@ public class RegressionTree {
 			leaves.add(bestChild.child);
 			numOfSplits++;
 		}
-		Logger.println(Logger.LEVELS.DEBUG, "\t\t Called splitDataIntoChildren " + DataSplit.calls + "times");
-		DataSplit.calls = 0;
 		return rootSplit.node;
+	}
+	
+	public void print_nodes() throws IOException {
+		root.printTree(new OutputStreamWriter(System.out));
+	}
+	
+	private class PossibleChild implements Comparable<PossibleChild>{
+		DataSplit parent;
+		DataSplit child;
+		boolean left;
+		double errorImprovement;
+		PossibleChild(DataSplit parent, DataSplit child, boolean left, double errorImprovement) {
+			this.parent = parent;
+			this.child = child;
+			this.left = left;
+			this.errorImprovement = errorImprovement;
+		}
+		
+		public int compareTo(PossibleChild that) {
+			return (int) Math.signum(that.errorImprovement - this.errorImprovement);
+		}
 	}
 	
 	
 	/* 
 	 *  Print nodes and corresponding information
 	 */
+	/*
 	private void print_each(TreeNode current, int depth, String leftOrRight) {
 		if (current != null) {
 			
@@ -236,8 +197,35 @@ public class RegressionTree {
 			print_each(current.rightChild, depth + 1, "right");
 		}
 	}
+	*/
 	
-	public void print_nodes() throws IOException {
-		root.printTree(new OutputStreamWriter(System.out));
+	/*
+	 *  The following function builds a regression tree from data
+	 */
+	/*
+	private TreeNode tree_builder(ArrayList<ArrayList<Double>> instances_x, ArrayList<Double> labels_y, double squaredErrorBeforeSplit, int currentDepth) {
+		// Stop if maxDepth has been reached or there aren't enough instances to split again
+		if (currentDepth > maxDepth || minObsInNode * 2 > instances_x.size()) {
+			return null;
+		}
+		
+
+		// split the data at the split point. Null return value means no split was found that resulted in better error than currentSquaredError.
+		DataSplit dataSplit = DataSplit.splitDataIntoChildren(instances_x, labels_y, minObsInNode, squaredErrorBeforeSplit, terminalType);
+		if (dataSplit == null) {
+			return null;
+		}
+
+				
+		// append left and right side
+		dataSplit.node.leftChild = tree_builder(dataSplit.leftInstances, dataSplit.leftLabels, dataSplit.node.leftSquaredError, currentDepth + 1); 
+		dataSplit.node.rightChild = tree_builder(dataSplit.rightInstances, dataSplit.rightLabels, dataSplit.node.rightSquaredError, currentDepth + 1);
+		
+		return dataSplit.node;
 	}
+	*/
+	
+	/*
+	 *  The following function builds a regression tree from data
+	 */
 }

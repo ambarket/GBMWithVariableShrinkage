@@ -1,0 +1,26 @@
+
+library("gbm")
+traindf <- read.table("C:/Users/ambar_000/Documents/GitHub/GBMWithVariableShrinkage/data/PowerPlant/TRAINING.txt", sep="\t", header=TRUE)
+testdf <- read.table("C:/Users/ambar_000/Documents/GitHub/GBMWithVariableShrinkage/data/PowerPlant/TEST.txt", sep="\t", header=TRUE)
+
+response_column <- which(colnames(traindf) == "PE")
+trainy <- traindf$PE
+
+gbm_formula <- as.formula(paste0("PE ~ ", paste(colnames(traindf[, -response_column]), collapse = " + ")))
+
+
+system.time(gbm_model <- gbm(gbm_formula, traindf, distribution = "gaussian", n.trees = 500, bag.fraction = 1, interaction.depth = 3))
+
+summary.gbm(gbm_model)
+
+predictions_gbm <- predict(gbm_model, newdata = testdf[, -response_column], n.trees = 500, type = "response")
+sqrt(mean((testdf$PE - predictions_gbm)^2))
+
+predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = 500, type = "response")
+sqrt(mean((traindf$PE - predictions_train_gbm)^2))
+
+pretty.gbm.tree(gbm_model,i.tree = 1)
+pretty.gbm.tree(gbm_model,i.tree = 2)
+pretty.gbm.tree(gbm_model,i.tree = 400)
+
+ideas - pick a subset of attributes to best pslit on instead of all. Did blum give me this idea?

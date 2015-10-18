@@ -1,4 +1,5 @@
 package gbm.test;
+import gbm.Dataset;
 import gbm.GradientBoostingTree;
 
 import java.util.ArrayList;
@@ -20,14 +21,15 @@ public class GradientBoostingTreeTest {
 	GradientBoostingTree boostedTree = null;
 
 
+	static Dataset dataset;
 	static ArrayList<ArrayList<Double>>  randomInstances = new ArrayList<ArrayList<Double>>();
 	static ArrayList<Double> randomLabels = new ArrayList<Double>();
+	static int minObsInNode = 10;
 	static StopWatch timer = (new StopWatch());
 	static Random rand = new Random();
 	
 	@BeforeClass
-	public static void setUpBeforeClass() {
-		timer.start();
+	public static void setup() {
 		for (int example = 0; example < 10000; example++) {
 			ArrayList<Double> instance = new ArrayList<Double>();
 			for (int attribute = 0; attribute < 2; attribute++) {
@@ -37,9 +39,9 @@ public class GradientBoostingTreeTest {
 			randomInstances.add(instance);
 			
 		}
+		dataset = new Dataset(randomInstances, randomLabels);
 		Logger.println(Logger.LEVELS.DEBUG, "Done generating Data: " + timer.getElapsedSeconds());
 	}
-	
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 	}
@@ -56,8 +58,8 @@ public class GradientBoostingTreeTest {
 	@Test
 	public void test() {
 		timer.start();
-		boostedTree = new GradientBoostingTree(0.5, 0.01, 1000, 10, 3);
-		GradientBoostingTree.ResultFunction result = boostedTree.buildGradientBoostingMachine(randomInstances, randomLabels);
+		boostedTree = new GradientBoostingTree(dataset, 0.5, 0.01, 1000, 10, 3);
+		GradientBoostingTree.ResultFunction result = boostedTree.buildGradientBoostingMachine();
 		Logger.println(Logger.LEVELS.DEBUG, "Done boosting trees: " + timer.getElapsedSeconds());
 		
 		Logger.println(Logger.LEVELS.DEBUG, "Error: " + calcSquaredError(result));

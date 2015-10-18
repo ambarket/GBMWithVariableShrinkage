@@ -9,8 +9,8 @@ public class TreeNode {
 	public double leftTerminalValue;
 	public double rightTerminalValue;
 	
-	public int leftObsInNode;
-	public int rightObsInNode;
+	public int leftInstanceCount;
+	public int rightInstanceCount;
 	
 	public double leftSquaredError;
 	public double rightSquaredError;
@@ -29,15 +29,15 @@ public class TreeNode {
 		leftSquaredError = 0.0;
 	    rightSquaredError = 0.0;
 		squaredErrorBeforeSplit = 0.0;
-		leftObsInNode = 0;
-		rightObsInNode = 0;
+		leftInstanceCount = 0;
+		rightInstanceCount = 0;
 		leftChild = null;
 		rightChild = null;
 		
 	}
 	// Construction function
 	public TreeNode(double splitValue, int splitAttribute, 
-			int leftObsInNode, int rightObsInNode, 
+			int leftInstanceCount, int rightInstanceCount, 
 			double leftTerminalValue, double rightTerminalValue,
 			double leftSquaredError, double rightSquaredError, double squaredErrorBeforeSplit) {
 		this.splitValue = splitValue;
@@ -46,8 +46,8 @@ public class TreeNode {
 		this.rightChild = null;
 		this.leftTerminalValue = leftTerminalValue;
 		this.rightTerminalValue = rightTerminalValue;
-		this.leftObsInNode = leftObsInNode;
-		this.rightObsInNode = rightObsInNode;
+		this.leftInstanceCount = leftInstanceCount;
+		this.rightInstanceCount = rightInstanceCount;
 		this.leftSquaredError = leftSquaredError;
 		this.rightSquaredError = rightSquaredError;
 		this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
@@ -64,7 +64,7 @@ public class TreeNode {
         }
     }
     private void printNodeValue(OutputStreamWriter out) throws IOException {
-    	String s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitAttribute, splitValue, squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError), leftObsInNode + rightObsInNode);
+    	String s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitAttribute, splitValue, squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError), leftInstanceCount + rightInstanceCount);
     	out.write(s);
     	//out.write("{Attr: " + splitAttribute + 
     		//	" Value: " + splitValue + 
@@ -99,12 +99,13 @@ public class TreeNode {
 	public String toString() {
 		return "SplitAttribute: " + splitAttribute + "\n" +
 				"splitValue: " + splitValue + "\n" +
-				"leftSize: " + leftObsInNode + "\n" +
-				"rightSize: " + rightObsInNode + "\n" +
+				"leftInstanceCount: " + leftInstanceCount + "\n" +
+				"rightInstanceCount: " + rightInstanceCount + "\n" +
 				"leftTerminalValue: " + leftTerminalValue + "\n" +
 				"rightTerminalValue: " + rightTerminalValue + "\n" +
 				"leftSquaredError: " + leftSquaredError + "\n" +
-				"rightSquaredError: " + rightSquaredError + "\n";
+				"rightSquaredError: " + rightSquaredError + "\n" +
+				"squaredErrorBeforeSplit: " + squaredErrorBeforeSplit + "\n";
 	}
 
 }

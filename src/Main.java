@@ -1,3 +1,4 @@
+import gbm.Dataset;
 import gbm.GradientBoostingTree;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public class Main {
 		recreateRExperiment();
 	}
 	
+	/*
 	public static void powerPlant() {
 		
 		StopWatch timer = (new StopWatch()).start();
@@ -70,6 +72,7 @@ public class Main {
 		
 		Logger.println(Logger.LEVELS.DEBUG, "Training RMSE: " + trainingRmse + "\nValidation RMSE: " + validationRmse + "\nTime in Seconds: " + timer.getElapsedSeconds());
 	}
+	*/
 	
 	public static void recreateRExperiment() {
 		StopWatch timer = (new StopWatch()).start();
@@ -83,12 +86,13 @@ public class Main {
 		ArrayList<Double> trainingY = extractResponseColumn(4, trainingX);
 		ArrayList<Double> testY = extractResponseColumn(4, testX);
 		
-		Logger.println(Logger.LEVELS.DEBUG, "Read Data in " + timer.getElapsedSeconds() + " seconds");
+		Logger.println(Logger.LEVELS.INFO, "Read Data in " + timer.getElapsedSeconds() + " seconds");
 		
+		Dataset trainingDataset = new Dataset(trainingX, trainingY);
 		timer.start();
-		GradientBoostingTree boostedTree = new GradientBoostingTree(1, 0.001, 500, 10, 3);
-		GradientBoostingTree.ResultFunction function = boostedTree.buildGradientBoostingMachine(trainingX, trainingY);
-		Logger.println(Logger.LEVELS.DEBUG, "Trained GBM " + timer.getElapsedSeconds() + " seconds");
+		GradientBoostingTree boostedTree = new GradientBoostingTree(trainingDataset, 1, 0.001, 50000, 10, 3);
+		GradientBoostingTree.ResultFunction function = boostedTree.buildGradientBoostingMachine();
+		Logger.println(Logger.LEVELS.INFO, "Trained GBM " + timer.getElapsedSeconds() + " seconds");
 		
 		timer.start();
 		double validationRmse = 0.0;
@@ -108,15 +112,15 @@ public class Main {
 		trainingRmse = Math.sqrt(trainingRmse);
 		
 		
-		Logger.println(Logger.LEVELS.DEBUG, "Training RMSE: " + trainingRmse + "\nValidation RMSE: " + validationRmse + "\nTime in Seconds: " + timer.getElapsedSeconds());
+		Logger.println(Logger.LEVELS.INFO, "Training RMSE: " + trainingRmse + "\nValidation RMSE: " + validationRmse + "\nTime in Seconds: " + timer.getElapsedSeconds());
 		
 		timer.start();
 		double[] relativeInf = function.calcRelativeInfluences();
-		Logger.println(Logger.LEVELS.DEBUG, "Relative Influences\n--------------------");
+		Logger.println(Logger.LEVELS.INFO, "Relative Influences\n--------------------");
 		for (int i = 0; i < relativeInf.length; i++) {
-			Logger.println(Logger.LEVELS.DEBUG, i + ": " + relativeInf[i] + "%");
+			Logger.println(Logger.LEVELS.INFO, i + ": " + relativeInf[i] + "%");
 		}
-		Logger.println(Logger.LEVELS.DEBUG, "Calc Rel Inf in " + timer.getElapsedSeconds() + " seconds");
+		Logger.println(Logger.LEVELS.INFO, "Calc Rel Inf in " + timer.getElapsedSeconds() + " seconds");
 		
 		try {
 			function.trees.get(0).root.printTree(new OutputStreamWriter(System.out));

@@ -1,5 +1,6 @@
 package gbm.test;
 import gbm.DataSplit;
+import gbm.Dataset;
 import gbm.RegressionTree;
 
 import java.util.ArrayList;
@@ -9,16 +10,19 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import utilities.Logger;
+import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class DataSplitTest {
 
+	static Dataset dataset;
 	static ArrayList<ArrayList<Double>>  randomInstances = new ArrayList<ArrayList<Double>>();
 	static ArrayList<Double> randomLabels = new ArrayList<Double>();
 	static int minObsInNode = 10;
 	static StopWatch timer = (new StopWatch());
 	static Random rand = new Random();
-	
+	static boolean[] inSample;
+	static int[] shuffledIndices;
 	@BeforeClass
 	public static void setup() {
 		for (int example = 0; example < 10000; example++) {
@@ -30,6 +34,15 @@ public class DataSplitTest {
 			randomInstances.add(instance);
 			
 		}
+		dataset = new Dataset(randomInstances, randomLabels);
+		// data for growing trees
+	    inSample = new boolean[dataset.numOfExamples];
+		shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numOfExamples);
+		int sampleSize = (int)(1 * shuffledIndices.length);
+		for (int i = 0; i < sampleSize; i++ ) {
+			inSample[shuffledIndices[i]] = true;
+		}
+		
 		Logger.println(Logger.LEVELS.DEBUG, "Done generating Data: " + timer.getElapsedSeconds());
 	}
 	
@@ -51,8 +64,8 @@ public class DataSplitTest {
 	@Test
 	public void get_optimal_splitTest() {
 		timer.start();
-
-		DataSplit split = DataSplit.splitDataIntoChildren(randomInstances, randomLabels, minObsInNode, Double.MAX_VALUE, RegressionTree.TerminalType.AVERAGE);
+		// we need to sample randomly without replacement
+		DataSplit split = DataSplit.splitDataIntoChildren(dataset, inSample, minObsInNode, Double.MAX_VALUE, RegressionTree.TerminalType.AVERAGE);
 		Logger.println(Logger.LEVELS.DEBUG, "Found Best Split " + timer.getElapsedSeconds());
 		Logger.println(Logger.LEVELS.DEBUG, split);
 	}
