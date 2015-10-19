@@ -156,15 +156,15 @@ public class GradientBoostingTree {
 				sum += relativeInfluences[i];
 			}
 			for (int i = 0; i < relativeInfluences.length; i++) {
-				relativeInfluences[i] /= sum;
 				relativeInfluences[i] *= 100;
+				relativeInfluences[i] /= sum;
 			}
 			return relativeInfluences;
 		}
 		
 		private void calcRelativeInfluenceHelper(double[] relativeInfluences, TreeNode node) {
 			if (node == null) return;
-			relativeInfluences[node.splitAttribute] += node.squaredErrorBeforeSplit - node.leftSquaredError + node.rightSquaredError;
+			relativeInfluences[node.splitAttribute] += Math.round(((node.squaredErrorBeforeSplit - (node.leftSquaredError + node.rightSquaredError))) * 10) / 10.0;
 			calcRelativeInfluenceHelper(relativeInfluences, node.leftChild);
 			calcRelativeInfluenceHelper(relativeInfluences, node.rightChild);
 		}
@@ -202,8 +202,7 @@ public class GradientBoostingTree {
 		boolean[] inSample = new boolean[dataset.numOfExamples];
 		while (iterationNum < numOfTrees) {
 			timer.start();
-			// calculate the gradient
-			ArrayList<Double> gradient = new ArrayList<Double>();
+			// calculate the gradient and store as the new responses to fit to.
 			for (int i = 0; i < dataset.responses_y.size(); i++) {
 				dataset.responses_y.set(i, (dataset.originalResponses_y.get(i) - hypothesisValue[i]));
 			}
@@ -212,7 +211,6 @@ public class GradientBoostingTree {
 			int[] shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numOfExamples);
 			
 			// data for growing trees
-			
 			int sampleSize = (int)(bagFraction * shuffledIndices.length);
 			for (int i = 0; i < sampleSize; i++ ) {
 				inSample[shuffledIndices[i]] = true;

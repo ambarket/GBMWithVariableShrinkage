@@ -137,10 +137,10 @@ public class RegressionTree {
 					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minObsInNode, parent.node.rightSquaredError, terminalType);
 				}
 				if (left != null) {
-					possibleChildren.add(new PossibleChild(parent, left, true, left.node.squaredErrorBeforeSplit - left.node.leftSquaredError + left.node.rightSquaredError));
+					possibleChildren.add(new PossibleChild(parent, left, true, left.node.squaredErrorBeforeSplit - (left.node.leftSquaredError + left.node.rightSquaredError)));
 				}
 				if (right != null) {
-					possibleChildren.add(new PossibleChild(parent, right, false, right.node.squaredErrorBeforeSplit - right.node.leftSquaredError + right.node.rightSquaredError));
+					possibleChildren.add(new PossibleChild(parent, right, false, right.node.squaredErrorBeforeSplit - (right.node.leftSquaredError + right.node.rightSquaredError)));
 				}
 			}
 			if (possibleChildren.isEmpty()) {

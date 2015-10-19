@@ -105,7 +105,8 @@ public class TreeNode {
 				"rightTerminalValue: " + rightTerminalValue + "\n" +
 				"leftSquaredError: " + leftSquaredError + "\n" +
 				"rightSquaredError: " + rightSquaredError + "\n" +
-				"squaredErrorBeforeSplit: " + squaredErrorBeforeSplit + "\n";
+				"squaredErrorBeforeSplit: " + squaredErrorBeforeSplit + "\n" +
+				"ErrorImprovement: " + (squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError)) + "\n";
 	}
 
 }

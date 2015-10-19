@@ -24,7 +24,7 @@ import utilities.StopWatch;
 			
 			// Find the optimal attribute/value combination to perform the split. If no split can be found then return null.
 			StopWatch timer = (new StopWatch()).start();
-			BestSplit bestSplit = get_optimal_split(dataset, inParent, minObsInNode, errorWithoutSplit);
+			BestSplit bestSplit = getOptimalSplit(dataset, inParent, minObsInNode, errorWithoutSplit);
 			Logger.println(Logger.LEVELS.DEBUG, "\t\t\t Found optimal split " + timer.getElapsedSeconds());
 			
 			if (!bestSplit.success) {
@@ -39,8 +39,8 @@ import utilities.StopWatch;
 			dataSplit.node.leftInstanceCount = bestSplit.leftInstanceCount;
 			dataSplit.node.rightInstanceCount = bestSplit.rightInstanceCount;
 			
-			// map training data to the correct child
-			// TODO: This can be done in get_optimal_split
+			// map training data to the correct child, can't really do this inside of getOptimalSplit because would
+			//	have to copy the array each time the error is minimized.
 			dataSplit.inLeftChild = new boolean[dataset.numOfExamples];
 			dataSplit.inRightChild = new boolean[dataset.numOfExamples];
 			for (int instanceNum = 0; instanceNum < dataset.numOfExamples; instanceNum++) {
@@ -73,10 +73,9 @@ import utilities.StopWatch;
 		}
 		 
 		 /*
-		 *  The following function gets the best split given the data
-
-		 */
-		protected static BestSplit get_optimal_split(Dataset dataset, boolean[] inParent, int minObsInNode, double errorWithoutSplit) {
+		  *  The following function gets the best split given the data
+		  */
+		protected static BestSplit getOptimalSplit(Dataset dataset, boolean[] inParent, int minObsInNode, double errorWithoutSplit) {
 			BestSplit bestSplit = new BestSplit();
 			double minimumError = errorWithoutSplit;
 			
@@ -122,11 +121,13 @@ import utilities.StopWatch;
 				 *        last split is Left = [0, numberOfExamples - minObsInNode) Right = [numberOfExamples - minObsInNode, numberOfExamples)
 				 */
 				sortedExampleIndex = lastSortedExampleIndexInLeft + 1;
+				int nextSortedExampleIndex = -1;
 				while(countRight > minObsInNode) {
 					if (sortedExampleIndex >= dataset.numOfExamples) {
 						throw new IllegalStateException("There must be less than 2 * minObsInNode examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
 					}
 					int realExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex];
+					nextSortedExampleIndex = sortedExampleIndex + 1;
 					if (inParent[realExampleIndex]) {
 						double y = dataset.responses_y.get(realExampleIndex);
 						sumLeft += y;
@@ -140,7 +141,7 @@ import utilities.StopWatch;
 						meanRight = sumRight / countRight;
 						
 						// Find next sortedExampleIndex that maps to a real example in the parent.
-						int nextSortedExampleIndex = sortedExampleIndex + 1;
+						nextSortedExampleIndex = sortedExampleIndex + 1;
 						int nextRealExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][nextSortedExampleIndex];
 						while (!inParent[nextRealExampleIndex]) {
 							// Note: This should never throw indexOutOfBounds b/c there must always be >= minObsInNode examples that will fall into the right child.
@@ -148,11 +149,9 @@ import utilities.StopWatch;
 						}
 						// We don't want to split if the two values are the same as it would lead to inconsistent results, need to move to the next split point. 
 						if (DoubleCompare.equals(dataset.instances_x.get(realExampleIndex).get(currentSplitAttribute), dataset.instances_x.get(nextRealExampleIndex).get(currentSplitAttribute))) {
-							sortedExampleIndex++;
+							sortedExampleIndex = nextSortedExampleIndex;
 							continue;
-						} else {
-							//System.out.println();
-						}
+						} 
 
 						currentLeftError = sumOfSquaresLeft - (2 * meanLeft * sumLeft) + (countLeft * meanLeft * meanLeft);
 						currentRightError = sumOfSquaresRight - (2 * meanRight * sumRight) + (countRight * meanRight * meanRight);
@@ -171,10 +170,7 @@ import utilities.StopWatch;
 							minimumError = currentError;
 						}
 					}
-					sortedExampleIndex++;
-					if (sortedExampleIndex == 17) {
-						//System.out.println();
-					}
+					sortedExampleIndex = nextSortedExampleIndex;
 				}
 			}
 			return bestSplit;

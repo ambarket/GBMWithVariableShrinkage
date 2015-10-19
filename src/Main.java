@@ -125,11 +125,13 @@ public class Main {
 		try {
 			function.trees.get(0).root.printTree(new OutputStreamWriter(System.out));
 			Logger.println();
-			function.trees.get(1).root.printTree(new OutputStreamWriter(System.out));
+			function.trees.get(149).root.printTree(new OutputStreamWriter(System.out));
 			Logger.println();
-			function.trees.get(399).root.printTree(new OutputStreamWriter(System.out));
+			
+			function.trees.get(29999).root.printTree(new OutputStreamWriter(System.out));
+			Logger.println();
+			function.trees.get(49999).root.printTree(new OutputStreamWriter(System.out));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
