@@ -23,8 +23,8 @@ public class GradientBoostingTree {
 	private int numOfTrees;
 	
 	// tree related parameters
-	private int minObsInNode;
-	private int maxTreeDepth;
+	private int minExamplesInNode;
+	private int maxNumberOfSplits;
 	
 	private Dataset dataset;
 	
@@ -33,14 +33,14 @@ public class GradientBoostingTree {
 	}
 	
 	public GradientBoostingTree(Dataset dataset, double bagFraction, double learningRate, 
-			int numOfTrees, int minObsInNode, int maxTreeDepth)
+			int numOfTrees, int minExamplesInNode, int maxNumberOfSplits)
 		{
 		this.dataset = dataset;
 		setBagFraction(bagFraction);
 		setLearningRate(learningRate);
 		setNumOfTrees(numOfTrees);
-		setMinObsInNode(minObsInNode);
-		setMaxTreeDepth(maxTreeDepth);
+		setMinObsInNode(minExamplesInNode);
+		setmaxNumberOfSplits(maxNumberOfSplits);
 	}
 	
 	private void setBagFraction(double bagFraction) {
@@ -67,25 +67,25 @@ public class GradientBoostingTree {
 		this.numOfTrees = numOfTrees;
 	}
 	
-	private void setMaxTreeDepth(int maxTreeDepth) {
-		if (maxTreeDepth < 1) {
-			Logger.println(Logger.LEVELS.DEBUG, "Max tree depth must be >= 1");
+	private void setmaxNumberOfSplits(int maxNumberOfSplits) {
+		if (maxNumberOfSplits < 1) {
+			Logger.println(Logger.LEVELS.DEBUG, "The tree's maxNumberOfSplits must be >= 1");
 			System.exit(0);	
 		}
-		this.maxTreeDepth = maxTreeDepth;
+		this.maxNumberOfSplits = maxNumberOfSplits;
 	}
 	
-	private void setMinObsInNode(int minObsInNode) {
-		if (minObsInNode < 1) {
+	private void setMinObsInNode(int minExamplesInNode) {
+		if (minExamplesInNode < 1) {
 			Logger.println(Logger.LEVELS.DEBUG, "MinObsInNode must be >= 1");
 			System.exit(0);
 		}
 		
-		if (minObsInNode * 2 > dataset.numOfExamples) {
-			Logger.println(Logger.LEVELS.DEBUG, "The number of examples int he dataset must be >= minObsInNode * 2");
+		if (minExamplesInNode * 2 > dataset.numOfExamples) {
+			Logger.println(Logger.LEVELS.DEBUG, "The number of examples int he dataset must be >= minExamplesInNode * 2");
 			System.exit(0);
 		}
-		this.minObsInNode = minObsInNode;
+		this.minExamplesInNode = minExamplesInNode;
 	}
 	
 	// get parameters
@@ -102,11 +102,11 @@ public class GradientBoostingTree {
 	}
 	
 	public int getMinObsInNode() {
-		return minObsInNode;
+		return minExamplesInNode;
 	}
 	
-	public int getMaxTreeDepth() {
-		return maxTreeDepth;
+	public int getMaxNumberOfSplits() {
+		return maxNumberOfSplits;
 	}
 	
 	public class ResultFunction {
@@ -178,13 +178,15 @@ public class GradientBoostingTree {
 		// get an initial guess of the function
 		
 		// initialize the final result
-		ResultFunction function = new ResultFunction(learningRate, dataset.meanY, dataset.instances_x.get(0).size());
+		double meanY = dataset.calcMeanY();
+		ResultFunction function = new ResultFunction(learningRate, meanY, dataset.instances_x.get(0).size());
 		
 		// prepare the iteration
 		double[] hypothesisValue = new double[dataset.numOfExamples];
 		// initialize h_value
+		
 		for (int i = 0; i < dataset.numOfExamples; i++) {
-			hypothesisValue[i] = dataset.meanY;
+			hypothesisValue[i] = meanY;
 		}
 		
 		// begin the boosting process
@@ -217,7 +219,7 @@ public class GradientBoostingTree {
 			}
 			
 			// fit a regression tree and add it to the list of trees
-			RegressionTree tree = (new RegressionTree(minObsInNode, maxTreeDepth, TerminalType.AVERAGE)).build(dataset, inSample);
+			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits, TerminalType.AVERAGE)).build(dataset, inSample);
 	
 			function.trees.add(tree);
 			

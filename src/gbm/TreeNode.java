@@ -2,12 +2,14 @@ package gbm;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 
 public class TreeNode {
 	public double splitValue;
 	public int    splitAttribute;
 	public double leftTerminalValue;
 	public double rightTerminalValue;
+	public double missingTerminalValue;
 	
 	public int leftInstanceCount;
 	public int rightInstanceCount;
@@ -26,6 +28,7 @@ public class TreeNode {
 		
 		leftTerminalValue = 0.0;
 		rightTerminalValue = 0.0;
+		missingTerminalValue = 0.0;
 		leftSquaredError = 0.0;
 	    rightSquaredError = 0.0;
 		squaredErrorBeforeSplit = 0.0;
@@ -39,13 +42,15 @@ public class TreeNode {
 	public TreeNode(double splitValue, int splitAttribute, 
 			int leftInstanceCount, int rightInstanceCount, 
 			double leftTerminalValue, double rightTerminalValue,
-			double leftSquaredError, double rightSquaredError, double squaredErrorBeforeSplit) {
+			double leftSquaredError, double rightSquaredError, 
+			double missingTerminalValue, double squaredErrorBeforeSplit) {
 		this.splitValue = splitValue;
 		this.splitAttribute = splitAttribute;
 		this.leftChild = null;
 		this.rightChild = null;
 		this.leftTerminalValue = leftTerminalValue;
 		this.rightTerminalValue = rightTerminalValue;
+		this.missingTerminalValue = missingTerminalValue;
 		this.leftInstanceCount = leftInstanceCount;
 		this.rightInstanceCount = rightInstanceCount;
 		this.leftSquaredError = leftSquaredError;
@@ -53,6 +58,50 @@ public class TreeNode {
 		this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
 	}
 	
+	public TreeNode(double missingTerminalValue, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
+		this.splitValue = -1;
+		this.splitAttribute = -1;
+		this.leftChild = null;
+		this.rightChild = null;
+		this.leftTerminalValue = -1;
+		this.rightTerminalValue = -1;
+		this.missingTerminalValue = missingTerminalValue;
+		this.leftInstanceCount = numOfInstancesBeforeSplit;
+		this.rightInstanceCount = 0;
+		this.leftSquaredError = squaredErrorBeforeSplit;
+		this.rightSquaredError = 0;
+		this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
+	}
+	
+	// Will only be false in the rare case of the root node couldn't be split. In that case missingTerminalValue should
+	// 	be used as the prediction for all data
+	public double getLearnedValue(ArrayList<Double> instance_x) {
+		TreeNode current = this;
+		
+		while (true) {
+			// SplitAttribute will be -1 only if we failed to split the root node and reduce the error.
+			//	In that case we will just return the mean response over all the training data passed to
+			//	the build function which will be stored in current.missingTerminalValue. 
+			if (current.splitAttribute == -1 || instance_x.get(current.splitAttribute) == null) {
+				return current.missingTerminalValue;
+			}
+			if (instance_x.get(current.splitAttribute) < current.splitValue) {
+				// we should consider left child
+				if (current.leftChild == null) {
+					return current.leftTerminalValue;
+				} else {
+					current = current.leftChild;
+				}
+			} else {
+				// we should consider right child
+				if (current.rightChild == null) {
+					return current.rightTerminalValue;
+				} else {
+					current = current.rightChild;
+				}
+			}
+		}
+	}
 	
     public void printTree(OutputStreamWriter out) throws IOException {
         if (rightChild != null) {

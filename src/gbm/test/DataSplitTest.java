@@ -18,7 +18,7 @@ public class DataSplitTest {
 	static Dataset dataset;
 	static ArrayList<ArrayList<Double>>  randomInstances = new ArrayList<ArrayList<Double>>();
 	static ArrayList<Double> randomLabels = new ArrayList<Double>();
-	static int minObsInNode = 10;
+	static int minExamplesInNode = 10;
 	static StopWatch timer = (new StopWatch());
 	static Random rand = new Random();
 	static boolean[] inSample;
@@ -46,8 +46,8 @@ public class DataSplitTest {
 		Logger.println(Logger.LEVELS.DEBUG, "Done generating Data: " + timer.getElapsedSeconds());
 	}
 	
-	// 		minObsInNode = 10;
-	// maxDepth = 3;
+	// 		minExamplesInNode = 10;
+	// maxNumberOfSplits = 3;
 
 	
 	/**
@@ -65,7 +65,7 @@ public class DataSplitTest {
 	public void get_optimal_splitTest() {
 		timer.start();
 		// we need to sample randomly without replacement
-		DataSplit split = DataSplit.splitDataIntoChildren(dataset, inSample, minObsInNode, Double.MAX_VALUE, RegressionTree.TerminalType.AVERAGE);
+		DataSplit split = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, dataset.calcMeanY(), Double.MAX_VALUE, RegressionTree.TerminalType.AVERAGE);
 		Logger.println(Logger.LEVELS.DEBUG, "Found Best Split " + timer.getElapsedSeconds());
 		Logger.println(Logger.LEVELS.DEBUG, split);
 	}

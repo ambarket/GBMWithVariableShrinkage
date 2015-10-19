@@ -24,7 +24,7 @@ public class GradientBoostingTreeTest {
 	static Dataset dataset;
 	static ArrayList<ArrayList<Double>>  randomInstances = new ArrayList<ArrayList<Double>>();
 	static ArrayList<Double> randomLabels = new ArrayList<Double>();
-	static int minObsInNode = 10;
+	static int minExamplesInNode = 10;
 	static StopWatch timer = (new StopWatch());
 	static Random rand = new Random();
 	

@@ -4,7 +4,6 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.Map;
 
 import utilities.Logger;
@@ -15,7 +14,6 @@ public class Dataset {
 	public final ArrayList<Double> responses_y; // Updated to be the gradient after each iteration
 	public final ArrayList<Double> originalResponses_y;
 	
-	public final double meanY;
 	public  final int numOfExamples, numOfAttributes;
 	
 	/*  
@@ -23,6 +21,12 @@ public class Dataset {
 	 *  They are sorted in ascending order of instances_x.get(instanceNum).get(attributeNum)
 	 */
 	public final int[][] sortedAttributeIndices;
+	
+	public class cachedSplitInfo {
+		double leftSum, leftSumOfSquares, leftMean;
+		double rightSum, rightSumOfSquares, rightMean;
+		int leftCount, rightCount;
+	}
 	
 	public Dataset(ArrayList<ArrayList<Double>> instances_x, ArrayList<Double> responses_y) {
 		if (instances_x.size() != responses_y.size() || instances_x.size() == 0) {
@@ -39,8 +43,6 @@ public class Dataset {
 		// Will be set to the gradients by GradientBoostingTree.build each iteration, need to keep the original copy separate.
 		this.responses_y = new ArrayList<Double>(responses_y);
 		this.originalResponses_y = responses_y;
-		
-		this.meanY = calcMeanY();
 		
 		// TODO Calculate sortedAttributeIndices
 		sortedAttributeIndices = new int[numOfAttributes][numOfExamples];
@@ -63,13 +65,25 @@ public class Dataset {
 		
 	}
 	
-	private double calcMeanY() {
+	public double calcMeanY() {
 		double meanY = 0.0;
-		Iterator<Double> iter = responses_y.iterator();
-		while (iter.hasNext()) {
-			meanY += iter.next();
+		for (int i = 0; i < numOfExamples; i++) {
+			meanY += responses_y.get(i);
 		}
 		meanY = meanY / numOfExamples;
+		return meanY;
+	}
+	
+	public double calcMeanY(boolean[] inSample) {
+		double meanY = 0.0;
+		int count = 0;
+		for (int i = 0; i < numOfExamples; i++) {
+			if (inSample[i]) {
+				meanY += responses_y.get(i);
+				count++;
+			}
+		}
+		meanY = meanY / count;
 		return meanY;
 	}
 	
@@ -79,7 +93,19 @@ public class Dataset {
 			this.attributeNum = attributeNum;
 		}
 		public int compare(Map.Entry<Integer, ArrayList<Double>> arg0, Map.Entry<Integer, ArrayList<Double>> arg1) {
-			return arg0.getValue().get(attributeNum).compareTo(arg1.getValue().get(attributeNum));
+			Double arg0Value = arg0.getValue().get(attributeNum) ;
+			Double arg1Value = arg1.getValue().get(attributeNum) ;
+			if (arg0Value == null) {
+				if (arg1Value == null) {
+					return 0;
+				} else {
+					return 1; // null > anyValue so push it to the back of the sortedIndices.
+				}
+			}
+			if (arg1Value == null) {
+				return -1; 
+			}
+			return arg0Value.compareTo(arg1Value);
 		}
 	}
 }

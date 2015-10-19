@@ -19,19 +19,19 @@ import utilities.StopWatch;
 		/*
 		 *  Split data into the left node and the right node based on the best splitting point.
 		 */
-		public static DataSplit splitDataIntoChildren(Dataset dataset, boolean[] inParent, int minObsInNode, double errorWithoutSplit, RegressionTree.TerminalType terminalType) {
+		public static DataSplit splitDataIntoChildren(Dataset dataset, boolean[] inParent, int minExamplesInNode, double missingTerminalValue, double squaredErrorBeforeSplit, RegressionTree.TerminalType terminalType) {
 			DataSplit dataSplit = new DataSplit();
 			
 			// Find the optimal attribute/value combination to perform the split. If no split can be found then return null.
 			StopWatch timer = (new StopWatch()).start();
-			BestSplit bestSplit = getOptimalSplit(dataset, inParent, minObsInNode, errorWithoutSplit);
+			BestSplit bestSplit = getOptimalSplit(dataset, inParent, minExamplesInNode, squaredErrorBeforeSplit);
 			Logger.println(Logger.LEVELS.DEBUG, "\t\t\t Found optimal split " + timer.getElapsedSeconds());
 			
 			if (!bestSplit.success) {
 				return null;
-			} 
-			
-			dataSplit.node.squaredErrorBeforeSplit = errorWithoutSplit;
+			}
+			dataSplit.node.missingTerminalValue = missingTerminalValue;
+			dataSplit.node.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
 			dataSplit.node.splitAttribute = bestSplit.splitAttribute;
 			dataSplit.node.splitValue = bestSplit.splitValue;
 			dataSplit.node.leftSquaredError = bestSplit.leftSquaredError;
@@ -46,7 +46,8 @@ import utilities.StopWatch;
 			for (int instanceNum = 0; instanceNum < dataset.numOfExamples; instanceNum++) {
 				if (inParent[instanceNum]) {
 					ArrayList<Double> instance = dataset.instances_x.get(instanceNum);
-					if (instance.get(dataSplit.node.splitAttribute) < dataSplit.node.splitValue) {
+					Double instanceValue = instance.get(dataSplit.node.splitAttribute);
+					if (instanceValue != null && instanceValue < dataSplit.node.splitValue) {
 						// append to the left instances
 						dataSplit.inLeftChild[instanceNum] = true;
 					} else {
@@ -75,7 +76,7 @@ import utilities.StopWatch;
 		 /*
 		  *  The following function gets the best split given the data
 		  */
-		protected static BestSplit getOptimalSplit(Dataset dataset, boolean[] inParent, int minObsInNode, double errorWithoutSplit) {
+		protected static BestSplit getOptimalSplit(Dataset dataset, boolean[] inParent, int minExamplesInNode, double errorWithoutSplit) {
 			BestSplit bestSplit = new BestSplit();
 			double minimumError = errorWithoutSplit;
 			
@@ -92,7 +93,7 @@ import utilities.StopWatch;
 				int countLeft = 0, countRight = 0, sortedExampleIndex = 0;
 				
 				int lastSortedExampleIndexInLeft = -1;
-				while(countLeft < minObsInNode - 1) {
+				while(countLeft < minExamplesInNode - 1) {
 					if (inParent[dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]]) {
 						currentY = dataset.responses_y.get(dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]);
 						sumLeft += currentY;
@@ -117,14 +118,14 @@ import utilities.StopWatch;
 				
 							
 				/* Find the best split. SplitIndex is the last example in the left child.
-				 * Note: First split is Left = [0, minObsInNode) 					Right = [minObsInNode, numberOfExamples).
-				 *        last split is Left = [0, numberOfExamples - minObsInNode) Right = [numberOfExamples - minObsInNode, numberOfExamples)
+				 * Note: First split is Left = [0, minExamplesInNode) 					Right = [minExamplesInNode, numberOfExamples).
+				 *        last split is Left = [0, numberOfExamples - minExamplesInNode) Right = [numberOfExamples - minExamplesInNode, numberOfExamples)
 				 */
 				sortedExampleIndex = lastSortedExampleIndexInLeft + 1;
 				int nextSortedExampleIndex = -1;
-				while(countRight > minObsInNode) {
+				while(countRight > minExamplesInNode) {
 					if (sortedExampleIndex >= dataset.numOfExamples) {
-						throw new IllegalStateException("There must be less than 2 * minObsInNode examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
+						throw new IllegalStateException("There must be less than 2 * minExamplesInNode examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
 					}
 					int realExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex];
 					nextSortedExampleIndex = sortedExampleIndex + 1;
@@ -144,7 +145,7 @@ import utilities.StopWatch;
 						nextSortedExampleIndex = sortedExampleIndex + 1;
 						int nextRealExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][nextSortedExampleIndex];
 						while (!inParent[nextRealExampleIndex]) {
-							// Note: This should never throw indexOutOfBounds b/c there must always be >= minObsInNode examples that will fall into the right child.
+							// Note: This should never throw indexOutOfBounds b/c there must always be >= minExamplesInNode examples that will fall into the right child.
 							nextRealExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][++nextSortedExampleIndex];
 						}
 						// We don't want to split if the two values are the same as it would lead to inconsistent results, need to move to the next split point. 

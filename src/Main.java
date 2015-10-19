@@ -7,7 +7,6 @@ import java.util.ArrayList;
 
 import utilities.DataReader;
 import utilities.Logger;
-import utilities.RandomSample;
 import utilities.StopWatch;
 
 
@@ -90,7 +89,7 @@ public class Main {
 		
 		Dataset trainingDataset = new Dataset(trainingX, trainingY);
 		timer.start();
-		GradientBoostingTree boostedTree = new GradientBoostingTree(trainingDataset, 1, 0.001, 50000, 10, 3);
+		GradientBoostingTree boostedTree = new GradientBoostingTree(trainingDataset, 1, 0.001, 500, 10, 3);
 		GradientBoostingTree.ResultFunction function = boostedTree.buildGradientBoostingMachine();
 		Logger.println(Logger.LEVELS.INFO, "Trained GBM " + timer.getElapsedSeconds() + " seconds");
 		
@@ -128,9 +127,9 @@ public class Main {
 			function.trees.get(149).root.printTree(new OutputStreamWriter(System.out));
 			Logger.println();
 			
-			function.trees.get(29999).root.printTree(new OutputStreamWriter(System.out));
-			Logger.println();
-			function.trees.get(49999).root.printTree(new OutputStreamWriter(System.out));
+			//function.trees.get(29999).root.printTree(new OutputStreamWriter(System.out));
+			////Logger.println();
+			//function.trees.get(49999).root.printTree(new OutputStreamWriter(System.out));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
