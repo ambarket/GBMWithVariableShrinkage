@@ -16,7 +16,7 @@ public class Logger {
 	}
 	
 	public static void println(String s) {
-		println(LEVELS.INFO);
+		println(LEVELS.INFO, s);
 	}
 	
 	public static void print(String s) {

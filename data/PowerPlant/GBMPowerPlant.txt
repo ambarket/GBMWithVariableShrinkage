@@ -9,19 +9,18 @@ trainy <- traindf$PE
 gbm_formula <- as.formula(paste0("PE ~ ", paste(colnames(traindf[, -response_column]), collapse = " + ")))
 
 
-system.time(gbm_model <- gbm(gbm_formula, traindf, distribution = "gaussian", n.trees = 50000, bag.fraction = 1, interaction.depth = 3))
+system.time(gbm_model <- gbm(gbm_formula, traindf, distribution = "gaussian", n.trees = 10000, bag.fraction = 1, interaction.depth = 3))
 
 summary.gbm(gbm_model)
 
-predictions_gbm <- predict(gbm_model, newdata = testdf[, -response_column], n.trees = 50000, type = "response")
+predictions_gbm <- predict(gbm_model, newdata = testdf[, -response_column], n.trees = 10000, type = "response")
 sqrt(mean((testdf$PE - predictions_gbm)^2))
 
-predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = 50000, type = "response")
+predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = 10000, type = "response")
 sqrt(mean((traindf$PE - predictions_train_gbm)^2))
 
 pretty.gbm.tree(gbm_model,i.tree = 1)
 pretty.gbm.tree(gbm_model,i.tree = 150)
-pretty.gbm.tree(gbm_model,i.tree = 30000)
-pretty.gbm.tree(gbm_model,i.tree = 50000)
+pretty.gbm.tree(gbm_model,i.tree = 500)
 
 ideas - pick a subset of attributes to best pslit on instead of all. Did blum give me this idea?

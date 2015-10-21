@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
+import utilities.DoubleCompare;
+
 public class TreeNode {
 	public double splitValue;
 	public int    splitAttribute;
@@ -58,6 +60,9 @@ public class TreeNode {
 		this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
 	}
 	
+	/*
+	 * Use when unable to split the root node.
+	 */
 	public TreeNode(double missingTerminalValue, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
 		this.splitValue = -1;
 		this.splitAttribute = -1;
@@ -75,17 +80,17 @@ public class TreeNode {
 	
 	// Will only be false in the rare case of the root node couldn't be split. In that case missingTerminalValue should
 	// 	be used as the prediction for all data
-	public double getLearnedValue(ArrayList<Double> instance_x) {
+	public double getLearnedValue(Attribute[] instance) {
 		TreeNode current = this;
 		
 		while (true) {
 			// SplitAttribute will be -1 only if we failed to split the root node and reduce the error.
 			//	In that case we will just return the mean response over all the training data passed to
 			//	the build function which will be stored in current.missingTerminalValue. 
-			if (current.splitAttribute == -1 || instance_x.get(current.splitAttribute) == null) {
+			if (current.splitAttribute == -1 || instance[current.splitAttribute] == null) {
 				return current.missingTerminalValue;
 			}
-			if (instance_x.get(current.splitAttribute) < current.splitValue) {
+			if (DoubleCompare.lessThan(instance[current.splitAttribute].getNumericValue(), current.splitValue)) {
 				// we should consider left child
 				if (current.leftChild == null) {
 					return current.leftTerminalValue;

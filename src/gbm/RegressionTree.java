@@ -12,7 +12,6 @@ package gbm;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -62,7 +61,7 @@ public class RegressionTree {
 		this.maxNumberOfSplits = maxNumberOfSplits;
 	}
 	
-	public double getLearnedValue(ArrayList<Double> instance_x) {
+	public double getLearnedValue(Attribute[] instance_x) {
 		if (root == null) {
 			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
 		}
@@ -75,11 +74,11 @@ public class RegressionTree {
 		// Calculate error before splitting
 		double mean = dataset.calcMeanY(inSample);
 		double squaredError = 0.0;
-		for (Double y : dataset.responses_y) {
-			squaredError += (y - mean) * (y - mean);
+		for (Response y : dataset.responses) {
+			squaredError += (y.getPsuedoResponse() - mean) * (y.getPsuedoResponse() - mean);
 		}
 		// build the regression tree
-		//root = tree_builder(instances_x, labels_y, squaredError, 0);
+		//root = tree_builder(instances, labels_y, squaredError, 0);
 		root = buildTree_MaxNumberOfSplits(dataset, inSample, mean, squaredError);
 		if (root == null) {
 			throw new IllegalStateException("buildTree_MaxNumberOfSplits returned a null root node.");

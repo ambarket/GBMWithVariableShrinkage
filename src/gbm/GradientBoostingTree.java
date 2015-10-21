@@ -81,7 +81,7 @@ public class GradientBoostingTree {
 			System.exit(0);
 		}
 		
-		if (minExamplesInNode * 2 > dataset.numOfExamples) {
+		if (minExamplesInNode * 2 > dataset.numberOfExamples) {
 			Logger.println(Logger.LEVELS.DEBUG, "The number of examples int he dataset must be >= minExamplesInNode * 2");
 			System.exit(0);
 		}
@@ -126,7 +126,7 @@ public class GradientBoostingTree {
 		
 		
 		// the following function is used to estimate the function
-		public double predictLabel(ArrayList<Double> instance_x) {
+		public double predictLabel(Attribute[] instance_x) {
 			double result = initialValue;
 			
 			if (trees.size() == 0) {
@@ -179,13 +179,13 @@ public class GradientBoostingTree {
 		
 		// initialize the final result
 		double meanY = dataset.calcMeanY();
-		ResultFunction function = new ResultFunction(learningRate, meanY, dataset.instances_x.get(0).size());
+		ResultFunction function = new ResultFunction(learningRate, meanY, dataset.numberOfPredictors);
 		
 		// prepare the iteration
-		double[] hypothesisValue = new double[dataset.numOfExamples];
+		double[] hypothesisValue = new double[dataset.numberOfExamples];
 		// initialize h_value
 		
-		for (int i = 0; i < dataset.numOfExamples; i++) {
+		for (int i = 0; i < dataset.numberOfExamples; i++) {
 			hypothesisValue[i] = meanY;
 		}
 		
@@ -195,22 +195,22 @@ public class GradientBoostingTree {
 		
 		StopWatch timer = (new StopWatch());
 		
-		/* Used to track which indices into the instances_x and responses_y structures are in the sample for the current iteration.
+		/* Used to track which indices into the instances and responses structures are in the sample for the current iteration.
 		 * 
 		 * This will allow us to presort the instances by each attribute and save a ton of time while finding the best split point
 		 * when growing the trees.
 		 * 
 		 */
-		boolean[] inSample = new boolean[dataset.numOfExamples];
+		boolean[] inSample = new boolean[dataset.numberOfExamples];
 		while (iterationNum < numOfTrees) {
 			timer.start();
 			// calculate the gradient and store as the new responses to fit to.
-			for (int i = 0; i < dataset.responses_y.size(); i++) {
-				dataset.responses_y.set(i, (dataset.originalResponses_y.get(i) - hypothesisValue[i]));
+			for (int i = 0; i < dataset.numberOfExamples; i++) {
+				dataset.responses[i].setPsuedoResponse(dataset.responses[i].getNumericValue() - hypothesisValue[i]);
 			}
 			
 			// we need to sample randomly without replacement
-			int[] shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numOfExamples);
+			int[] shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numberOfExamples);
 			
 			// data for growing trees
 			int sampleSize = (int)(bagFraction * shuffledIndices.length);
@@ -224,8 +224,8 @@ public class GradientBoostingTree {
 			function.trees.add(tree);
 			
 			// update hypothesis information, prepare for the next iteration
-			for (int i = 0; i < dataset.numOfExamples; i++) {
-				hypothesisValue[i] += learningRate * tree.getLearnedValue(dataset.instances_x.get(i));
+			for (int i = 0; i < dataset.numberOfExamples; i++) {
+				hypothesisValue[i] += learningRate * tree.getLearnedValue(dataset.instances[i]);
 			}
 			
 			// next iteration

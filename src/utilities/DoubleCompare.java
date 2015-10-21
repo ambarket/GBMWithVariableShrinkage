@@ -3,6 +3,7 @@
  */
 package utilities;
 
+
 public class DoubleCompare {
 	public final static double EPSILON = 0.00001;
 
@@ -100,6 +101,16 @@ public class DoubleCompare {
 	 */
 	public static boolean lessThan(double a, double b, double epsilon){
 	    return b - a > epsilon;
+	}
+
+	public static int compare(Double arg0, Double arg1) {
+		if (lessThan(arg0, arg1)) {
+			return -1;
+		}
+		if (greaterThan(arg0, arg1)) {
+			return 1;
+		}
+		return 0;
 	}
 	
 }

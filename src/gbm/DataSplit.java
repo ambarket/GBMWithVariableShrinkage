@@ -1,6 +1,4 @@
 package gbm;
-import java.util.ArrayList;
-
 import utilities.DoubleCompare;
 import utilities.Logger;
 import utilities.StopWatch;
@@ -41,12 +39,12 @@ import utilities.StopWatch;
 			
 			// map training data to the correct child, can't really do this inside of getOptimalSplit because would
 			//	have to copy the array each time the error is minimized.
-			dataSplit.inLeftChild = new boolean[dataset.numOfExamples];
-			dataSplit.inRightChild = new boolean[dataset.numOfExamples];
-			for (int instanceNum = 0; instanceNum < dataset.numOfExamples; instanceNum++) {
+			dataSplit.inLeftChild = new boolean[dataset.numberOfExamples];
+			dataSplit.inRightChild = new boolean[dataset.numberOfExamples];
+			for (int instanceNum = 0; instanceNum < dataset.numberOfExamples; instanceNum++) {
 				if (inParent[instanceNum]) {
-					ArrayList<Double> instance = dataset.instances_x.get(instanceNum);
-					Double instanceValue = instance.get(dataSplit.node.splitAttribute);
+					Attribute[] instance = dataset.instances[instanceNum];
+					Double instanceValue = instance[dataSplit.node.splitAttribute].getNumericValue();
 					if (instanceValue != null && instanceValue < dataSplit.node.splitValue) {
 						// append to the left instances
 						dataSplit.inLeftChild[instanceNum] = true;
@@ -81,7 +79,7 @@ import utilities.StopWatch;
 			double minimumError = errorWithoutSplit;
 			
 			// Find the best attribute to split on 
-			for (int currentSplitAttribute = 0; currentSplitAttribute < dataset.numOfAttributes; currentSplitAttribute ++) {
+			for (int currentSplitAttribute = 0; currentSplitAttribute < dataset.numberOfPredictors; currentSplitAttribute ++) {
 				double currentLeftError = Double.MAX_VALUE;
 				double currentRightError = Double.MAX_VALUE;
 				double currentError = Double.MAX_VALUE;
@@ -94,8 +92,8 @@ import utilities.StopWatch;
 				
 				int lastSortedExampleIndexInLeft = -1;
 				while(countLeft < minExamplesInNode - 1) {
-					if (inParent[dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]]) {
-						currentY = dataset.responses_y.get(dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]);
+					if (inParent[dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][sortedExampleIndex]]) {
+						currentY = dataset.responses[dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][sortedExampleIndex]].getPsuedoResponse();
 						sumLeft += currentY;
 						sumOfSquaresLeft += currentY * currentY;
 						countLeft++;
@@ -105,9 +103,12 @@ import utilities.StopWatch;
 				}
 				meanLeft = sumLeft / countLeft;
 				
-				while(sortedExampleIndex < dataset.numOfExamples) {
-					if (inParent[dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]]) {
-						currentY = dataset.responses_y.get(dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex]);
+				while(sortedExampleIndex < dataset.numberOfExamples) {
+					if (inParent[dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][sortedExampleIndex]]) {
+						currentY = dataset.responses[dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][sortedExampleIndex]].getPsuedoResponse();
+						if (currentY < 0) {
+							//System.out.println();
+						}
 						sumRight += currentY;
 						sumOfSquaresRight += currentY * currentY;
 						countRight++;
@@ -124,13 +125,13 @@ import utilities.StopWatch;
 				sortedExampleIndex = lastSortedExampleIndexInLeft + 1;
 				int nextSortedExampleIndex = -1;
 				while(countRight > minExamplesInNode) {
-					if (sortedExampleIndex >= dataset.numOfExamples) {
+					if (sortedExampleIndex >= dataset.numberOfExamples) {
 						throw new IllegalStateException("There must be less than 2 * minExamplesInNode examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
 					}
-					int realExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][sortedExampleIndex];
+					int realExampleIndex = dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][sortedExampleIndex];
 					nextSortedExampleIndex = sortedExampleIndex + 1;
 					if (inParent[realExampleIndex]) {
-						double y = dataset.responses_y.get(realExampleIndex);
+						double y = dataset.responses[realExampleIndex].getPsuedoResponse();
 						sumLeft += y;
 						sumOfSquaresLeft += y*y;
 						countLeft ++;
@@ -143,13 +144,13 @@ import utilities.StopWatch;
 						
 						// Find next sortedExampleIndex that maps to a real example in the parent.
 						nextSortedExampleIndex = sortedExampleIndex + 1;
-						int nextRealExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][nextSortedExampleIndex];
+						int nextRealExampleIndex = dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][nextSortedExampleIndex];
 						while (!inParent[nextRealExampleIndex]) {
 							// Note: This should never throw indexOutOfBounds b/c there must always be >= minExamplesInNode examples that will fall into the right child.
-							nextRealExampleIndex = dataset.sortedAttributeIndices[currentSplitAttribute][++nextSortedExampleIndex];
+							nextRealExampleIndex = dataset.numericalPredictorSortedIndexMap[currentSplitAttribute][++nextSortedExampleIndex];
 						}
 						// We don't want to split if the two values are the same as it would lead to inconsistent results, need to move to the next split point. 
-						if (DoubleCompare.equals(dataset.instances_x.get(realExampleIndex).get(currentSplitAttribute), dataset.instances_x.get(nextRealExampleIndex).get(currentSplitAttribute))) {
+						if (dataset.instances[realExampleIndex][currentSplitAttribute].compareTo(dataset.instances[nextRealExampleIndex][currentSplitAttribute]) == 0) {
 							sortedExampleIndex = nextSortedExampleIndex;
 							continue;
 						} 
@@ -160,7 +161,7 @@ import utilities.StopWatch;
 						
 						if (DoubleCompare.lessThan(currentError, minimumError)) {
 							bestSplit.splitAttribute = currentSplitAttribute;
-							bestSplit.splitValue = (dataset.instances_x.get(realExampleIndex).get(currentSplitAttribute) + dataset.instances_x.get(nextRealExampleIndex).get(currentSplitAttribute))/2;
+							bestSplit.splitValue = (dataset.instances[realExampleIndex][currentSplitAttribute].getNumericValue() + dataset.instances[nextRealExampleIndex][currentSplitAttribute].getNumericValue())/2;
 							bestSplit.leftSquaredError = currentLeftError;
 							bestSplit.rightSquaredError = currentRightError;
 							bestSplit.leftInstanceCount = countLeft;
@@ -176,7 +177,7 @@ import utilities.StopWatch;
 			}
 			return bestSplit;
 		}
-	}
+}
 	
 	/*
 	 *  The following class is used for split point in the regression tree

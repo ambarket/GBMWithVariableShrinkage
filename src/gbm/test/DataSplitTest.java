@@ -13,11 +13,12 @@ import utilities.Logger;
 import utilities.RandomSample;
 import utilities.StopWatch;
 
+/*
 public class DataSplitTest {
 
 	static Dataset dataset;
-	static ArrayList<ArrayList<Double>>  randomInstances = new ArrayList<ArrayList<Double>>();
-	static ArrayList<Double> randomLabels = new ArrayList<Double>();
+	static ArrayList<Attribute[]>  randomInstances = new ArrayList<Attribute[]>();
+	static Attribute[] randomLabels = new Attribute[]();
 	static int minExamplesInNode = 10;
 	static StopWatch timer = (new StopWatch());
 	static Random rand = new Random();
@@ -26,7 +27,7 @@ public class DataSplitTest {
 	@BeforeClass
 	public static void setup() {
 		for (int example = 0; example < 10000; example++) {
-			ArrayList<Double> instance = new ArrayList<Double>();
+			Attribute[] instance = new Attribute[]();
 			for (int attribute = 0; attribute < 2; attribute++) {
 				instance.add(rand.nextDouble());
 			}
@@ -36,8 +37,8 @@ public class DataSplitTest {
 		}
 		dataset = new Dataset(randomInstances, randomLabels);
 		// data for growing trees
-	    inSample = new boolean[dataset.numOfExamples];
-		shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numOfExamples);
+	    inSample = new boolean[dataset.numberOfExamples];
+		shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numberOfExamples);
 		int sampleSize = (int)(1 * shuffledIndices.length);
 		for (int i = 0; i < sampleSize; i++ ) {
 			inSample[shuffledIndices[i]] = true;
@@ -49,7 +50,8 @@ public class DataSplitTest {
 	// 		minExamplesInNode = 10;
 	// maxNumberOfSplits = 3;
 
-	
+	*/
+
 	/**
 	 *  BenchMark for get_optimal_split with 10000 random instances
 		Done generating Data: 0.007396846
@@ -61,6 +63,7 @@ public class DataSplitTest {
 		rightSquaredError: 707.4522880073323
 		status: true
 	 */
+/*
 	@Test
 	public void get_optimal_splitTest() {
 		timer.start();
@@ -70,4 +73,6 @@ public class DataSplitTest {
 		Logger.println(Logger.LEVELS.DEBUG, split);
 	}
 
+
 }
+	*/
