@@ -9,14 +9,14 @@ trainy <- traindf$class
 gbm_formula <- as.formula(paste0("class ~ ", paste(colnames(traindf[, -response_column]), collapse = " + ")))
 
 
-system.time(gbm_model <- gbm(gbm_formula, traindf, distribution = "gaussian", n.trees = 10000, bag.fraction = 1, interaction.depth = 3))
+system.time(gbm_model <- gbm(gbm_formula, traindf, distribution = "gaussian", n.trees = 50000, bag.fraction = 1, interaction.depth = 3))
 
 summary.gbm(gbm_model)
 
-predictions_gbm <- predict(gbm_model, newdata = testdf[, -response_column], n.trees = 10000, type = "response")
+predictions_gbm <- predict(gbm_model, newdata = testdf[, -response_column], n.trees = 50000, type = "response")
 sqrt(mean((testdf$class - predictions_gbm)^2))
 
-predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = 10000, type = "response")
+predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = 50000, type = "response")
 sqrt(mean((traindf$class - predictions_train_gbm)^2))
 
 pretty.gbm.tree(gbm_model,i.tree = 1)
@@ -24,3 +24,9 @@ pretty.gbm.tree(gbm_model,i.tree = 150)
 pretty.gbm.tree(gbm_model,i.tree = 500)
 
 ideas - pick a subset of attributes to best pslit on instead of all. Did blum give me this idea?
+
+Verified that categorical variables are working as expected. Error is exactly same as gbm in R. Relattive influence claculations are correct only to the 2cd decimal place for some reason but the trees and predictions generated are identical (at least to 500 trees). 
+
+Verified missing values work as expected if they are in the test dataset. Its going to take some work to finish support for them in the training dataset however.
+
+Also running time

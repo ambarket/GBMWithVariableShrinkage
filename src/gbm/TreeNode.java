@@ -173,7 +173,22 @@ public class TreeNode {
     	if (splitPredictorType == Type.Numeric) {
     		s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
     	} else if (splitPredictorType == Type.Categorical) {
-    		s= String.format("{Attr: %d Val: %.2s ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, "Categories coming soon", getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
+    		s= String.format("{"
+    				+ "Attr: %d "
+    				+ "Val: %.2s "
+    				+ "ErrorReduction: %.5f "
+    				+ "Weight: %d "
+    				+ "LeftPred: %f "
+    				+ "RightPred: %f "
+    				+ "}", 
+    				
+    				splitPredictorIndex, 
+    				"Categories coming soon", 
+    				getSquaredErrorImprovement(), 
+    				leftInstanceCount + rightInstanceCount,
+    				leftTerminalValue,
+    				rightTerminalValue
+    				);
     	}
     	out.write(s);
     	//out.write("{Attr: " + splitAttribute + 

@@ -15,9 +15,15 @@ public class Main {
 	public static void main(String[] args) {
 		//recreateRExperiment();
 		experiment2();
+		//try {
+			//DataSetGen.gen();
+		//} catch (IOException e) {
+			// TODO Auto-generated catch block
+		//	e.printStackTrace();
+		//}
 	}
 	
-	public static final int NUMBER_OF_TREES = 500;
+	public static final int NUMBER_OF_TREES = 50000;
 	public static final double LEARNING_RATE = 0.001;
 	public static final double BAG_FRACTION = 1;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;
@@ -26,8 +32,11 @@ public class Main {
 	public static void experiment2() {
 		StopWatch timer = (new StopWatch());
 		
-		Dataset trainingDataset = new Dataset( System.getProperty("user.dir") + "/data/ServoMotor/" + "TRAINING.txt", true, true, 4);
-		Dataset testDataset = new Dataset(System.getProperty("user.dir") + "/data/ServoMotor/" + "TEST.txt", true, true, 4);
+		//Dataset trainingDataset = new Dataset( System.getProperty("user.dir") + "/data/ServoMotor/" + "TRAINING.txt", true, true, 4);
+		//Dataset testDataset = new Dataset(System.getProperty("user.dir") + "/data/ServoMotor/" + "TEST.txt", true, true, 4);
+		
+		Dataset trainingDataset = new Dataset( System.getProperty("user.dir") + "/data/gen/" + "TRAINING.txt", true, true, 9);
+		Dataset testDataset = new Dataset(System.getProperty("user.dir") + "/data/gen/" + "TEST.txt", true, true, 9);
 		
 		timer.start();
 		GradientBoostingTree boostedTree = new GradientBoostingTree(trainingDataset, BAG_FRACTION, LEARNING_RATE, NUMBER_OF_TREES, MIN_EXAMPLES_IN_NODE, MAX_NUMBER_OF_SPLITS);
