@@ -98,9 +98,9 @@ public class TreeNode {
 		switch (node.splitPredictorType) {
 			case Numeric:
 				if (DoubleCompare.lessThan(node.numericSplitValue, instance[node.splitPredictorIndex].getNumericValue())) {
-					whichChild = 1;
-				} else {
 					whichChild = 2;
+				} else {
+					whichChild = 1;
 				}
 				break;
 			case Categorical:
@@ -171,9 +171,9 @@ public class TreeNode {
     private void printNodeValue(OutputStreamWriter out) throws IOException {
     	String s = null;
     	if (splitPredictorType == Type.Numeric) {
-    		s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError), leftInstanceCount + rightInstanceCount);
+    		s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
     	} else if (splitPredictorType == Type.Categorical) {
-    		s= String.format("{Attr: %d Val: %.2s ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, "Categories coming soon", squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError), leftInstanceCount + rightInstanceCount);
+    		s= String.format("{Attr: %d Val: %.2s ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, "Categories coming soon", getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
     	}
     	out.write(s);
     	//out.write("{Attr: " + splitAttribute + 

@@ -13,8 +13,8 @@ public class Main {
 	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
 	
 	public static void main(String[] args) {
-		recreateRExperiment();
-		//experiment2();
+		//recreateRExperiment();
+		experiment2();
 	}
 	
 	public static final int NUMBER_OF_TREES = 500;

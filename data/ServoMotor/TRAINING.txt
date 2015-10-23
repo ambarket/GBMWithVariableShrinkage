@@ -1,4 +1,4 @@
-C	C	C	C	N
+C	C	N	N	N
 Motor	Screw	pgain	vgain	class
 E	E	5	4	0.28125095
 B	D	6	5	0.5062525
