@@ -6,8 +6,6 @@ package gbm;
 */
 
 
-import gbm.RegressionTree.TerminalType;
-
 import java.util.ArrayList;
 //import gbt.ranker.RegressionTree.TerminalType;
 import java.util.Iterator;
@@ -164,7 +162,7 @@ public class GradientBoostingTree {
 		
 		private void calcRelativeInfluenceHelper(double[] relativeInfluences, TreeNode node) {
 			if (node == null) return;
-			relativeInfluences[node.splitAttribute] += Math.round(((node.squaredErrorBeforeSplit - (node.leftSquaredError + node.rightSquaredError))) * 10) / 10.0;
+			relativeInfluences[node.splitPredictorIndex] += Math.round(((node.squaredErrorBeforeSplit - (node.leftSquaredError + node.rightSquaredError))) * 10) / 10.0;
 			calcRelativeInfluenceHelper(relativeInfluences, node.leftChild);
 			calcRelativeInfluenceHelper(relativeInfluences, node.rightChild);
 		}
@@ -219,7 +217,7 @@ public class GradientBoostingTree {
 			}
 			
 			// fit a regression tree and add it to the list of trees
-			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits, TerminalType.AVERAGE)).build(dataset, inSample);
+			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits)).build(dataset, inSample);
 	
 			function.trees.add(tree);
 			

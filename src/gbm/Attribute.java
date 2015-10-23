@@ -51,7 +51,7 @@ public class Attribute implements Comparable<Attribute> {
 	
 	public int compareTo(Attribute that) {
 		if (this.type != that.type) {
-			throw new IllegalStateException("Attempt to compare a numeric attribute to a categorical attribute");
+			throw new IllegalStateException("Attempt to compare a numeric attribute to a categorical attribute in compareTo method");
 		}
 		// MISSING > Having a value
 		if (this.missing && that.missing) {

@@ -100,9 +100,7 @@ public class Dataset {
 					} else if (responseType  == Attribute.Type.Categorical) {
 						response= new Response((missingValue) ? null : stringElement);
 					}
-				}
-				
-				
+				} 
 			}
 			instances[recordIndex] = instance;
 			responses[recordIndex] = response;

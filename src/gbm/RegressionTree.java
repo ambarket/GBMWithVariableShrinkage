@@ -18,31 +18,21 @@ import java.util.Queue;
 
 import utilities.Logger;
 public class RegressionTree {
-	public enum TerminalType {
-		AVERAGE
-	}
-
 	// class members
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
-	private TerminalType terminalType;
 	
 	public TreeNode root;
 	
 	// construction function
 	public RegressionTree() {
-		this(10, 3, TerminalType.AVERAGE);
+		this(10, 3);
 	}
 	
-	public RegressionTree(int minExamplesInNode, int maxNumberOfSplits, TerminalType terminalType) {
+	public RegressionTree(int minExamplesInNode, int maxNumberOfSplits) {
 		setMinObsInNode(minExamplesInNode);
 		setMaxNumberOfSplits(maxNumberOfSplits);
-		setTerminalType(terminalType);
 		root = null;
-	}
-	
-	public void setTerminalType(TerminalType terminalType) {
-		this.terminalType = terminalType;
 	}
 	
 	public void setMinObsInNode(int minExamplesInNode) {
@@ -65,11 +55,9 @@ public class RegressionTree {
 		if (root == null) {
 			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
 		}
-		
 		return root.getLearnedValue(instance_x);
 	}
 	
-	// build the regression tree
 	public RegressionTree build(Dataset dataset, boolean[] inSample) {
 		// Calculate error before splitting
 		double mean = dataset.calcMeanY(inSample);
@@ -78,7 +66,6 @@ public class RegressionTree {
 			squaredError += (y.getPsuedoResponse() - mean) * (y.getPsuedoResponse() - mean);
 		}
 		// build the regression tree
-		//root = tree_builder(instances, labels_y, squaredError, 0);
 		root = buildTree_MaxNumberOfSplits(dataset, inSample, mean, squaredError);
 		if (root == null) {
 			throw new IllegalStateException("buildTree_MaxNumberOfSplits returned a null root node.");
@@ -86,15 +73,15 @@ public class RegressionTree {
 		return this;
 	}
 	
-	private TreeNode buildTree_MaxNumberOfSplits(Dataset dataset, boolean[] inSample, double missingTerminalValue, double squaredErrorBeforeSplit) {
+	private TreeNode buildTree_MaxNumberOfSplits(Dataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, missingTerminalValue, squaredErrorBeforeSplit, terminalType);
+		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			int count = 0;
 			for (int i = 0; i < inSample.length; i++) {
 				count += (inSample[i]) ? 1 : 0;
 			}
-			TreeNode unSplitRoot = new TreeNode(missingTerminalValue, squaredErrorBeforeSplit, count);
+			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
 		}
 		leaves.add(rootSplit);
@@ -104,28 +91,36 @@ public class RegressionTree {
 		while (numOfSplits < maxNumberOfSplits) {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
-				DataSplit left = null, right = null;
+				DataSplit left = null, right = null, missing = null;
 				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftInstanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, parent.node.leftTerminalValue, parent.node.leftSquaredError, terminalType);
+					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, parent.node.leftTerminalValue, parent.node.leftSquaredError);
 				}
 				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightInstanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, parent.node.rightTerminalValue, parent.node.rightSquaredError, terminalType);
+					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, parent.node.rightTerminalValue, parent.node.rightSquaredError);
+				}
+				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingInstanceCount) {
+					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, parent.node.missingTerminalValue, parent.node.missingSquaredError);
 				}
 				if (left != null) {
-					possibleChildren.add(new PossibleChild(parent, left, true, left.node.squaredErrorBeforeSplit - (left.node.leftSquaredError + left.node.rightSquaredError)));
+					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));
 				}
 				if (right != null) {
-					possibleChildren.add(new PossibleChild(parent, right, false, right.node.squaredErrorBeforeSplit - (right.node.leftSquaredError + right.node.rightSquaredError)));
+					possibleChildren.add(new PossibleChild(parent, right, 2, right.node.getSquaredErrorImprovement()));
+				}
+				if (missing != null) {
+					possibleChildren.add(new PossibleChild(parent, missing, 3, missing.node.getSquaredErrorImprovement()));
 				}
 			}
 			if (possibleChildren.isEmpty()) {
 				throw new IllegalStateException("No possible children to pick from in tree builder. I dont think this is possible");
 			}
 			PossibleChild bestChild = possibleChildren.poll();
-			if (bestChild.left) {
+			if (bestChild.whichNode == 1) {
 				bestChild.parent.node.leftChild = bestChild.child.node;
-			} else {
+			} else if (bestChild.whichNode == 2){
 				bestChild.parent.node.rightChild = bestChild.child.node;
+			} else {
+				bestChild.parent.node.missingChild = bestChild.child.node;
 			}
 			
 			leaves.add(bestChild.child);
@@ -141,12 +136,12 @@ public class RegressionTree {
 	private class PossibleChild implements Comparable<PossibleChild>{
 		DataSplit parent;
 		DataSplit child;
-		boolean left;
+		int whichNode; // 1 = left, 2 = right, 3 = missing
 		double errorImprovement;
-		PossibleChild(DataSplit parent, DataSplit child, boolean left, double errorImprovement) {
+		PossibleChild(DataSplit parent, DataSplit child, int whichNode, double errorImprovement) {
 			this.parent = parent;
 			this.child = child;
-			this.left = left;
+			this.whichNode = whichNode;
 			this.errorImprovement = errorImprovement;
 		}
 		
