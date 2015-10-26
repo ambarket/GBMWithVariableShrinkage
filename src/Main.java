@@ -10,6 +10,7 @@ import utilities.StopWatch;
 
 
 public class Main {
+	
 	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
 	
 	public static void main(String[] args) {
@@ -23,7 +24,7 @@ public class Main {
 		}
 	}
 	
-	public static final int NUMBER_OF_TREES = 5000;
+	public static final int NUMBER_OF_TREES = 50000;
 	public static final double LEARNING_RATE = 0.001;
 	public static final double BAG_FRACTION = 1;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;

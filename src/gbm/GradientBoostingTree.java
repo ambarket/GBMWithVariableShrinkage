@@ -9,12 +9,15 @@ package gbm;
 import java.util.ArrayList;
 //import gbt.ranker.RegressionTree.TerminalType;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import utilities.Logger;
 import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class GradientBoostingTree {
+	public static ExecutorService executor = Executors.newFixedThreadPool(4);
 	// class members
 	private double bagFraction; 
 	private double maxLearningRate;
