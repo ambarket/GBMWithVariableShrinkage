@@ -1,7 +1,5 @@
 package gbm;
 
-import gbm.GradientBoostingTree.ResultFunction;
-
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,26 +12,24 @@ import utilities.RawFile;
 import utilities.StopWatch;
 
 public class Dataset {
-	public int numberOfExamples, numberOfPredictors;
+	private int numberOfExamples, numberOfPredictors;
 	
-	public Attribute.Type[] predictorTypes;
-	public String[] predictorNames;
-	public Attribute[][] instances;
+	private Attribute.Type[] predictorTypes;
+	private String[] predictorNames;
+	private Attribute[][] instances;
 	
-	public Attribute.Type responseType;
-	public String responseName;
-	public Response[] responses; 
+	private Attribute.Type responseType;
+	private String responseName;
+	private Attribute[] responses;
 	
-	public double[] predictions;
-
 	/*  
 	 *  sortedAttributeIndices is [numberOfPredictors][numberOfExamples], each element stores an index into instances/labels_y. 
 	 *  They are sorted in ascending order of instances.get(instanceNum).get(attributeNum)
 	 */
-	public int[][] numericalPredictorSortedIndexMap;
+	private int[][] numericalPredictorSortedIndexMap;
 	
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
-	HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
+	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 	
 	//--------------------------------------Object Construction-----------------------------------------------------------
 	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn) {
@@ -54,6 +50,10 @@ public class Dataset {
 		extractAndStoreAttributeTypes(file, responseVariableColumn);
 		extractAndStoreAttributeNames(file, responseVariableColumn);
 		extractAndStoreExamples(file, responseVariableColumn);
+		
+		// Pre-process trainingData to improve speed of split calculation
+		buildCategoricalPredictorIndexMap();
+		buildnumericalPredictorSortedIndexMap();
 		
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}
@@ -99,10 +99,10 @@ public class Dataset {
 	
 	private void extractAndStoreExamples(RawFile file, int responseVariableColumn) {
 		instances = new Attribute[file.numberOfRecords][file.numberOfAttributes - 1];
-		responses = new Response[file.numberOfRecords];
+		responses = new Attribute[file.numberOfRecords];
 		for (int recordIndex = 0; recordIndex < file.numberOfRecords; recordIndex++) {
 			Attribute[] instance = new Attribute[file.numberOfAttributes - 1];
-			Response response = null;
+			Attribute response = null;
 			for (int attributeIndex = 0; attributeIndex < file.numberOfAttributes; attributeIndex++) {
 				String stringElement = file.data.get(recordIndex)[attributeIndex];
 				boolean missingValue = false;
@@ -118,9 +118,9 @@ public class Dataset {
 					}
 				} else {
 					if (responseType == Attribute.Type.Numeric) {
-						response = new Response((missingValue) ? null : Double.parseDouble(stringElement));
+						response = new Attribute((missingValue) ? null : Double.parseDouble(stringElement));
 					} else if (responseType  == Attribute.Type.Categorical) {
-						response= new Response((missingValue) ? null : stringElement);
+						response= new Attribute((missingValue) ? null : stringElement);
 					}
 				} 
 			}
@@ -128,9 +128,11 @@ public class Dataset {
 			responses[recordIndex] = response;
 		}
 	}
+
+	
 	
 	//---------------------------Pre-processing to speed up regression tree splits------------------------------------------------
-	public void buildCategoricalPredictorIndexMap() {
+	private void buildCategoricalPredictorIndexMap() {
 		for (int predictorIndex = 0; predictorIndex < numberOfPredictors; predictorIndex++) {
 			if (predictorTypes[predictorIndex] == Attribute.Type.Categorical) {
 				HashMap<String, HashSet<Integer>> predictorIndexMap = new HashMap<String, HashSet<Integer>>();
@@ -146,7 +148,7 @@ public class Dataset {
 		}
 	}
 	
-	public void buildnumericalPredictorSortedIndexMap() {
+	private void buildnumericalPredictorSortedIndexMap() {
 		numericalPredictorSortedIndexMap = new int[numberOfPredictors][numberOfExamples];
 		for (int attributeNum = 0; attributeNum < numberOfPredictors; attributeNum++) {
 			InstanceAttributeComparator comparator = new InstanceAttributeComparator(attributeNum);
@@ -163,79 +165,6 @@ public class Dataset {
 		}
 	}
 	
-	//-------------------------------Boosting Helper Methods-----------------------------
-	public void initializePredictions(double initialValue) {
-		predictions = new double[numberOfExamples];
-		for (int i = 0; i < numberOfExamples; i++) {
-			predictions[i] = initialValue;
-		}
-	}
-	
-	public void updatePredictionsWithLearnedValueFromNewTree(RegressionTree tree) {
-		for (int i = 0; i < numberOfExamples; i++) {
-			// Learning rate will be accounted for in getLearnedValue;
-			predictions[i] += tree.getLearnedValue(instances[i]);
-		}
-	}
-
-	public void updatePsuedoResponses() {
-		for (int i = 0; i < numberOfExamples; i++) {
-			responses[i].setPsuedoResponse(responses[i].getNumericValue() - predictions[i]);
-		}
-	}
-	
-	public double calcMeanResponse() {
-		double meanY = 0.0;
-		for (int i = 0; i < numberOfExamples; i++) {
-			meanY += responses[i].getNumericValue();
-		}
-		meanY = meanY / numberOfExamples;
-		return meanY;
-	}
-	
-	public double calcMeanPsuedoResponse() {
-		double meanY = 0.0;
-		for (int i = 0; i < numberOfExamples; i++) {
-			meanY += responses[i].getPsuedoResponse();
-		}
-		meanY = meanY / numberOfExamples;
-		return meanY;
-	}
-	
-	public double calcMeanPsuedoResponse(boolean[] inSample) {
-		double meanY = 0.0;
-		int count = 0;
-		for (int i = 0; i < numberOfExamples; i++) {
-			if (inSample[i]) {
-				meanY += responses[i].getPsuedoResponse();
-				count++;
-			}
-		}
-		meanY = meanY / count;
-		return meanY;
-	}
-	
-	public double calculateRootMeanSquaredError(ResultFunction function) {
-		double rmse = 0.0;
-		for (int i = 0; i < numberOfExamples; i++) {
-			double tmp = (function.predictLabel(instances[i]) - responses[i].getNumericValue());
-			rmse += tmp * tmp;
-		}
-		rmse /= numberOfExamples;
-		rmse = Math.sqrt(rmse);
-		return rmse;
-	}
-	
-	public double calculateRootMeanSquaredError() {
-		double rmse = 0.0;
-		for (int i = 0; i < numberOfExamples; i++) {
-			double tmp = (predictions[i] - responses[i].getNumericValue());
-			rmse += tmp * tmp;
-		}
-		rmse /= numberOfExamples;
-		rmse = Math.sqrt(rmse);
-		return rmse;
-	}
 	
 	private class InstanceAttributeComparator implements Comparator<Map.Entry<Integer, Attribute[]>> {
 		int attributeNum;
@@ -259,5 +188,46 @@ public class Dataset {
 			}
 			return arg0Value.compareTo(arg1Value);
 		}
+	}
+	
+	//-----------------------------GETTERS--------------------------------------------------------
+	public int getNumberOfExamples() {
+		return numberOfExamples;
+	}
+
+	public int getNumberOfPredictors() {
+		return numberOfPredictors;
+	}
+
+	public Attribute.Type[] getPredictorTypes() {
+		return predictorTypes;
+	}
+
+	public String[] getPredictorNames() {
+		return predictorNames;
+	}
+
+	public Attribute[][] getInstances() {
+		return instances;
+	}
+
+	public Attribute.Type getResponseType() {
+		return responseType;
+	}
+
+	public String getResponseName() {
+		return responseName;
+	}
+
+	public Attribute[] getResponses() {
+		return responses;
+	}
+
+	public int[][] getNumericalPredictorSortedIndexMap() {
+		return numericalPredictorSortedIndexMap;
+	}
+
+	public HashMap<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
+		return categoricalPredictorIndexMap;
 	}
 }

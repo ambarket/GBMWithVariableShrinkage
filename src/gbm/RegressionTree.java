@@ -68,12 +68,12 @@ public class RegressionTree {
 		return root.getLearnedValue(instance_x);
 	}
 	
-	public RegressionTree build(Dataset dataset, boolean[] inSample) {
+	public RegressionTree build(GbmDataset dataset, boolean[] inSample) {
 		// Calculate error before splitting
-		double mean = dataset.calcMeanPsuedoResponse(inSample);
+		double mean = dataset.calcMeanPseudoResponse(inSample);
 		double squaredError = 0.0;
-		for (Response y : dataset.responses) {
-			squaredError += (y.getPsuedoResponse() - mean) * (y.getPsuedoResponse() - mean);
+		for (double pseudoResponse : dataset.pseudoResponses) {
+			squaredError += (pseudoResponse - mean) * (pseudoResponse - mean);
 		}
 		// build the regression tree
 		root = buildTree_MaxNumberOfSplits(dataset, inSample, mean, squaredError);
@@ -83,7 +83,7 @@ public class RegressionTree {
 		return this;
 	}
 	
-	private TreeNode buildTree_MaxNumberOfSplits(Dataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
+	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
 		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, maxLearningRate, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {

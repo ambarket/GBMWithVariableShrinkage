@@ -24,7 +24,7 @@ public class Main {
 		}
 	}
 	
-	public static final int NUMBER_OF_TREES = 50000;
+	public static final int NUMBER_OF_TREES = 500;
 	public static final double LEARNING_RATE = 0.001;
 	public static final double BAG_FRACTION = 1;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;
@@ -132,7 +132,7 @@ public class Main {
 			
 			try {
 				function.trees.get(value).root.printTree(new OutputStreamWriter(System.out));
-				System.out.println(function.predictLabel(trainingDataset.instances[value]));
+				System.out.println(function.predictLabel(trainingDataset.getInstances()[value]));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

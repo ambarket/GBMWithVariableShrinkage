@@ -25,12 +25,12 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	@Override
 	public BestSplit call() {
 		BestSplit tmpSplit = null;
-		if (parameters.dataset.predictorTypes[splitPredictorIndex] == Type.Numeric) {
+		if (parameters.dataset.getPredictorTypes()[splitPredictorIndex] == Type.Numeric) {
 			SplitSnapshot snapshot = new SplitSnapshot(parameters.squaredErrorBeforeSplit);
 			int firstSplitIndex = initializeFirstNumericalSplit_ReturnFirstSplitIndex(parameters, snapshot, splitPredictorIndex);
 			tmpSplit = findBestNumericalSplit(parameters, snapshot, splitPredictorIndex, firstSplitIndex);
 		
-		} else if (parameters.dataset.predictorTypes[splitPredictorIndex] == Type.Categorical) {
+		} else if (parameters.dataset.getPredictorTypes()[splitPredictorIndex] == Type.Categorical) {
 			HashMap<String, SumCountAverage> sumCountAverageByCategory = initializeSumCountAverageByCategory(parameters, splitPredictorIndex);
 			tmpSplit = findBestCategoricalSplit(parameters, splitPredictorIndex, sumCountAverageByCategory);
 		}
@@ -47,21 +47,24 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	 * 	the left child
 	 */
 	private static int initializeFirstNumericalSplit_ReturnFirstSplitIndex(FindOptimalSplitParameters parameters, SplitSnapshot snapshot, int splitPredictorIndex) {
+		// Going to be accessing these a lot so just grab the pointer.
+		int[][] numericalPredictorSortedIndexMap = parameters.dataset.getNumericalPredictorSortedIndexMap();
+		
 		int sortedExampleIndex = 0;
 		int lastSortedExampleIndexInLeft = -1;
 		double currentY = 0.0;	
 		while(snapshot.left.getCount() < parameters.minExamplesInNode) {
-			if (parameters.inParent[parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.responses[parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]].getPsuedoResponse();
+			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
+				currentY = parameters.dataset.pseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
 				snapshot.left.addData(currentY);
 				lastSortedExampleIndexInLeft = sortedExampleIndex;
 			}
 			sortedExampleIndex++;
 		}
 		
-		while(sortedExampleIndex < parameters.dataset.numberOfExamples) {
-			if (parameters.inParent[parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.responses[parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]].getPsuedoResponse();
+		while(sortedExampleIndex < parameters.dataset.getNumberOfExamples()) {
+			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
+				currentY = parameters.dataset.pseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
 				snapshot.right.addData(currentY);
 			}
 			sortedExampleIndex++;
@@ -77,29 +80,33 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	 * @return
 	 */
 	private static BestSplit findBestNumericalSplit(FindOptimalSplitParameters parameters, SplitSnapshot snapshot, int splitPredictorIndex, int firstSplitIndex) {
+		// Going to be accessing these a lot so just grab the pointer.
+		int[][] numericalPredictorSortedIndexMap = parameters.dataset.getNumericalPredictorSortedIndexMap();
+		Attribute[][] instances = parameters.dataset.getInstances();
+		
 		BestSplit bestSplit = new BestSplit(parameters.squaredErrorBeforeSplit);
 
 		int lastLeftIndex = firstSplitIndex + 1;
 		int firstRightIndex = lastLeftIndex + 1;
 		while(snapshot.right.getCount() > parameters.minExamplesInNode) {
-			if (lastLeftIndex >= parameters.dataset.numberOfExamples) {
+			if (lastLeftIndex >= parameters.dataset.getNumberOfExamples()) {
 				throw new IllegalStateException("There must be less than 2 * minExamplesInNode "
 						+ "examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
 			}
-			int realLastLeftIndex = parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][lastLeftIndex];
-			int realFirstRightIndex = parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][firstRightIndex];
-			Attribute lastLeftAttribute = parameters.dataset.instances[realLastLeftIndex][splitPredictorIndex];
-			Attribute firstRightAttribute = parameters.dataset.instances[realFirstRightIndex][splitPredictorIndex];
+			int realLastLeftIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][lastLeftIndex];
+			int realFirstRightIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][firstRightIndex];
+			Attribute lastLeftAttribute = instances[realLastLeftIndex][splitPredictorIndex];
+			Attribute firstRightAttribute = instances[realFirstRightIndex][splitPredictorIndex];
 			if (parameters.inParent[realLastLeftIndex]) {
-				double y = parameters.dataset.responses[realLastLeftIndex].getPsuedoResponse();
+				double y = parameters.dataset.pseudoResponses[realLastLeftIndex];
 				snapshot.left.addData(y);
 				snapshot.right.subtractData(y);
 				
 				// Find next sortedExampleIndex that maps to a real example in the parent, this will be the first example in the right child for this split.
 				while (!parameters.inParent[realFirstRightIndex]) {
 					// Note: This should never throw indexOutOfBounds b/c there must always be >= minExamplesInNode examples that will fall into the right child.
-					realFirstRightIndex = parameters.dataset.numericalPredictorSortedIndexMap[splitPredictorIndex][++firstRightIndex];
-					firstRightAttribute = parameters.dataset.instances[realFirstRightIndex][splitPredictorIndex];
+					realFirstRightIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][++firstRightIndex];
+					firstRightAttribute = instances[realFirstRightIndex][splitPredictorIndex];
 				}
 				// We don't want to split if the two values are the same as it would lead to inconsistent results,
 				//	need to move to the next split point. If the values differ, evaluate the new error and update bestSplit if necessary
@@ -127,7 +134,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	}
 	
 	private static HashMap<String, SumCountAverage> initializeSumCountAverageByCategory(FindOptimalSplitParameters parameters, int splitPredictorIndex) {
-		HashMap<String, HashSet<Integer>> categoryToExampleIndexMap = parameters.dataset.categoricalPredictorIndexMap.get(splitPredictorIndex);
+		HashMap<String, HashSet<Integer>> categoryToExampleIndexMap = parameters.dataset.getCategoricalPredictorIndexMap().get(splitPredictorIndex);
 		
 		HashMap<String, SumCountAverage> SumCountAverageByCategory = new HashMap<String, SumCountAverage>();
 		
@@ -135,8 +142,8 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			SumCountAverage categoryData = new SumCountAverage();
 			for (Integer exampleIndex : entry.getValue()) {
 				if (parameters.inParent[exampleIndex]) {
-					double psuedoResponse = parameters.dataset.responses[exampleIndex].getPsuedoResponse();
-					categoryData.addData(psuedoResponse);
+					double pseudoResponse = parameters.dataset.pseudoResponses[exampleIndex];
+					categoryData.addData(pseudoResponse);
 				}
 			}
 			SumCountAverageByCategory.put(entry.getKey(), categoryData);

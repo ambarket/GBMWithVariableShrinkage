@@ -31,7 +31,7 @@ import utilities.SumCountAverage;
 		/*
 		 *  Split data into the left node and the right node based on the best splitting point.
 		 */
-		public static DataSplit splitDataIntoChildren(Dataset dataset, boolean[] inParent, int minExamplesInNode, double maxLearningRate, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		public static DataSplit splitDataIntoChildren(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double maxLearningRate, double meanResponseInParent, double squaredErrorBeforeSplit) {
 			DataSplit dataSplit = new DataSplit();
 			
 			StopWatch timer = (new StopWatch()).start();
@@ -48,13 +48,14 @@ import utilities.SumCountAverage;
 			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, maxLearningRate);
 			
 			// map training data to the correct child
-			dataSplit.inLeftChild = new boolean[dataset.numberOfExamples];
-			dataSplit.inRightChild = new boolean[dataset.numberOfExamples];
-			dataSplit.inMissingChild = new boolean[dataset.numberOfExamples];
+			int numOfExamples = dataset.getNumberOfExamples();
+			dataSplit.inLeftChild = new boolean[numOfExamples];
+			dataSplit.inRightChild = new boolean[numOfExamples];
+			dataSplit.inMissingChild = new boolean[numOfExamples];
 			//int leftC = 0, rightC = 0, missingC= 0;
-			for (int instanceNum = 0; instanceNum < dataset.numberOfExamples; instanceNum++) {
+			for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
 				if (inParent[instanceNum]) {
-					switch (dataSplit.node.whichChild(dataset.instances[instanceNum])) {
+					switch (dataSplit.node.whichChild(dataset.getInstances()[instanceNum])) {
 						case 1:
 							dataSplit.inLeftChild[instanceNum] = true;
 							//leftC++;
@@ -81,8 +82,9 @@ import utilities.SumCountAverage;
 			BestSplit bestSplit = null, tmpSplit = null;
 			
 			ArrayList<Future<BestSplit>> splits = new ArrayList<Future<BestSplit>> ();
-			// Find the best attribute to split on 
-			for (int splitPredictorIndex = 0; splitPredictorIndex < parameters.dataset.numberOfPredictors; splitPredictorIndex ++) {
+			// Find the best attribute to split on
+			int numOfPredictors = parameters.dataset.getNumberOfPredictors();
+			for (int splitPredictorIndex = 0; splitPredictorIndex < numOfPredictors; splitPredictorIndex ++) {
 				splits.add(GradientBoostingTree.executor.submit(new OptimalSplitFinder(parameters, splitPredictorIndex)));
 			}
 			
@@ -111,13 +113,13 @@ import utilities.SumCountAverage;
 	
 
 	class FindOptimalSplitParameters {
-		public FindOptimalSplitParameters(Dataset dataset, boolean[] inParent, int minExamplesInNode, double squaredErrorBeforeSplit) {
+		public FindOptimalSplitParameters(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double squaredErrorBeforeSplit) {
 			this.dataset = dataset;
 			this.inParent = inParent;
 			this.minExamplesInNode = minExamplesInNode;
 			this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
 		}
-		public final Dataset dataset;
+		public final GbmDataset dataset;
 		public final boolean[] inParent;
 		public final int minExamplesInNode;
 		public final double squaredErrorBeforeSplit;

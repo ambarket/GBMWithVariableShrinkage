@@ -27,8 +27,8 @@ public class GradientBoostingTree {
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
 	
-	private Dataset trainingData;
-	private Dataset validationData;
+	private GbmDataset trainingData;
+	private GbmDataset validationData;
 	
 	public GradientBoostingTree(Dataset trainingData, Dataset validationData) {
 		this(trainingData, validationData, 0.5, 0.05, 100, 10, 3);
@@ -37,8 +37,8 @@ public class GradientBoostingTree {
 	public GradientBoostingTree(Dataset trainingData, Dataset validationData, double bagFraction, double learningRate, 
 			int numOfTrees, int minExamplesInNode, int maxNumberOfSplits)
 		{
-		this.trainingData = trainingData;
-		this.validationData = validationData;
+		this.trainingData = new GbmDataset(trainingData);
+		this.validationData = new GbmDataset(validationData);
 		setBagFraction(bagFraction);
 		setMaxLearningRate(learningRate);
 		setNumOfTrees(numOfTrees);
@@ -84,7 +84,7 @@ public class GradientBoostingTree {
 			System.exit(0);
 		}
 		
-		if (minExamplesInNode * 2 > trainingData.numberOfExamples) {
+		if (minExamplesInNode * 2 > trainingData.getNumberOfExamples()) {
 			Logger.println(Logger.LEVELS.DEBUG, "The number of examples int he dataset must be >= minExamplesInNode * 2");
 			System.exit(0);
 		}
@@ -188,13 +188,11 @@ public class GradientBoostingTree {
 	 *  On success, return function; otherwise, return null. 
 	 */
 	public ResultFunction buildGradientBoostingMachine() {
-		// Pre-process trainingData to improve speed of split calculation
-		trainingData.buildCategoricalPredictorIndexMap();
-		trainingData.buildnumericalPredictorSortedIndexMap();
+
 		
 		// Initialize the function approximation to the mean response in the training data
 		double meanTrainingResponse = trainingData.calcMeanResponse();
-		ResultFunction function = new ResultFunction(maxLearningRate, meanTrainingResponse, trainingData.numberOfPredictors);
+		ResultFunction function = new ResultFunction(maxLearningRate, meanTrainingResponse, trainingData.getNumberOfPredictors());
 		
 		// Initialize predictions of all instances to the initial function value.
 		trainingData.initializePredictions(meanTrainingResponse);
@@ -204,18 +202,18 @@ public class GradientBoostingTree {
 		StopWatch timer = (new StopWatch());
 		for (int iterationNum = 0; iterationNum < numOfTrees; iterationNum++) {
 			timer.start();
-			// Update the current psuedo responses (gradients) of all the training instances.
-			trainingData.updatePsuedoResponses();
+			// Update the current pseudo responses (gradients) of all the training instances.
+			trainingData.updatePseudoResponses();
 			
 			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-			int[] shuffledIndices = RandomSample.fisherYatesShuffle(trainingData.numberOfExamples);
+			int[] shuffledIndices = RandomSample.fisherYatesShuffle(trainingData.getNumberOfExamples());
 			int sampleSize = (int)(bagFraction * shuffledIndices.length);
-			boolean[] inSample = new boolean[trainingData.numberOfExamples];
+			boolean[] inSample = new boolean[trainingData.getNumberOfExamples()];
 			for (int i = 0; i < sampleSize; i++ ) {
 				inSample[shuffledIndices[i]] = true;
 			}
 			
-			// Fit a regression tree to predict the current psuedo responses on the training data.
+			// Fit a regression tree to predict the current pseudo responses on the training data.
 			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits, maxLearningRate)).build(trainingData, inSample);
 			
 			// Update our predictions for each training and validation instance using the new tree.
