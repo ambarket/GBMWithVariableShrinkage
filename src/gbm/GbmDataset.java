@@ -47,13 +47,11 @@ public class GbmDataset {
 	}
 	
 	public double calcMeanResponse() {
-		Attribute[] responses = dataset.getResponses();
-		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			meanY += responses[i].getNumericValue();
-		}
-		meanY = meanY / getNumberOfExamples();
-		return meanY;
+		return dataset.calcMeanResponse();
+	}
+	
+	public double calcMeanResponse(boolean[] inSample) {
+		return dataset.calcMeanResponse(inSample);
 	}
 	
 	public double calcMeanPseudoResponse() {
@@ -83,7 +81,7 @@ public class GbmDataset {
 		Attribute[][] instances = dataset.getInstances();
 		double rmse = 0.0;
 		for (int i = 0; i < getNumberOfExamples(); i++) {
-			double tmp = (function.predictLabel(instances[i]) - responses[i].getNumericValue());
+			double tmp = (function.getLearnedValue(instances[i]) - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
 		rmse /= getNumberOfExamples();
@@ -97,6 +95,37 @@ public class GbmDataset {
 		for (int i = 0; i < getNumberOfExamples(); i++) {
 			double tmp = (predictions[i] - responses[i].getNumericValue());
 			rmse += tmp * tmp;
+		}
+		rmse /= getNumberOfExamples();
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calculateRootMeanSquaredError(boolean[] inSample) {
+		Attribute[] responses = dataset.getResponses();
+		double rmse = 0.0;
+		for (int i = 0; i < getNumberOfExamples(); i++) {
+			if (inSample[i]) {
+				double tmp = (predictions[i] - responses[i].getNumericValue());
+				rmse += tmp * tmp;
+			}
+		}
+		rmse /= getNumberOfExamples();
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calculateRootMeanSquaredError(boolean[] inSample, boolean negate) {
+		if (!negate) {
+			return calculateRootMeanSquaredError(inSample);
+		}
+		Attribute[] responses = dataset.getResponses();
+		double rmse = 0.0;
+		for (int i = 0; i < getNumberOfExamples(); i++) {
+			if (!inSample[i]) {
+				double tmp = (predictions[i] - responses[i].getNumericValue());
+				rmse += tmp * tmp;
+			}
 		}
 		rmse /= getNumberOfExamples();
 		rmse = Math.sqrt(rmse);

@@ -230,4 +230,41 @@ public class Dataset {
 	public HashMap<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
 		return categoricalPredictorIndexMap;
 	}
+	
+	public double calcMeanResponse() {
+		Attribute[] responses = getResponses();
+		double meanY = 0.0;
+		for (int i = 0; i < getNumberOfExamples(); i++) {
+			meanY += responses[i].getNumericValue();
+		}
+		meanY = meanY / getNumberOfExamples();
+		return meanY;
+	}
+	
+	public double calcMeanResponse(boolean[] inSample) {
+		Attribute[] responses = getResponses();
+		double meanY = 0.0;
+		for (int i = 0; i < getNumberOfExamples(); i++) {
+			if (inSample[i]) {
+				meanY += responses[i].getNumericValue();
+			}
+		}
+		meanY = meanY / getNumberOfExamples();
+		return meanY;
+	}
+	
+	public double calcMeanResponse(boolean[] inSample, boolean negate) {
+		if (!negate) {
+			return calcMeanResponse(inSample);
+		}
+		Attribute[] responses = getResponses();
+		double meanY = 0.0;
+		for (int i = 0; i < getNumberOfExamples(); i++) {
+			if (!inSample[i]) {
+				meanY += responses[i].getNumericValue();
+			}
+		}
+		meanY = meanY / getNumberOfExamples();
+		return meanY;
+	}
 }
