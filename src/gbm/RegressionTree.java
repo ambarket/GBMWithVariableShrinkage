@@ -21,18 +21,28 @@ public class RegressionTree {
 	// class members
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
+	private double maxLearningRate;
 	
 	public TreeNode root;
 	
 	// construction function
 	public RegressionTree() {
-		this(10, 3);
+		this(10, 3, .05);
 	}
 	
-	public RegressionTree(int minExamplesInNode, int maxNumberOfSplits) {
+	public RegressionTree(int minExamplesInNode, int maxNumberOfSplits, double maxLearningRate) {
 		setMinObsInNode(minExamplesInNode);
 		setMaxNumberOfSplits(maxNumberOfSplits);
+		setMaxLearningRate(maxLearningRate);
 		root = null;
+	}
+	
+	private void setMaxLearningRate(double maxLearningRate) {
+		if (maxLearningRate <= 0) {
+			Logger.println(Logger.LEVELS.DEBUG, "Learning rate must be >= 0");
+			System.exit(0);
+		}
+		this.maxLearningRate = maxLearningRate;
 	}
 	
 	public void setMinObsInNode(int minExamplesInNode) {
@@ -60,7 +70,7 @@ public class RegressionTree {
 	
 	public RegressionTree build(Dataset dataset, boolean[] inSample) {
 		// Calculate error before splitting
-		double mean = dataset.calcMeanY(inSample);
+		double mean = dataset.calcMeanPsuedoResponse(inSample);
 		double squaredError = 0.0;
 		for (Response y : dataset.responses) {
 			squaredError += (y.getPsuedoResponse() - mean) * (y.getPsuedoResponse() - mean);
@@ -75,13 +85,13 @@ public class RegressionTree {
 	
 	private TreeNode buildTree_MaxNumberOfSplits(Dataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
+		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, maxLearningRate, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			int count = 0;
 			for (int i = 0; i < inSample.length; i++) {
 				count += (inSample[i]) ? 1 : 0;
 			}
-			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
+			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, maxLearningRate, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
 		}
 		leaves.add(rootSplit);
@@ -93,13 +103,13 @@ public class RegressionTree {
 				DataSplit parent = leaves.poll();
 				DataSplit left = null, right = null, missing = null;
 				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftInstanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, parent.node.leftTerminalValue, parent.node.leftSquaredError);
+					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, maxLearningRate, parent.node.leftTerminalValue, parent.node.leftSquaredError);
 				}
 				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightInstanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, parent.node.rightTerminalValue, parent.node.rightSquaredError);
+					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, maxLearningRate, parent.node.rightTerminalValue, parent.node.rightSquaredError);
 				}
 				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingInstanceCount) {
-					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, parent.node.missingTerminalValue, parent.node.missingSquaredError);
+					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, maxLearningRate, parent.node.missingTerminalValue, parent.node.missingSquaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));

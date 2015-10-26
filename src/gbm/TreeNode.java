@@ -30,22 +30,24 @@ public class TreeNode {
 	public double missingSquaredError = Double.MAX_VALUE;
 	public double squaredErrorBeforeSplit = Double.MAX_VALUE;
 	
-	// Each non-leaf node has a left child and a right child.
-	public TreeNode leftChild;
-	public TreeNode rightChild;
-	public TreeNode missingChild;
+	public TreeNode leftChild = null;
+	public TreeNode rightChild = null;
+	public TreeNode missingChild = null;
+	
+	public double maxLearningRate = 0.0;
 	
 	/*
 	 * Use when unable to split the root node.
 	 */
-	public TreeNode(double missingTerminalValue, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
+	public TreeNode(double missingTerminalValue, double maxLearningRate, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
 		this.splitPredictorIndex = -1;
 		this.missingTerminalValue = missingTerminalValue;
+		this.maxLearningRate = maxLearningRate;
 		this.missingSquaredError = squaredErrorBeforeSplit;
 		this.missingInstanceCount = numOfInstancesBeforeSplit;
 	}
 	
-	public TreeNode(BestSplit bestSplit, double meanResponseInParent) {
+	public TreeNode(BestSplit bestSplit, double meanResponseInParent, double maxLearningRate) {
 		this.splitPredictorType = bestSplit.splitPredictorType;
 		this.splitPredictorIndex = bestSplit.splitPredictorIndex;
 		this.numericSplitValue = bestSplit.numericSplitValue;
@@ -67,6 +69,8 @@ public class TreeNode {
 		this.missingTerminalValue = meanResponseInParent;
 		
 		this.squaredErrorBeforeSplit = bestSplit.squaredErrorBeforeSplit;
+		
+		this.maxLearningRate = maxLearningRate;
 	}
 	
 	// TODO: Doesn't account for missing values;
@@ -138,19 +142,20 @@ public class TreeNode {
 			switch(whichChild) {
 				case 1:
 					if (current.leftChild == null) {
-						return current.leftTerminalValue;
+						// TODO: Finidh implementing, will likely require adding actual terminal nodes.
+						return maxLearningRate * current.leftTerminalValue;
 					}
 					current = current.leftChild;
 					break;
 				case 2:
 					if (current.rightChild == null) {
-						return current.rightTerminalValue;
+						return maxLearningRate * current.rightTerminalValue;
 					}
 					current = current.rightChild;
 					break;
 				case 3:
 					if (current.missingChild == null) {
-						return current.missingTerminalValue;
+						return maxLearningRate * current.missingTerminalValue;
 					}
 					current = current.missingChild;
 					break;
@@ -171,7 +176,23 @@ public class TreeNode {
     private void printNodeValue(OutputStreamWriter out) throws IOException {
     	String s = null;
     	if (splitPredictorType == Type.Numeric) {
-    		s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
+    		//s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
+    		s= String.format("{"
+    				+ "Attr: %d "
+    				+ "Val: %.5f "
+    				+ "ErrorReduction: %.5f "
+    				+ "Weight: %d "
+    				+ "LeftPred: %f "
+    				+ "RightPred: %f "
+    				+ "}", 
+    				
+    				splitPredictorIndex, 
+    				numericSplitValue, 
+    				getSquaredErrorImprovement(), 
+    				leftInstanceCount + rightInstanceCount,
+    				maxLearningRate * leftTerminalValue,
+    				maxLearningRate * rightTerminalValue
+    				);
     	} else if (splitPredictorType == Type.Categorical) {
     		s= String.format("{"
     				+ "Attr: %d "
@@ -186,8 +207,8 @@ public class TreeNode {
     				"Categories coming soon", 
     				getSquaredErrorImprovement(), 
     				leftInstanceCount + rightInstanceCount,
-    				leftTerminalValue,
-    				rightTerminalValue
+    				maxLearningRate * leftTerminalValue,
+    				maxLearningRate * rightTerminalValue
     				);
     	}
     	out.write(s);

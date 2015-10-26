@@ -24,7 +24,8 @@ public class Dataset {
 	public String responseName;
 	public Response[] responses; 
 	
-	
+	public double[] predictions;
+
 	/*  
 	 *  sortedAttributeIndices is [numberOfPredictors][numberOfExamples], each element stores an index into instances/labels_y. 
 	 *  They are sorted in ascending order of instances.get(instanceNum).get(attributeNum)
@@ -34,9 +35,30 @@ public class Dataset {
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
 	HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 	
-
-	private void extractAndStoreAttributeTypes(RawFile file, int responseVariableColumn) {
+	//--------------------------------------Object Construction-----------------------------------------------------------
+	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn) {
+		StopWatch timer = (new StopWatch()).start();
+		if (!attributeTypeHeader) {
+			throw new UnsupportedOperationException("Support for dataset files without an explicit attribute type header is not yet implemented");
+		}
+		if (responseVariableColumn < 0) {
+			throw new IllegalArgumentException("responseVariableColumn must be specificed");
+		}
 		
+		// Read dataset file as strings
+		RawFile file = new RawFile(filePath, attributeTypeHeader, attributeNameHeader);
+		numberOfExamples = file.numberOfRecords;
+		numberOfPredictors = file.numberOfAttributes - 1;
+		
+		// Extract, validate, and store the dataset information in Attribute.Type, Attribute, and Response objects
+		extractAndStoreAttributeTypes(file, responseVariableColumn);
+		extractAndStoreAttributeNames(file, responseVariableColumn);
+		extractAndStoreExamples(file, responseVariableColumn);
+		
+		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
+	}
+	
+	private void extractAndStoreAttributeTypes(RawFile file, int responseVariableColumn) {
 		predictorTypes = new Attribute.Type[file.attributeTypes.length - 1];
 		for (int i = 0; i < file.numberOfAttributes; i++) {
 			switch(file.attributeTypes[i].toUpperCase()) {
@@ -107,7 +129,8 @@ public class Dataset {
 		}
 	}
 	
-	private void buildCategoricalPredictorIndexMap() {
+	//---------------------------Pre-processing to speed up regression tree splits------------------------------------------------
+	public void buildCategoricalPredictorIndexMap() {
 		for (int predictorIndex = 0; predictorIndex < numberOfPredictors; predictorIndex++) {
 			if (predictorTypes[predictorIndex] == Attribute.Type.Categorical) {
 				HashMap<String, HashSet<Integer>> predictorIndexMap = new HashMap<String, HashSet<Integer>>();
@@ -123,7 +146,7 @@ public class Dataset {
 		}
 	}
 	
-	private void buildnumericalPredictorSortedIndexMap() {
+	public void buildnumericalPredictorSortedIndexMap() {
 		numericalPredictorSortedIndexMap = new int[numberOfPredictors][numberOfExamples];
 		for (int attributeNum = 0; attributeNum < numberOfPredictors; attributeNum++) {
 			InstanceAttributeComparator comparator = new InstanceAttributeComparator(attributeNum);
@@ -138,38 +161,39 @@ public class Dataset {
 				numericalPredictorSortedIndexMap[attributeNum][i] = entry.getKey();
 			}
 		}
-		
 	}
 	
-	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn) {
-		StopWatch timer = (new StopWatch()).start();
-		if (!attributeTypeHeader) {
-			throw new UnsupportedOperationException("Support for dataset files without an explicit attribute type header is not yet implemented");
+	//-------------------------------Boosting Helper Methods-----------------------------
+	public void initializePredictions(double initialValue) {
+		predictions = new double[numberOfExamples];
+		for (int i = 0; i < numberOfExamples; i++) {
+			predictions[i] = initialValue;
 		}
-		if (responseVariableColumn < 0) {
-			throw new IllegalArgumentException("responseVariableColumn must be specificed");
-		}
-		
-		// Read dataset file as strings
-		RawFile file = new RawFile(filePath, attributeTypeHeader, attributeNameHeader);
-		numberOfExamples = file.numberOfRecords;
-		numberOfPredictors = file.numberOfAttributes - 1;
-		
-		// Extract, validate, and store the dataset information in Attribute.Type, Attribute, and Response objects
-		extractAndStoreAttributeTypes(file, responseVariableColumn);
-		extractAndStoreAttributeNames(file, responseVariableColumn);
-		extractAndStoreExamples(file, responseVariableColumn);
-		
-		// Pre-processing to improve speed of split calculation
-		buildCategoricalPredictorIndexMap();
-		buildnumericalPredictorSortedIndexMap();
-		
-		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}
 	
+	public void updatePredictionsWithLearnedValueFromNewTree(RegressionTree tree) {
+		for (int i = 0; i < numberOfExamples; i++) {
+			// Learning rate will be accounted for in getLearnedValue;
+			predictions[i] += tree.getLearnedValue(instances[i]);
+		}
+	}
 
+	public void updatePsuedoResponses() {
+		for (int i = 0; i < numberOfExamples; i++) {
+			responses[i].setPsuedoResponse(responses[i].getNumericValue() - predictions[i]);
+		}
+	}
 	
-	public double calcMeanY() {
+	public double calcMeanResponse() {
+		double meanY = 0.0;
+		for (int i = 0; i < numberOfExamples; i++) {
+			meanY += responses[i].getNumericValue();
+		}
+		meanY = meanY / numberOfExamples;
+		return meanY;
+	}
+	
+	public double calcMeanPsuedoResponse() {
 		double meanY = 0.0;
 		for (int i = 0; i < numberOfExamples; i++) {
 			meanY += responses[i].getPsuedoResponse();
@@ -178,7 +202,7 @@ public class Dataset {
 		return meanY;
 	}
 	
-	public double calcMeanY(boolean[] inSample) {
+	public double calcMeanPsuedoResponse(boolean[] inSample) {
 		double meanY = 0.0;
 		int count = 0;
 		for (int i = 0; i < numberOfExamples; i++) {
@@ -195,6 +219,17 @@ public class Dataset {
 		double rmse = 0.0;
 		for (int i = 0; i < numberOfExamples; i++) {
 			double tmp = (function.predictLabel(instances[i]) - responses[i].getNumericValue());
+			rmse += tmp * tmp;
+		}
+		rmse /= numberOfExamples;
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calculateRootMeanSquaredError() {
+		double rmse = 0.0;
+		for (int i = 0; i < numberOfExamples; i++) {
+			double tmp = (predictions[i] - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
 		rmse /= numberOfExamples;

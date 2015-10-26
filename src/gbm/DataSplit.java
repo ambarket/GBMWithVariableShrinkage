@@ -26,7 +26,7 @@ import utilities.SumCountAverage;
 		/*
 		 *  Split data into the left node and the right node based on the best splitting point.
 		 */
-		public static DataSplit splitDataIntoChildren(Dataset dataset, boolean[] inParent, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		public static DataSplit splitDataIntoChildren(Dataset dataset, boolean[] inParent, int minExamplesInNode, double maxLearningRate, double meanResponseInParent, double squaredErrorBeforeSplit) {
 			DataSplit dataSplit = new DataSplit();
 			
 			StopWatch timer = (new StopWatch()).start();
@@ -40,27 +40,27 @@ import utilities.SumCountAverage;
 			}
 			
 			// Build a new tree node based on the best split information
-			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent);
+			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, maxLearningRate);
 			
 			// map training data to the correct child
 			dataSplit.inLeftChild = new boolean[dataset.numberOfExamples];
 			dataSplit.inRightChild = new boolean[dataset.numberOfExamples];
 			dataSplit.inMissingChild = new boolean[dataset.numberOfExamples];
-			int leftC = 0, rightC = 0, missingC= 0;
+			//int leftC = 0, rightC = 0, missingC= 0;
 			for (int instanceNum = 0; instanceNum < dataset.numberOfExamples; instanceNum++) {
 				if (inParent[instanceNum]) {
 					switch (dataSplit.node.whichChild(dataset.instances[instanceNum])) {
 						case 1:
 							dataSplit.inLeftChild[instanceNum] = true;
-							leftC++;
+							//leftC++;
 							break;
 						case 2:
 							dataSplit.inRightChild[instanceNum] = true;
-							rightC++;
+							//rightC++;
 							break;
 						case 3:
 							dataSplit.inMissingChild[instanceNum] = true;
-							missingC++;
+							//missingC++;
 							break;
 						default:
 							throw new IllegalStateException("Trrenode.whichChild returned an unexpected value to DataSplit.splitDataIntoChildren");
@@ -104,12 +104,9 @@ import utilities.SumCountAverage;
 			public SumCountAverage left = new SumCountAverage(), right= new SumCountAverage();
 			private double 	currentLeftError = Double.MAX_VALUE, currentRightError = Double.MAX_VALUE, 
 					currentTotalError = Double.MAX_VALUE, minimumTotalError = Double.MAX_VALUE;
-			public double improvement;
-			double squaredErrorBeforeSplit;
 			
 			SplitSnapshot(double squaredErrorBeforeSplit) {
 				this.minimumTotalError = squaredErrorBeforeSplit;
-				this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
 			}
 			
 			public void recomputeErrors() {
@@ -118,7 +115,7 @@ import utilities.SumCountAverage;
 				currentTotalError = currentLeftError + currentRightError;
 			}
 			
-			// TODO: What is this formula and why/how is it used in GBM. Do I need to use it?
+			/* TODO: What is this formula and why/how is it used in GBM. Do I need to use it?
 			public void recomputeImprovement() {
 				improvement = left.getCount() * right.getCount() * (left.getMean() - right.getMean()) * (left.getMean() - right.getMean()) / left.getCount() + right.getCount();
 				double improvement2 = squaredErrorBeforeSplit - (currentTotalError);
@@ -126,6 +123,7 @@ import utilities.SumCountAverage;
 					System.out.println();
 				}
 			}
+			*/
 		}
 
 		private static class FindOptimalSplitParameters {

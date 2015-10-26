@@ -17,25 +17,27 @@ import utilities.StopWatch;
 public class GradientBoostingTree {
 	// class members
 	private double bagFraction; 
-	private double learningRate;
+	private double maxLearningRate;
 	private int numOfTrees;
 	
 	// tree related parameters
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
 	
-	private Dataset dataset;
+	private Dataset trainingData;
+	private Dataset validationData;
 	
-	public GradientBoostingTree(Dataset dataset) {
-		this(dataset, 0.5, 0.05, 100, 10, 3);
+	public GradientBoostingTree(Dataset trainingData, Dataset validationData) {
+		this(trainingData, validationData, 0.5, 0.05, 100, 10, 3);
 	}
 	
-	public GradientBoostingTree(Dataset dataset, double bagFraction, double learningRate, 
+	public GradientBoostingTree(Dataset trainingData, Dataset validationData, double bagFraction, double learningRate, 
 			int numOfTrees, int minExamplesInNode, int maxNumberOfSplits)
 		{
-		this.dataset = dataset;
+		this.trainingData = trainingData;
+		this.validationData = validationData;
 		setBagFraction(bagFraction);
-		setLearningRate(learningRate);
+		setMaxLearningRate(learningRate);
 		setNumOfTrees(numOfTrees);
 		setMinObsInNode(minExamplesInNode);
 		setmaxNumberOfSplits(maxNumberOfSplits);
@@ -49,12 +51,12 @@ public class GradientBoostingTree {
 		this.bagFraction = bagFraction;
 	}
 	
-	private void setLearningRate(double learningRate) {
-		if (learningRate <= 0) {
+	private void setMaxLearningRate(double maxLearningRate) {
+		if (maxLearningRate <= 0) {
 			Logger.println(Logger.LEVELS.DEBUG, "Learning rate must be >= 0");
 			System.exit(0);
 		}
-		this.learningRate = learningRate;
+		this.maxLearningRate = maxLearningRate;
 	}
 	
 	private void setNumOfTrees(int numOfTrees) {
@@ -79,7 +81,7 @@ public class GradientBoostingTree {
 			System.exit(0);
 		}
 		
-		if (minExamplesInNode * 2 > dataset.numberOfExamples) {
+		if (minExamplesInNode * 2 > trainingData.numberOfExamples) {
 			Logger.println(Logger.LEVELS.DEBUG, "The number of examples int he dataset must be >= minExamplesInNode * 2");
 			System.exit(0);
 		}
@@ -91,8 +93,8 @@ public class GradientBoostingTree {
 		return bagFraction;
 	}
 	
-	public double getLearningRate() {
-		return learningRate;
+	public double getMaxLearningRate() {
+		return maxLearningRate;
 	}
 	
 	public int getNumOfTrees() {
@@ -114,15 +116,25 @@ public class GradientBoostingTree {
 		public double learningRate;
 		public int numberOfPredictors;
 		
+		public ArrayList<Double> trainingError;
+		public ArrayList<Double> validationError;
+		
 		// construction function
 		ResultFunction(double learningRate, double intialValue, int numberOfPredictors) {
 			this.initialValue = intialValue;
 			this.learningRate = learningRate;
 			this.numberOfPredictors = numberOfPredictors;
 			trees = new ArrayList<RegressionTree> ();
+			trainingError = new ArrayList<Double>();
+			validationError = new ArrayList<Double>();
 		}
 		
 		
+		public void addTree(RegressionTree newTree, double trainingError, double validationError) {
+			this.trees.add(newTree);
+			this.trainingError.add(trainingError);
+			this.validationError.add(validationError);
+		}
 		// the following function is used to estimate the function
 		public double predictLabel(Attribute[] instance_x) {
 			double result = initialValue;
@@ -134,8 +146,8 @@ public class GradientBoostingTree {
 			Iterator<RegressionTree> iter = trees.iterator();
 			while (iter.hasNext()) {
 				RegressionTree tree = iter.next();
-				
-				result += learningRate * tree.getLearnedValue(instance_x);
+				// Learning rate is accoutned for in the tree itself.
+				result += tree.getLearnedValue(instance_x);
 			}
 			
 			return result;
@@ -173,61 +185,47 @@ public class GradientBoostingTree {
 	 *  On success, return function; otherwise, return null. 
 	 */
 	public ResultFunction buildGradientBoostingMachine() {
-		// get an initial guess of the function
+		// Pre-process trainingData to improve speed of split calculation
+		trainingData.buildCategoricalPredictorIndexMap();
+		trainingData.buildnumericalPredictorSortedIndexMap();
 		
-		// initialize the final result
-		double meanY = dataset.calcMeanY();
-		ResultFunction function = new ResultFunction(learningRate, meanY, dataset.numberOfPredictors);
+		// Initialize the function approximation to the mean response in the training data
+		double meanTrainingResponse = trainingData.calcMeanResponse();
+		ResultFunction function = new ResultFunction(maxLearningRate, meanTrainingResponse, trainingData.numberOfPredictors);
 		
-		// prepare the iteration
-		double[] hypothesisValue = new double[dataset.numberOfExamples];
-		// initialize h_value
-		
-		for (int i = 0; i < dataset.numberOfExamples; i++) {
-			hypothesisValue[i] = meanY;
-		}
-		
+		// Initialize predictions of all instances to the initial function value.
+		trainingData.initializePredictions(meanTrainingResponse);
+		validationData.initializePredictions(meanTrainingResponse);
+	
 		// begin the boosting process
-		int iterationNum = 0;
-
-		
 		StopWatch timer = (new StopWatch());
-		
-		/* Used to track which indices into the instances and responses structures are in the sample for the current iteration.
-		 * 
-		 * This will allow us to presort the instances by each attribute and save a ton of time while finding the best split point
-		 * when growing the trees.
-		 * 
-		 */
-		boolean[] inSample = new boolean[dataset.numberOfExamples];
-		while (iterationNum < numOfTrees) {
+		for (int iterationNum = 0; iterationNum < numOfTrees; iterationNum++) {
 			timer.start();
-			// calculate the gradient and store as the new responses to fit to.
-			for (int i = 0; i < dataset.numberOfExamples; i++) {
-				dataset.responses[i].setPsuedoResponse(dataset.responses[i].getNumericValue() - hypothesisValue[i]);
-			}
+			// Update the current psuedo responses (gradients) of all the training instances.
+			trainingData.updatePsuedoResponses();
 			
-			// we need to sample randomly without replacement
-			int[] shuffledIndices = RandomSample.fisherYatesShuffle(dataset.numberOfExamples);
-			
-			// data for growing trees
+			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
+			int[] shuffledIndices = RandomSample.fisherYatesShuffle(trainingData.numberOfExamples);
 			int sampleSize = (int)(bagFraction * shuffledIndices.length);
+			boolean[] inSample = new boolean[trainingData.numberOfExamples];
 			for (int i = 0; i < sampleSize; i++ ) {
 				inSample[shuffledIndices[i]] = true;
 			}
 			
-			// fit a regression tree and add it to the list of trees
-			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits)).build(dataset, inSample);
-	
-			function.trees.add(tree);
+			// Fit a regression tree to predict the current psuedo responses on the training data.
+			RegressionTree tree = (new RegressionTree(minExamplesInNode, maxNumberOfSplits, maxLearningRate)).build(trainingData, inSample);
 			
-			// update hypothesis information, prepare for the next iteration
-			for (int i = 0; i < dataset.numberOfExamples; i++) {
-				hypothesisValue[i] += learningRate * tree.getLearnedValue(dataset.instances[i]);
-			}
+			// Update our predictions for each training and validation instance using the new tree.
+			trainingData.updatePredictionsWithLearnedValueFromNewTree(tree);
+			validationData.updatePredictionsWithLearnedValueFromNewTree(tree);
+
+			// Calculate the training and validation error for this iteration.
+			double trainingRMSE = trainingData.calculateRootMeanSquaredError();
+			double validationRMSE = validationData.calculateRootMeanSquaredError();
 			
-			// next iteration
-			iterationNum += 1;
+			// Add the tree to the function approximation, keep track of the training and validation errors.
+			function.addTree(tree, trainingRMSE, validationRMSE);
+			
 			Logger.println(Logger.LEVELS.DEBUG, "\tAdded 1 tree in : " + timer.getElapsedSeconds());
 		}
 		return function;

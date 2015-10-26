@@ -6,7 +6,7 @@ testdf <- read.table("C:/Users/ambar_000/Documents/GitHub/GBMWithVariableShrinka
 response_column <- which(colnames(traindf) == "PE")
 trainy <- traindf$PE
 
-numOfTrees <- 500
+numOfTrees <- 5000
 gbm_formula <- as.formula(paste0("PE ~ ", paste(colnames(traindf[, -response_column]), collapse = " + ")))
 
 
@@ -20,7 +20,15 @@ sqrt(mean((testdf$PE - predictions_gbm)^2))
 predictions_train_gbm <- predict(gbm_model, newdata = traindf[, -response_column], n.trees = numOfTrees, type = "response")
 sqrt(mean((traindf$PE - predictions_train_gbm)^2))
 
+
 pretty.gbm.tree(gbm_model,i.tree = 1)
 pretty.gbm.tree(gbm_model,i.tree = numOfTrees)
+
+
+gbm.perf(gbm_model, method="cv")
+
+gbm_model$train.error
+gbm_model$valid.error
+gbm_model$oobag.improve
 
 ideas - pick a subset of attributes to best pslit on instead of all. Did blum give me this idea?

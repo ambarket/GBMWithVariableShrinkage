@@ -10,8 +10,8 @@ import utilities.MersenneTwisterFast;
 public class DataSetGen {
 	public static void gen() throws IOException {
 		
-		String training = System.getProperty("user.dir") + "/data/gen/" + "TRAINING.txt";
-		String test= System.getProperty("user.dir") + "/data/gen/" + "TEST.txt";
+		String training = System.getProperty("user.dir") + "/data/gen2/" + "TRAINING.txt";
+		String test= System.getProperty("user.dir") + "/data/gen2/" + "TEST.txt";
 		
 		int numOfAttributes = 10;
 		int numOfTrainExamples = 9000;
@@ -47,6 +47,8 @@ public class DataSetGen {
 			int type = rand.nextInt(2);
 			if (i == numOfAttributes-1) {
 				type = 1; // Force response to be numeric
+			} else {
+				type = 0; // For all categorical preicotrs
 			}
 			
 			attrTypes[i] = types[type];
