@@ -104,13 +104,15 @@ public class GbmDataset {
 	public double calculateRootMeanSquaredError(boolean[] inSample) {
 		Attribute[] responses = dataset.getResponses();
 		double rmse = 0.0;
+		double count = 0;
 		for (int i = 0; i < getNumberOfExamples(); i++) {
 			if (inSample[i]) {
 				double tmp = (predictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
+				count++;
 			}
 		}
-		rmse /= getNumberOfExamples();
+		rmse /= count;
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
@@ -121,13 +123,15 @@ public class GbmDataset {
 		}
 		Attribute[] responses = dataset.getResponses();
 		double rmse = 0.0;
+		int count = 0;
 		for (int i = 0; i < getNumberOfExamples(); i++) {
 			if (!inSample[i]) {
 				double tmp = (predictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
+				count++;
 			}
 		}
-		rmse /= getNumberOfExamples();
+		rmse /= count;
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}

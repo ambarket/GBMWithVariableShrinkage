@@ -20,24 +20,24 @@ public class PlotGenerator {
 		if (iterationNumber == null) {
 			iterationNumber = new double[trainingErrorByIteration.length];
 			for (int i = 1; i <= trainingErrorByIteration.length; i++) {
-				iterationNumber[i] = i;
+				iterationNumber[i-1] = i;
 			}
 		}
-		Plot2DPanel plot = new Plot2DPanel(new double[] {0 , 0 }, new double[] { 1, 1 },  new String[] { "LINEAR", "LINEAR" }, new String[] { "Iteration Number", "Error" });
+		Plot2DPanel plot = new Plot2DPanel(new double[] {0 , 0 }, new double[] { 1, 1 },  new String[] { "lin", "lin" }, new String[] { "Iteration Number", "Error" });
 		plot.addLegend("SOUTH");
 		plot.addLinePlot("Training Error", iterationNumber, trainingErrorByIteration);
 		plot.addLinePlot("Validation Error", iterationNumber, validationErrorByIteration);
 
-		plot.setFixedBounds(1, -0.1, 1);
-		plot.setFixedBounds(0, 0, 1000);
-		plot.setLinearSlicing(1, 11);
-		plot.setLinearSlicing(0, 10);
+		//plot.setFixedBounds(1, -0.1, 1);
+		//plot.setFixedBounds(0, 0, 1000);
+		//plot.setLinearSlicing(1, 11);
+		//plot.setLinearSlicing(0, 10);
 		
 	    BaseLabel title = new BaseLabel(titleStr, Color.BLACK, 0.5, 1.1);
         title.setFont(new Font("Courier", Font.BOLD, 15));
         plot.addPlotable(title);
         
-        double minTrainingError = 1, minValidationError = 1;
+        double minTrainingError = Double.MAX_VALUE, minValidationError = Double.MAX_VALUE;
         int minTrainingErrorIteration = trainingErrorByIteration.length, minValidationErrorIteration = validationErrorByIteration.length;
         for (int i = 0; i < trainingErrorByIteration.length; i++) {
         	if ( trainingErrorByIteration[i] < minTrainingError) {
@@ -57,7 +57,7 @@ public class PlotGenerator {
         plot.addPlotable(minErrors);
         
         
-		plot.setLinearSlicing(1, 11);
+		//plot.setLinearSlicing(1, 11);
 		
 		JFrame frame = new JFrame("a plot panel");
 		frame.setContentPane(plot);
@@ -78,7 +78,7 @@ public class PlotGenerator {
 		g.dispose();
 		frame.dispose();
 		try {
-			ImageIO.write((RenderedImage) bufferedImage, "PNG", new File("PREFIX" + plotFileName));
+			ImageIO.write((RenderedImage) bufferedImage, "PNG", new File("PREFIX" + plotFileName + ".png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

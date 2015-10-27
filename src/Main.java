@@ -31,8 +31,8 @@ public class Main {
 		*/
 	}
 	
-	public static final int NUMBER_OF_TREES = 50000 ;
-	public static final double LEARNING_RATE = 1;
+	public static final int NUMBER_OF_TREES = 100000000;
+	public static final double LEARNING_RATE = .001;
 	public static final double BAG_FRACTION = 1;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;
 	public static final int MIN_EXAMPLES_IN_NODE = 10;

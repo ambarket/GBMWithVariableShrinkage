@@ -23,7 +23,7 @@ import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class GradientBoostingTree {
-	public static ExecutorService executor = Executors.newFixedThreadPool(4);
+	public static ExecutorService executor = Executors.newFixedThreadPool(20);
 	
 	public static class GbmParameters {
 		// class members
@@ -207,7 +207,7 @@ public class GradientBoostingTree {
 			trainingData.updatePseudoResponses();
 			
 			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-			int[] shuffledIndices = RandomSample.fisherYatesShuffle(trainingData.getNumberOfExamples());
+			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(trainingData.getNumberOfExamples());
 			int sampleSize = (int)(parameters.bagFraction * shuffledIndices.length);
 			boolean[] inSample = new boolean[trainingData.getNumberOfExamples()];
 			for (int i = 0; i < sampleSize; i++ ) {
@@ -241,7 +241,7 @@ public class GradientBoostingTree {
 		CrossValidationStepper[] steppers = new CrossValidationStepper[numOfFolds];
 
 		// Partition the data set into k folds. All done with boolean index masks into the original dataset
-		int[] shuffledIndices = RandomSample.fisherYatesShuffle(training.getNumberOfExamples());
+		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(training.getNumberOfExamples());
 		int foldSize = shuffledIndices.length / numOfFolds;
 		boolean[][] trainingInEachFold = new boolean[numOfFolds][shuffledIndices.length];
 		for (int i = 0; i < numOfFolds; i++) {
@@ -264,11 +264,13 @@ public class GradientBoostingTree {
 			steppers[i].dataset.initializePredictions(meanResponse);
 		}
 		
-		int lastTreeIndex = stepSize-1;
+		int lastTreeIndex = -1;
 		double lastAvgValidationError = Double.MAX_VALUE;
 		double avgValidError = 0.0;
+		double avgTrainingError = 0.0;
 		Queue<Future<Void>> futures = new LinkedList<Future<Void>>();
 		while (lastTreeIndex + stepSize < parameters.numOfTrees) {
+			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds; i++) {
 				futures.add(executor.submit(steppers[i]));
 			}
@@ -281,41 +283,19 @@ public class GradientBoostingTree {
 					System.exit(1);
 				}
 				avgValidError += steppers[i].function.validationError.get(lastTreeIndex);
+				avgTrainingError += steppers[i].function.trainingError.get(lastTreeIndex);
 			}
 			avgValidError /= numOfFolds;
-			
+			avgTrainingError /= numOfFolds;
+			System.out.println("Training: " + avgTrainingError + " Last Validation Error: " + lastAvgValidationError + " Validation Error: " + avgValidError + " Difference: " + (lastAvgValidationError - avgValidError));
 			if (DoubleCompare.lessThan(avgValidError, lastAvgValidationError)) {
 				lastAvgValidationError = avgValidError;
-				lastTreeIndex += stepSize;
 			} else {
 				break;
 			}
-		}
-		
-		double minAvgValidationError = Double.MAX_VALUE;
-		int treeIndex = lastTreeIndex - stepSize;
-		int optimalNumOfTrees = treeIndex;
-		for (; treeIndex < lastTreeIndex; treeIndex++) {
-			avgValidError = 0.0;
-			for (int fold = 0; fold < numOfFolds; fold++) {
-				avgValidError += steppers[fold].function.validationError.get(treeIndex);
-			}
-			avgValidError /= numOfFolds;
-			
-			if (DoubleCompare.lessThan(avgValidError, minAvgValidationError)) {
-				lastAvgValidationError = avgValidError;
-				optimalNumOfTrees = treeIndex;
-			} else {
-				break;
-			}
-		}
-		
-		// TODO: Maybe add a user input prompt to continue?
-		if (optimalNumOfTrees == lastTreeIndex) {
-			System.out.println("Warning: The optimal number was trees was equivalent to the number of trees grown. Consider running longer");
 		}
 
-		return new CrossValidatedResultFunctionEnsemble(steppers, optimalNumOfTrees, lastTreeIndex);
+		return new CrossValidatedResultFunctionEnsemble(parameters, steppers, lastTreeIndex);
 	}
 	
 	private static class CrossValidationStepper implements Callable<Void> {
@@ -343,12 +323,12 @@ public class GradientBoostingTree {
 				dataset.updatePseudoResponses();
 				
 				// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-				int[] shuffledIndices = RandomSample.fisherYatesShuffle(dataset.getNumberOfExamples());
+				int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(dataset.getNumberOfExamples());
 				int sampleSize = (int)(parameters.bagFraction * numOfExamplesInSample);
 				boolean[] inCurrentSample = new boolean[dataset.getNumberOfExamples()];
 				int selected = 0, i = 0;
 				while(selected < sampleSize) {
-					if (this.inSample[i]) {
+					if (this.inSample[shuffledIndices[i]]) {
 						inCurrentSample[shuffledIndices[i]] = true;
 						selected++;
 					}
@@ -368,30 +348,36 @@ public class GradientBoostingTree {
 				// Add the tree to the function approximation, keep track of the training and validation errors.
 				function.addTree(tree, trainingRMSE, validationRMSE);
 			}
-			Logger.println(Logger.LEVELS.DEBUG, "\tFinished 1 step in : " + timer.getElapsedSeconds());
+			Logger.println(Logger.LEVELS.INFO, "\tFinished " + stepSize + " in : " + timer.getElapsedSeconds());
 			return null;
 		}
 	}
 	
 	public static class CrossValidatedResultFunctionEnsemble {
+		GbmParameters parameters;
 		public ResultFunction[] functions;
 		public double avgInitialValue;
 		public int optimalNumberOfTrees, totalNumberOfTrees;
-		
+		public int stepSize, numOfFolds;
 		public double[] avgCvValidationErrors;
 		public double[] avgCvTrainingErrors;
 		
-		public CrossValidatedResultFunctionEnsemble(CrossValidationStepper[] steppers, int optimalNumberOfTrees, int totalNumberOfTrees) {
-			this.optimalNumberOfTrees = optimalNumberOfTrees;
+		public CrossValidatedResultFunctionEnsemble(GbmParameters parameters, CrossValidationStepper[] steppers, int totalNumberOfTrees) {
+			this.parameters = parameters;
 			this.totalNumberOfTrees = totalNumberOfTrees;
+			this.stepSize = steppers[0].stepSize;
+			this.numOfFolds = steppers.length;
 			
+			this.functions = new ResultFunction[steppers.length];
 			this.avgInitialValue = 0.0;
 			for (int i = 0; i < steppers.length; i++) {
 				functions[i] = steppers[i].function;
 				avgInitialValue += functions[i].initialValue;
 			}
 			this.avgInitialValue /= functions.length;
-			
+
+			// Optimal number of trees is the point where average cross validation error is minimized.
+			double minAvgValidationError = Double.MAX_VALUE;
 			this.avgCvTrainingErrors = new double[totalNumberOfTrees];
 			this.avgCvValidationErrors = new double[totalNumberOfTrees];
 			for (int i = 0; i < totalNumberOfTrees; i++) {
@@ -399,23 +385,31 @@ public class GradientBoostingTree {
 					avgCvTrainingErrors[i] += functions[functionIndex].trainingError.get(i);
 					avgCvValidationErrors[i] += functions[functionIndex].validationError.get(i);
 				}
+				if (DoubleCompare.lessThan(avgCvValidationErrors[i], minAvgValidationError)) {
+					minAvgValidationError = avgCvValidationErrors[i];
+					this.optimalNumberOfTrees = i;
+				}
 			}
 			for (int i = 0; i < totalNumberOfTrees; i++) {
 				avgCvTrainingErrors[i] /= functions.length;
 				avgCvValidationErrors[i] /= functions.length;
 			}
+			
+			if (optimalNumberOfTrees == totalNumberOfTrees) {
+				System.out.println("Warning: The optimal number was trees was equivalent to the number of trees grown. Consider running longer");
+			}
 		}
 		
 		// the following function is used to estimate the function
 		public double getLearnedValue(Attribute[] instance_x) {
-			/*
 			double avgLearnedValue = 0.0;
 			for (int j = 0; j < functions.length; j++) {
 				avgLearnedValue += functions[j].getLearnedValue(instance_x);
 			}
 			avgLearnedValue /= functions.length;
-			*/
+			return avgLearnedValue;
 			
+			/* Not sure which way makes more sense.
 			double result = avgInitialValue;
 			for (int i = 0; i < optimalNumberOfTrees; i++) {
 				double avgLearnedValue = 0.0;
@@ -426,6 +420,7 @@ public class GradientBoostingTree {
 				result += avgLearnedValue;
 			}
 			return result;
+			*/
 		}
 		
 		public double[] calcRelativeInfluences() {
