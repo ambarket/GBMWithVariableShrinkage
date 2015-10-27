@@ -1,6 +1,4 @@
-package gbm;
-
-import gbm.Attribute.Type;
+package regressionTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,6 +9,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+import dataset.Attribute;
+import dataset.Attribute.Type;
 import utilities.DoubleCompare;
 import utilities.SumCountAverage;
 

@@ -1,11 +1,11 @@
-package gbm;
-
-import gbm.Attribute.Type;
+package regressionTree;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.HashSet;
 
+import dataset.Attribute;
+import dataset.Attribute.Type;
 import utilities.DoubleCompare;
 
 public class TreeNode {

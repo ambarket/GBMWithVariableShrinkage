@@ -1,4 +1,4 @@
-package gbm;
+package dataset;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import dataset.Attribute.Type;
 import utilities.RawFile;
 import utilities.StopWatch;
 
@@ -31,6 +32,7 @@ public class Dataset {
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
 	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 	
+	private boolean[] inTrainingSample;
 	//--------------------------------------Object Construction-----------------------------------------------------------
 	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn) {
 		StopWatch timer = (new StopWatch()).start();
@@ -54,6 +56,16 @@ public class Dataset {
 		// Pre-process trainingData to improve speed of split calculation
 		buildCategoricalPredictorIndexMap();
 		buildnumericalPredictorSortedIndexMap();
+		
+		/* TODO come back to this.
+		// Set aside trainingSampleFraction * numberOfExamples examples for training use. The remaining will be used as the test set.
+		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(numberOfExamples);
+		int sampleSize = (int)(trainingSampleFraction * shuffledIndices.length);
+		this.inTrainingSample = new boolean[numberOfExamples];
+		for (int i = 0; i < sampleSize; i++ ) {
+			inTrainingSample[shuffledIndices[i]] = true;
+		}
+		*/
 		
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}

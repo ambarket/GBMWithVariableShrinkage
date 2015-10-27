@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
@@ -16,6 +17,22 @@ import org.math.plot.plotObjects.BaseLabel;
 
 public class PlotGenerator {
 	public static int msBeforeClosingEachGraph = 2000;
+	public static void plotTrainingAndValidationErrors(String plotFileName, String titleStr, ArrayList<Double> trainingErrorByIteration,  ArrayList<Double> validationErrorByIteration) {
+		double[] training = new double[trainingErrorByIteration.size()]; 
+		for (int i = 0; i < training.length; i++) {
+			training[i] = trainingErrorByIteration.get(i);
+		}
+		double[] validation = new double[validationErrorByIteration.size()]; 
+		for (int i = 0; i < validation.length; i++) {
+			validation[i] = validationErrorByIteration.get(i);
+		}
+		plotTrainingAndValidationErrors(plotFileName, titleStr, training, validation);
+	}
+	
+	public static void plotTrainingAndValidationErrors(String plotFileName, String titleStr, double[] trainingErrorByIteration, double[] validationErrorByIteration) {
+		plotTrainingAndValidationErrors(plotFileName, titleStr, null, trainingErrorByIteration, validationErrorByIteration);
+	}
+	
 	public static void plotTrainingAndValidationErrors(String plotFileName, String titleStr, double[] iterationNumber, double[] trainingErrorByIteration, double[] validationErrorByIteration) {
 		if (iterationNumber == null) {
 			iterationNumber = new double[trainingErrorByIteration.length];

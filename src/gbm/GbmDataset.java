@@ -3,7 +3,9 @@ package gbm;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import gbm.GradientBoostingTree.ResultFunction;
+import dataset.Attribute;
+import dataset.Dataset;
+import regressionTree.RegressionTree;
 
 /**
  * Wraps a Dataset object and adds an array for storing the current predictions and pseudo responses for each

@@ -1,5 +1,6 @@
-package gbm;
-import gbm.Attribute.Type;
+package regressionTree;
+import gbm.GbmDataset;
+import gbm.GradientBoostingTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.Attribute;
+import dataset.Attribute.Type;
 import utilities.DoubleCompare;
 import utilities.Logger;
 import utilities.StopWatch;

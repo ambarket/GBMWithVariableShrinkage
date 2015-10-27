@@ -1,8 +1,7 @@
-import gbm.Dataset;
+import gbm.GbmParameters;
 import gbm.GradientBoostingTree;
-import gbm.GradientBoostingTree.CrossValidatedResultFunctionEnsemble;
-import gbm.GradientBoostingTree.GbmParameters;
-import gbm.GradientBoostingTree.ResultFunction;
+import gbm.ResultFunction;
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -11,6 +10,7 @@ import java.util.Scanner;
 import utilities.Logger;
 import utilities.PlotGenerator;
 import utilities.StopWatch;
+import dataset.Dataset;
 
 
 public class Main {
@@ -31,19 +31,32 @@ public class Main {
 		*/
 	}
 	
-	public static final int NUMBER_OF_TREES = 100000000;
+	public static final int NUMBER_OF_TREES = 500;
 	public static final double LEARNING_RATE = .001;
 	public static final double BAG_FRACTION = 1;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;
 	public static final int MIN_EXAMPLES_IN_NODE = 10;
+	public static final int CV_NUMBER_OF_FOLDS = 5;
+	public static final int CV_STEP_SIZE = 500;
+	public static final double TRAINING_SAMPLE_FRACTION = 0.8;
 	
 	public static void crossVal1() {
+		StopWatch timer = (new StopWatch()).start();
 		Dataset trainingDataset = new Dataset(powerPlantFiles + "TRAINING.txt", true, true, 4);
 		Dataset validationDataset = new Dataset(powerPlantFiles + "TEST.txt", true, true, 4);
 		GbmParameters parameters = new GbmParameters(BAG_FRACTION, LEARNING_RATE, NUMBER_OF_TREES, MIN_EXAMPLES_IN_NODE, MAX_NUMBER_OF_SPLITS);
-		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, 5, 500);
+		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE);
+		System.out.println(ensemble.getSummary());
 		
 		PlotGenerator.plotTrainingAndValidationErrors("sdfsdfsdf", "asdfasd", null, ensemble.avgCvTrainingErrors, ensemble.avgCvValidationErrors);
+
+		parameters.numOfTrees = ensemble.optimalNumberOfTrees;
+		ResultFunction function = GradientBoostingTree.buildGradientBoostingMachine(parameters, trainingDataset, validationDataset);
+		System.out.println(function.getSummary());
+		PlotGenerator.plotTrainingAndValidationErrors("sdfsdfsdf", "asdfasd", function.trainingError, function.validationError);
+
+		GradientBoostingTree.executor.shutdownNow();
+		System.out.println("Finished " + CV_NUMBER_OF_FOLDS + " in " + timer.getElapsedSeconds() + " seconds");
 	}
 	
 	

@@ -1,4 +1,4 @@
-package gbm;
+package regressionTree;
 /*
 * The stochastic gradient boosting method.
 * yorkey: yangchadam AT gmail.com
@@ -10,12 +10,15 @@ package gbm;
  *  The following class implements a regression tree
  */
 
+import gbm.GbmDataset;
+
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+import dataset.Attribute;
 import utilities.Logger;
 public class RegressionTree {
 	// class members
