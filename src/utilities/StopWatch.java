@@ -7,6 +7,11 @@ public class StopWatch {
 		return this;
 	}
 	
+	public double getElapsedMinutes() {
+		endTime = System.nanoTime();
+		return (endTime - startTime) / 60000000000.0;
+	}
+	
 	public double getElapsedSeconds() {
 		endTime = System.nanoTime();
 		return (endTime - startTime) / 1000000000;

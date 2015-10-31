@@ -8,21 +8,23 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import dataset.Attribute.Type;
+import utilities.RandomSample;
 import utilities.RawFile;
 import utilities.StopWatch;
 
 public class Dataset {
-	private int numberOfExamples, numberOfPredictors;
+	public double trainingSampleFraction;
+	private int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors;
 	
 	private Attribute.Type[] predictorTypes;
 	private String[] predictorNames;
-	private Attribute[][] instances;
+	private Attribute[][] trainingInstances;
+	private Attribute[][] testInstances;
 	
 	private Attribute.Type responseType;
 	private String responseName;
-	private Attribute[] responses;
-	
+	private Attribute[] trainingResponses;
+	private Attribute[] testResponses;
 	/*  
 	 *  sortedAttributeIndices is [numberOfPredictors][numberOfExamples], each element stores an index into instances/labels_y. 
 	 *  They are sorted in ascending order of instances.get(instanceNum).get(attributeNum)
@@ -31,10 +33,9 @@ public class Dataset {
 	
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
 	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
-	
-	private boolean[] inTrainingSample;
+
 	//--------------------------------------Object Construction-----------------------------------------------------------
-	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn) {
+	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn, double trainingSampleFraction) {
 		StopWatch timer = (new StopWatch()).start();
 		if (!attributeTypeHeader) {
 			throw new UnsupportedOperationException("Support for dataset files without an explicit attribute type header is not yet implemented");
@@ -45,13 +46,15 @@ public class Dataset {
 		
 		// Read dataset file as strings
 		RawFile file = new RawFile(filePath, attributeTypeHeader, attributeNameHeader);
-		numberOfExamples = file.numberOfRecords;
-		numberOfPredictors = file.numberOfAttributes - 1;
+		this.trainingSampleFraction = trainingSampleFraction;
+		this.numberOfTrainingExamples = (int) (file.numberOfRecords * trainingSampleFraction);
+		this.numberOfTestExamples = file.numberOfRecords - numberOfTrainingExamples;
+		this.numberOfPredictors = file.numberOfAttributes - 1;
 		
 		// Extract, validate, and store the dataset information in Attribute.Type, Attribute, and Response objects
 		extractAndStoreAttributeTypes(file, responseVariableColumn);
 		extractAndStoreAttributeNames(file, responseVariableColumn);
-		extractAndStoreExamples(file, responseVariableColumn);
+		extractAndStoreExamples(file, responseVariableColumn, trainingSampleFraction);
 		
 		// Pre-process trainingData to improve speed of split calculation
 		buildCategoricalPredictorIndexMap();
@@ -109,14 +112,19 @@ public class Dataset {
 		}
 	}
 	
-	private void extractAndStoreExamples(RawFile file, int responseVariableColumn) {
-		instances = new Attribute[file.numberOfRecords][file.numberOfAttributes - 1];
-		responses = new Attribute[file.numberOfRecords];
+	private void extractAndStoreExamples(RawFile file, int responseVariableColumn, double trainingSampleFraction) {
+		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(file.numberOfRecords);
+		
+		trainingInstances = new Attribute[numberOfTrainingExamples][file.numberOfAttributes - 1];
+		trainingResponses = new Attribute[numberOfTrainingExamples];
+		testInstances = new Attribute[numberOfTestExamples][file.numberOfAttributes - 1];
+		testResponses = new Attribute[numberOfTestExamples];
+		
 		for (int recordIndex = 0; recordIndex < file.numberOfRecords; recordIndex++) {
 			Attribute[] instance = new Attribute[file.numberOfAttributes - 1];
 			Attribute response = null;
 			for (int attributeIndex = 0; attributeIndex < file.numberOfAttributes; attributeIndex++) {
-				String stringElement = file.data.get(recordIndex)[attributeIndex];
+				String stringElement = file.data.get(shuffledIndices[recordIndex])[attributeIndex];
 				boolean missingValue = false;
 				// TODO: Make more generic?
 				if (stringElement.equalsIgnoreCase("NA")) {
@@ -136,8 +144,14 @@ public class Dataset {
 					}
 				} 
 			}
-			instances[recordIndex] = instance;
-			responses[recordIndex] = response;
+		
+			if (recordIndex < numberOfTrainingExamples) {
+				trainingInstances[recordIndex] = instance;
+				trainingResponses[recordIndex] = response;
+			} else {
+				testInstances[recordIndex-numberOfTrainingExamples] = instance;
+				testResponses[recordIndex-numberOfTrainingExamples] = response;
+			}
 		}
 	}
 
@@ -150,8 +164,8 @@ public class Dataset {
 				HashMap<String, HashSet<Integer>> predictorIndexMap = new HashMap<String, HashSet<Integer>>();
 				categoricalPredictorIndexMap.put(predictorIndex, predictorIndexMap);
 				
-				for (int instanceIndex = 0; instanceIndex < numberOfExamples; instanceIndex++) {
-					String category = instances[instanceIndex][predictorIndex].getCategoricalValue();
+				for (int instanceIndex = 0; instanceIndex < numberOfTrainingExamples; instanceIndex++) {
+					String category = trainingInstances[instanceIndex][predictorIndex].getCategoricalValue();
 					predictorIndexMap.putIfAbsent(category, new HashSet<Integer>());
 					HashSet<Integer> examplesWithCategory = predictorIndexMap.get(category);
 					examplesWithCategory.add(instanceIndex);
@@ -161,16 +175,16 @@ public class Dataset {
 	}
 	
 	private void buildnumericalPredictorSortedIndexMap() {
-		numericalPredictorSortedIndexMap = new int[numberOfPredictors][numberOfExamples];
+		numericalPredictorSortedIndexMap = new int[numberOfPredictors][numberOfTrainingExamples];
 		for (int attributeNum = 0; attributeNum < numberOfPredictors; attributeNum++) {
 			InstanceAttributeComparator comparator = new InstanceAttributeComparator(attributeNum);
 			ArrayList<Map.Entry<Integer, Attribute[]>> sortedInstances = new ArrayList<Map.Entry<Integer, Attribute[]>>();
-			for (int i = 0; i < numberOfExamples; i++) {
-				sortedInstances.add(new AbstractMap.SimpleEntry<Integer, Attribute[]>(i, instances[i]));
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
+				sortedInstances.add(new AbstractMap.SimpleEntry<Integer, Attribute[]>(i, trainingInstances[i]));
 			}
 			Collections.sort(sortedInstances, comparator);
 			
-			for (int i = 0; i < numberOfExamples; i++) {
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
 				Map.Entry<Integer, Attribute[]> entry = sortedInstances.get(i);
 				numericalPredictorSortedIndexMap[attributeNum][i] = entry.getKey();
 			}
@@ -203,8 +217,12 @@ public class Dataset {
 	}
 	
 	//-----------------------------GETTERS--------------------------------------------------------
-	public int getNumberOfExamples() {
-		return numberOfExamples;
+	public int getNumberOfTrainingExamples() {
+		return numberOfTrainingExamples;
+	}
+	
+	public int getNumberOfTestExamples() {
+		return numberOfTestExamples;
 	}
 
 	public int getNumberOfPredictors() {
@@ -219,8 +237,20 @@ public class Dataset {
 		return predictorNames;
 	}
 
-	public Attribute[][] getInstances() {
-		return instances;
+	public Attribute[][] getTrainingInstances() {
+		return trainingInstances;
+	}
+	
+	public Attribute[] getTrainingResponses() {
+		return trainingResponses;
+	}
+	
+	public Attribute[][] getTestInstances() {
+		return testInstances;
+	}
+	
+	public Attribute[] getTestResponses() {
+		return testResponses;
 	}
 
 	public Attribute.Type getResponseType() {
@@ -230,11 +260,7 @@ public class Dataset {
 	public String getResponseName() {
 		return responseName;
 	}
-
-	public Attribute[] getResponses() {
-		return responses;
-	}
-
+	
 	public int[][] getNumericalPredictorSortedIndexMap() {
 		return numericalPredictorSortedIndexMap;
 	}
@@ -243,40 +269,85 @@ public class Dataset {
 		return categoricalPredictorIndexMap;
 	}
 	
-	public double calcMeanResponse() {
-		Attribute[] responses = getResponses();
+	public double calcMeanTrainingResponse() {
+		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			meanY += responses[i].getNumericValue();
 		}
-		meanY = meanY / getNumberOfExamples();
+		meanY = meanY / getNumberOfTrainingExamples();
 		return meanY;
 	}
 	
-	public double calcMeanResponse(boolean[] inSample) {
-		Attribute[] responses = getResponses();
+	public double calcMeanTrainingResponse(boolean[] inSample) {
+		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		int count = 0;
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			if (inSample[i]) {
 				meanY += responses[i].getNumericValue();
+				count++;
 			}
 		}
-		meanY = meanY / getNumberOfExamples();
+		meanY = meanY / count;
 		return meanY;
 	}
 	
-	public double calcMeanResponse(boolean[] inSample, boolean negate) {
+	public double calcMeanTrainingResponse(boolean[] inSample, boolean negate) {
 		if (!negate) {
-			return calcMeanResponse(inSample);
+			return calcMeanTrainingResponse(inSample);
 		}
-		Attribute[] responses = getResponses();
+		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		int count = 0;
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			if (!inSample[i]) {
 				meanY += responses[i].getNumericValue();
+				count++;
 			}
 		}
-		meanY = meanY / getNumberOfExamples();
+		meanY = meanY / count;
+		return meanY;
+	}
+	
+	public double calcMeanTestResponse() {
+		Attribute[] responses = getTestResponses();
+		double meanY = 0.0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			meanY += responses[i].getNumericValue();
+		}
+		meanY = meanY / getNumberOfTestExamples();
+		return meanY;
+	}
+	
+	public double calcMeanTestResponse(boolean[] inSample) {
+		Attribute[] responses = getTestResponses();
+		double meanY = 0.0;
+		int count = 0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			if (inSample[i]) {
+				meanY += responses[i].getNumericValue();
+				count++;
+			}
+		}
+		meanY = meanY / count;
+		return meanY;
+	}
+	
+	public double calcMeanTestResponse(boolean[] inSample, boolean negate) {
+		if (!negate) {
+			return calcMeanTrainingResponse(inSample);
+		}
+		Attribute[] responses = getTestResponses();
+		double meanY = 0.0;
+		int count = 0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			if (!inSample[i]) {
+				meanY += responses[i].getNumericValue();
+				count++;
+			}
+		}
+		meanY = meanY / count;
 		return meanY;
 	}
 }

@@ -11,6 +11,7 @@ package regressionTree;
  */
 
 import gbm.GbmDataset;
+import gbm.GbmParameters;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -18,31 +19,39 @@ import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-import dataset.Attribute;
 import utilities.Logger;
+import dataset.Attribute;
 public class RegressionTree {
+	public enum LearningRatePolicy {CONSTANT, VARIABLE};
 	// class members
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
 	private double maxLearningRate;
+	private int sampleSize;
+	private LearningRatePolicy learningRatePolicy;
 	
 	public TreeNode root;
 	
-	// construction function
-	public RegressionTree() {
-		this(10, 3, .05);
+	public RegressionTree(GbmParameters parameters, int sampleSize) {
+		setMinObsInNode(parameters.minExamplesInNode);
+		setMaxNumberOfSplits(parameters.maxNumberOfSplits);
+		setMaxLearningRate(parameters.maxLearningRate);
+		setSampleSize(sampleSize);
+		this.learningRatePolicy = parameters.learningRatePolicy;
+		root = null;
 	}
 	
-	public RegressionTree(int minExamplesInNode, int maxNumberOfSplits, double maxLearningRate) {
-		setMinObsInNode(minExamplesInNode);
-		setMaxNumberOfSplits(maxNumberOfSplits);
-		setMaxLearningRate(maxLearningRate);
-		root = null;
+	private void setSampleSize(int sampleSize) {
+		if (sampleSize < minExamplesInNode) {
+			Logger.println(Logger.LEVELS.INFO, "sampleSize must be > minExamplesInNode, but was " + sampleSize + " and minExamplesInNode was " + minExamplesInNode);
+			System.exit(0);
+		}
+		this.sampleSize = sampleSize;
 	}
 	
 	private void setMaxLearningRate(double maxLearningRate) {
 		if (maxLearningRate <= 0) {
-			Logger.println(Logger.LEVELS.DEBUG, "Learning rate must be >= 0");
+			Logger.println(Logger.LEVELS.INFO, "Learning rate must be > 0");
 			System.exit(0);
 		}
 		this.maxLearningRate = maxLearningRate;
@@ -50,7 +59,7 @@ public class RegressionTree {
 	
 	public void setMinObsInNode(int minExamplesInNode) {
 		if (minExamplesInNode < 1) {
-			Logger.println(Logger.LEVELS.DEBUG, "The min obs in node value must be >= 1");
+			Logger.println(Logger.LEVELS.INFO, "The min obs in node value must be >= 1");
 			System.exit(0);
 		}
 		this.minExamplesInNode = minExamplesInNode;
@@ -58,7 +67,7 @@ public class RegressionTree {
 	
 	public void setMaxNumberOfSplits(int maxNumberOfSplits) {
 		if (maxNumberOfSplits < 1) {
-			Logger.println(Logger.LEVELS.DEBUG, "The maxNumberOfSplits must be >= 1");
+			Logger.println(Logger.LEVELS.INFO, "The maxNumberOfSplits must be >= 1");
 			System.exit(0);
 		}
 		this.maxNumberOfSplits = maxNumberOfSplits;
@@ -68,14 +77,19 @@ public class RegressionTree {
 		if (root == null) {
 			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
 		}
-		return root.getLearnedValue(instance_x);
+		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
+		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			return maxLearningRate * leaf.terminalValue;
+		} else {
+			return maxLearningRate * leaf.instanceCount / sampleSize * leaf.terminalValue;
+		}
 	}
 	
 	public RegressionTree build(GbmDataset dataset, boolean[] inSample) {
 		// Calculate error before splitting
-		double mean = dataset.calcMeanPseudoResponse(inSample);
+		double mean = dataset.calcMeanTrainingPseudoResponse(inSample);
 		double squaredError = 0.0;
-		for (double pseudoResponse : dataset.pseudoResponses) {
+		for (double pseudoResponse : dataset.trainingPseudoResponses) {
 			squaredError += (pseudoResponse - mean) * (pseudoResponse - mean);
 		}
 		// build the regression tree
@@ -88,13 +102,13 @@ public class RegressionTree {
 	
 	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, maxLearningRate, meanResponseInParent, squaredErrorBeforeSplit);
+		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			int count = 0;
 			for (int i = 0; i < inSample.length; i++) {
 				count += (inSample[i]) ? 1 : 0;
 			}
-			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, maxLearningRate, squaredErrorBeforeSplit, count);
+			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
 		}
 		leaves.add(rootSplit);
@@ -105,14 +119,14 @@ public class RegressionTree {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
 				DataSplit left = null, right = null, missing = null;
-				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftInstanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, maxLearningRate, parent.node.leftTerminalValue, parent.node.leftSquaredError);
+				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
+					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
 				}
-				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightInstanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, maxLearningRate, parent.node.rightTerminalValue, parent.node.rightSquaredError);
+				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
+					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
 				}
-				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingInstanceCount) {
-					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, maxLearningRate, parent.node.missingTerminalValue, parent.node.missingSquaredError);
+				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
+					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));
@@ -125,7 +139,7 @@ public class RegressionTree {
 				}
 			}
 			if (possibleChildren.isEmpty()) {
-				throw new IllegalStateException("No possible children to pick from in tree builder. I dont think this is possible");
+				return rootSplit.node; // This happens when we don't have enough examples to split anymore.
 			}
 			PossibleChild bestChild = possibleChildren.poll();
 			if (bestChild.whichNode == 1) {

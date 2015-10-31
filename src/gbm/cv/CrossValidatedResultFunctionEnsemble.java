@@ -3,25 +3,32 @@ package gbm.cv;
 import gbm.GbmParameters;
 import gbm.ResultFunction;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
+import utilities.DoubleCompare;
+import utilities.Matrix;
 import dataset.Attribute;
 import dataset.Dataset;
-import regressionTree.RegressionTree;
-import utilities.DoubleCompare;
 
 public class CrossValidatedResultFunctionEnsemble {
-	GbmParameters parameters;
+	public GbmParameters parameters;
 	public ResultFunction[] functions;
+	public ResultFunction allDataFunction;
 	public double avgInitialValue;
 	public int optimalNumberOfTrees, totalNumberOfTrees;
 	public int stepSize, numOfFolds;
 	public double[] avgCvValidationErrors;
 	public double[] avgCvTrainingErrors;
+	public double[] avgCvTestErrors;
 	public String[] predictorNames;
 	
 	public CrossValidatedResultFunctionEnsemble(GbmParameters parameters, CrossValidationStepper[] steppers, int totalNumberOfTrees) {
@@ -29,33 +36,37 @@ public class CrossValidatedResultFunctionEnsemble {
 		this.parameters = parameters;
 		this.totalNumberOfTrees = totalNumberOfTrees;
 		this.stepSize = steppers[0].stepSize;
-		this.numOfFolds = steppers.length;
+		this.numOfFolds = steppers.length-1;
 		
-		this.functions = new ResultFunction[steppers.length];
+		this.functions = new ResultFunction[steppers.length-1];
 		this.avgInitialValue = 0.0;
-		for (int i = 0; i < steppers.length; i++) {
+		for (int i = 0; i < steppers.length-1; i++) {
 			functions[i] = steppers[i].function;
 			avgInitialValue += functions[i].initialValue;
 		}
+		allDataFunction = steppers[steppers.length-1].function;
 		this.avgInitialValue /= functions.length;
 
 		// Optimal number of trees is the point where average cross validation error is minimized.
 		double minAvgValidationError = Double.MAX_VALUE;
 		this.avgCvTrainingErrors = new double[totalNumberOfTrees];
 		this.avgCvValidationErrors = new double[totalNumberOfTrees];
+		this.avgCvTestErrors = new double[totalNumberOfTrees];
 		for (int i = 0; i < totalNumberOfTrees; i++) {
 			for (int functionIndex = 0; functionIndex < functions.length; functionIndex++) {
 				avgCvTrainingErrors[i] += functions[functionIndex].trainingError.get(i);
 				avgCvValidationErrors[i] += functions[functionIndex].validationError.get(i);
+				avgCvTestErrors[i] += functions[functionIndex].testError.get(i);
 			}
 			if (DoubleCompare.lessThan(avgCvValidationErrors[i], minAvgValidationError)) {
 				minAvgValidationError = avgCvValidationErrors[i];
-				this.optimalNumberOfTrees = i;
+				this.optimalNumberOfTrees = i+1;
 			}
 		}
 		for (int i = 0; i < totalNumberOfTrees; i++) {
 			avgCvTrainingErrors[i] /= functions.length;
 			avgCvValidationErrors[i] /= functions.length;
+			avgCvTestErrors[i] /= functions.length;
 		}
 		
 		if (optimalNumberOfTrees == totalNumberOfTrees) {
@@ -85,11 +96,14 @@ public class CrossValidatedResultFunctionEnsemble {
 		return result;
 		*/
 	}
-	
 	public String getRelativeInfluencesString() {
-		double[] relativeInf = calcRelativeInfluences();
+		return getRelativeInfluencesString(optimalNumberOfTrees);
+	}
+	
+	public String getRelativeInfluencesString(int numberOfTrees) {
+		double[] relativeInf = calcRelativeInfluences(numberOfTrees);
 		StringBuffer s = new StringBuffer();
-		s.append("Relative Influences\n--------------------\n");
+		s.append("CV Relative Influences\n--------------------\n");
 		PriorityQueue<Map.Entry<String, Double>> sortedRelativeInfluences = 
 				new PriorityQueue<Map.Entry<String, Double>>(new Comparator<Map.Entry<String, Double>>() {
 					@Override
@@ -107,19 +121,18 @@ public class CrossValidatedResultFunctionEnsemble {
 		return s.toString();
 	}
 	
-	
-	private double[] calcRelativeInfluences() {
+	public double[] calcRelativeInfluences() { 
+		return calcRelativeInfluences(optimalNumberOfTrees);
+	}
+
+	public double[] calcRelativeInfluences(int numberOfTrees) {
 		double[] relativeInfluences = new double[predictorNames.length];
-		int totalNumOfTrees = 0;
 		for (int functionIndex = 0; functionIndex < functions.length; functionIndex++) {
-			for (RegressionTree tree : functions[functionIndex].trees) {
-				ResultFunction.calcRelativeInfluenceHelper(relativeInfluences, tree.root);
-			}
-			totalNumOfTrees += functions[functionIndex].trees.size();
+			Matrix.addToInPlace(relativeInfluences, functions[functionIndex].calcRelativeInfluences(numberOfTrees));
 		}
 		
 		for (int i = 0; i < relativeInfluences.length; i++) {
-			relativeInfluences[i] /= totalNumOfTrees;
+			relativeInfluences[i] /= (numberOfTrees * functions.length);
 		}
 		double sum = 0;
 		for (int i = 0; i < relativeInfluences.length; i++) {
@@ -133,31 +146,146 @@ public class CrossValidatedResultFunctionEnsemble {
 	}
 	
 	public double calculateRootMeanSquaredError(Dataset dataset) {
-		Attribute[] responses = dataset.getResponses();
-		Attribute[][] instances = dataset.getInstances();
+		Attribute[] responses = dataset.getTrainingResponses();
+		Attribute[][] instances = dataset.getTrainingInstances();
 		double rmse = 0.0;
-		for (int i = 0; i < dataset.getNumberOfExamples(); i++) {
+		for (int i = 0; i < dataset.getNumberOfTrainingExamples(); i++) {
 			double tmp = (getLearnedValue(instances[i]) - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= dataset.getNumberOfExamples();
+		rmse /= dataset.getNumberOfTrainingExamples();
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
 	
 	public String getSummary() {
-		return String.format("\nTotalNumberOfTrees: %d \n"
+		return String.format("Step Size: %d \n"
+						+ "Number Of Folds: %d \n"
+						+ "TotalNumberOfTrees: %d \n"
 						+ "OptimalNumberOfTrees: %d \n"
-						+ "CV Training RMSE: %f \n"
 						+ "CV Validation RMSE: %f \n" 
-						+ "Step Size: %d \n"
-						+ "Number Of Folds: %d \n\n"
-						+ getRelativeInfluencesString(),
+						+ "CV Training RMSE: %f \n"
+						+ "All Data Training RMSE: %f \n"
+						+ "CV Test RMSE: %f \n" 
+						+ "All Data Test RMSE: %f \n" 
+						+ getRelativeInfluencesString()
+						+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
+				stepSize,
+				numOfFolds,
 				totalNumberOfTrees,
 				optimalNumberOfTrees, 
-				avgCvTrainingErrors[optimalNumberOfTrees],
-				avgCvValidationErrors[optimalNumberOfTrees],
+				avgCvValidationErrors[optimalNumberOfTrees-1],
+				avgCvTrainingErrors[optimalNumberOfTrees-1],
+				allDataFunction.trainingError.get(optimalNumberOfTrees-1),
+				avgCvTestErrors[optimalNumberOfTrees-1],
+				allDataFunction.testError.get(optimalNumberOfTrees-1));
+	}
+	
+	public String getMathematicaCommentedSummary() {
+		return String.format("(* Step Size: %d *) \n"
+						+ "(* Number Of Folds: %d *)\n"
+						+ "(* TotalNumberOfTrees: %d *)\n"
+						+ "(* OptimalNumberOfTrees: %d *)\n"
+						+ "(* CV Validation RMSE: %f *)\n" 
+						+ "(* CV Training RMSE: %f *)\n"
+						+ "(* All Data Training RMSE: %f *)\n"
+						+ "(* CV Test RMSE: %f *)\n" 
+						+ "(* All Data Test RMSE: %f *)\n" 
+						// TODO:
+						+ getRelativeInfluencesString()
+						+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
 				stepSize,
-				numOfFolds);
+				numOfFolds,
+				totalNumberOfTrees,
+				optimalNumberOfTrees, 
+				avgCvValidationErrors[optimalNumberOfTrees],
+				avgCvTrainingErrors[optimalNumberOfTrees],
+				allDataFunction.trainingError.get(optimalNumberOfTrees),
+				avgCvTestErrors[optimalNumberOfTrees],
+				allDataFunction.testError.get(optimalNumberOfTrees));
+	}
+	
+	public void saveDataToFile(String postFix, String directory) throws IOException {
+		String mathDirectory = directory + "/mathematica/";
+		String normalDirectory = directory + "/normal/";
+		new File(mathDirectory).mkdirs();
+		new File(normalDirectory).mkdirs();
+		String mathematicFileName = mathDirectory + parameters.getFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--mathematica.txt";
+		String normalFileName = normalDirectory + parameters.getFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--normal.txt";
+		BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicFileName)));
+		BufferedWriter normal = new BufferedWriter(new PrintWriter(new File(normalFileName)));
+		
+		//mathematica.write(getMathematicaCommentedSummary());
+		mathematica.write("avgCvTrainingError := " + convertToMathematicaList(avgCvTrainingErrors) + "\n");
+		mathematica.write("avgCvValidationError := " + convertToMathematicaList(avgCvValidationErrors) + "\n");
+		mathematica.write("avgCvTestError := " + convertToMathematicaList(avgCvTestErrors) + "\n");
+		mathematica.write("allDataTrainingError := " + convertToMathematicaList(allDataFunction.trainingError) + "\n");
+		mathematica.write("allDataTestError := " + convertToMathematicaList(allDataFunction.testError) + "\n");
+		mathematica.write("optimalNumberOfTrees := {{" + optimalNumberOfTrees + ", 0}, {" + optimalNumberOfTrees + ", 15}}\n");
+		mathematica.write("ListLinePlot[{avgCvTrainingError,avgCvValidationError,avgCvTestError, allDataTrainingError, allDataTestError, optimalNumberOfTrees}"
+				+ ", PlotLegends -> {\"avgCvTrainingError\", \"avgCvValidationError\", \"avgCvTestError\", \"allDataTrainingError\", \"allDataTestError\", \"optimalNumberOfTrees\"}"
+				+ ", PlotStyle -> {{Orange, Dashed, Thick}, {Blue, Dashed, Thick}, {Red, Dashed, Thick}, Cyan, Magenta, {Green, Thin}}"
+				+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+				+ ", PlotRange -> {{Automatic, Automatic}, {0, 15}}"
+				+ "] \n");
+		mathematica.flush();
+		mathematica.close();
+		normal.write(getSummary());
+		normal.write(convertToNormalFile());
+		normal.flush();
+		normal.close();
+
+	}
+	
+	public String convertToMathematicaList(ArrayList<Double> error) {
+		StringBuffer retval = new StringBuffer();
+		retval.append("{\n");
+		for (int i = 0; i < error.size(); i++) {
+			retval.append(String.format("\t{ %d, %.5f }", i+1, error.get(i)));
+			if (i != error.size() - 1) {
+				retval.append(",");
+			} 
+			retval.append("\n");
+		}
+		retval.append("}");
+		return retval.toString();
+	}
+	
+	public String convertToMathematicaList(double[] error) {
+		StringBuffer retval = new StringBuffer();
+		retval.append("{\n");
+		for (int i = 0; i < error.length; i++) {
+			retval.append(String.format("\t{ %d, %.5f }", i+1, error[i]));
+			if (i != error.length - 1) {
+				retval.append(",");
+			} 
+			retval.append("\n");
+		}
+		retval.append("}");
+		return retval.toString();
+	}
+	
+	public String convertToNormalFile() {
+		StringBuffer retval = new StringBuffer();
+		retval.append("TreeNumber\tAvgCvTrainingError\tAvgCvValidationError\tAvgCvTestError\tAllDataTrainingError\tAllDataTestError\n");
+		for (int i = 0; i < totalNumberOfTrees; i++) {
+			retval.append(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\n", 
+					i+1,
+					avgCvTrainingErrors[i],
+					avgCvValidationErrors[i],
+					avgCvTestErrors[i],
+					allDataFunction.trainingError.get(i),
+					allDataFunction.testError.get(i)));
+		}
+		return retval.toString();
+	}
+	
+	
+	public String roundNicely(int precision, double variable) {
+		int val = 1;
+		for (int i = 1; i < precision; i++) {
+			val *= 10;
+		}
+		return "" + Math.round(((variable)) * val) / (double)val;
 	}
 }

@@ -1,5 +1,6 @@
 package gbm;
 
+import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.Logger;
 
 public class GbmParameters {
@@ -7,17 +8,20 @@ public class GbmParameters {
 	public double bagFraction; 
 	public double maxLearningRate;
 	public int numOfTrees;
+	public LearningRatePolicy learningRatePolicy;
 	
 	// tree related parameters
 	public int minExamplesInNode;
 	public int maxNumberOfSplits;
-	
-	public GbmParameters(double bagFraction, double maxLearningRate, int numOfTrees, int minExamplesInNode, int maxNumberOfSplits) {
+	public double timeInSeconds;
+	public int optimalNumberOfTrees;
+	public GbmParameters(double bagFraction, double maxLearningRate, int numOfTrees, int minExamplesInNode, int maxNumberOfSplits, LearningRatePolicy learningRatePolicy) {
 		setBagFraction(bagFraction);
 		setMaxLearningRate(maxLearningRate);
 		setNumOfTrees(numOfTrees);
 		setMinObsInNode(minExamplesInNode);
 		setmaxNumberOfSplits(maxNumberOfSplits);
+		this.learningRatePolicy = learningRatePolicy;
 	}
 
 	private void setBagFraction(double bagFraction) {
@@ -80,5 +84,38 @@ public class GbmParameters {
 	
 	public int getMaxNumberOfSplits() {
 		return maxNumberOfSplits;
+	}
+	
+	public String getFileNamePrefix() {
+		return String.format(learningRatePolicy.name() 
+				+ "_MLR-%.4f" 
+				+ "_BF-%.4f"
+				+ "_SPLITS-%d"
+				+ "_MEIN-%d"
+				+ "_TREES-%d",
+				maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
+	}
+	
+	public static String getTabSeparatedHeader() {
+		return "TimeInSeconds\t"
+				+ "OptimalNumberOfTrees\t"
+				+ "LearningRatePolicy\t"
+				+ "MaxLearningRate\t" 
+				+ "BagFraction\t"
+				+ "MaxNumberOfSplits\t"
+				+ "MinExamplesInNode\t"
+				+ "NumberOfTrees\t";
+	}
+	public String getTabSeparatedPrintOut() {
+		return String.format(
+				"%.4f\t"
+				+ "%d\t"
+				+ learningRatePolicy.name() + "\t" 
+				+ "%.4f\t" 
+				+ "%.4f\t"
+				+ "%d\t"
+				+ "%d\t"
+				+ "%d\t",
+				timeInSeconds, optimalNumberOfTrees, maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
 	}
 }

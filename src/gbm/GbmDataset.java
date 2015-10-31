@@ -14,63 +14,84 @@ import regressionTree.RegressionTree;
  *
  */
 public class GbmDataset {
-	public double[] pseudoResponses;
-	
-	public double[] predictions;
+	public double[] trainingPseudoResponses;
+	public double[] trainingPredictions;
+	public double[] testPseudoResponses;
+	public double[] testPredictions;
 
 	Dataset dataset;
 	
 	public GbmDataset(Dataset dataset) {
 		this.dataset = dataset;
-		this.predictions = new double[getNumberOfExamples()];
-		this.pseudoResponses = new double[getNumberOfExamples()];
+		this.trainingPredictions = new double[getNumberOfTrainingExamples()];
+		this.trainingPseudoResponses = new double[getNumberOfTrainingExamples()];
+		this.testPredictions = new double[getNumberOfTestExamples()];
+		this.testPseudoResponses = new double[getNumberOfTestExamples()];
 	}
 	//-------------------------------Boosting Helper Methods-----------------------------
 	public void initializePredictions(double initialValue) {
-		predictions = new double[getNumberOfExamples()];
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			predictions[i] = initialValue;
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			trainingPredictions[i] = initialValue;
+		}
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			testPredictions[i] = initialValue;
 		}
 	}
 	
 	public void updatePredictionsWithLearnedValueFromNewTree(RegressionTree tree) {
-		Attribute[][] instances = dataset.getInstances();
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		Attribute[][] trainingInstances = dataset.getTrainingInstances();
+		Attribute[][] testInstances = dataset.getTestInstances();
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			// Learning rate will be accounted for in getLearnedValue;
-			predictions[i] += tree.getLearnedValue(instances[i]);
+			trainingPredictions[i] += tree.getLearnedValue(trainingInstances[i]);
+		}
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			testPredictions[i] += tree.getLearnedValue(testInstances[i]);
 		}
 	}
 
 	public void updatePseudoResponses() {
-		Attribute[] responses = dataset.getResponses();
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			pseudoResponses[i] = (responses[i].getNumericValue() - predictions[i]);
+		Attribute[] trainingResponses = dataset.getTrainingResponses();
+		Attribute[] testResponses = dataset.getTestResponses();
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			trainingPseudoResponses[i] = (trainingResponses[i].getNumericValue() - trainingPredictions[i]);
+		}
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			testPseudoResponses[i] = (testResponses[i].getNumericValue() - testPredictions[i]);
 		}
 	}
 	
-	public double calcMeanResponse() {
-		return dataset.calcMeanResponse();
+	public double calcMeanTrainingResponse() {
+		return dataset.calcMeanTrainingResponse();
 	}
 	
-	public double calcMeanResponse(boolean[] inSample) {
-		return dataset.calcMeanResponse(inSample);
+	public double calcMeanTrainingResponse(boolean[] inSample) {
+		return dataset.calcMeanTrainingResponse(inSample);
 	}
 	
-	public double calcMeanPseudoResponse() {
+	public double calcMeanTestResponse() {
+		return dataset.calcMeanTestResponse();
+	}
+	
+	public double calcMeanTestResponse(boolean[] inSample) {
+		return dataset.calcMeanTestResponse(inSample);
+	}
+	
+	public double calcMeanTrainingPseudoResponse() {
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			meanY += pseudoResponses[i];
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			meanY += trainingPseudoResponses[i];
 		}
-		meanY = meanY / getNumberOfExamples();
+		meanY = meanY / getNumberOfTrainingExamples();
 		return meanY;
 	}
 	
-	public double calcMeanPseudoResponse(boolean[] inSample) {
+	public double calcMeanTrainingPseudoResponse(boolean[] inSample) {
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			if (inSample[i]) {
-				meanY += pseudoResponses[i];
+				meanY += trainingPseudoResponses[i];
 				count++;
 			}
 		}
@@ -78,38 +99,59 @@ public class GbmDataset {
 		return meanY;
 	}
 	
-	public double calculateRootMeanSquaredError(ResultFunction function) {
-		Attribute[] responses = dataset.getResponses();
-		Attribute[][] instances = dataset.getInstances();
+	public double calcMeanTestPseudoResponse() {
+		double meanY = 0.0;
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			meanY += testPseudoResponses[i];
+		}
+		meanY = meanY / getNumberOfTrainingExamples();
+		return meanY;
+	}
+	
+	public double calcMeanTestPseudoResponse(boolean[] inSample) {
+		double meanY = 0.0;
+		int count = 0;
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			if (inSample[i]) {
+				meanY += testPseudoResponses[i];
+				count++;
+			}
+		}
+		meanY = meanY / count;
+		return meanY;
+	}
+	
+	public double calcTrainingRMSE(ResultFunction function) {
+		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			double tmp = (function.getLearnedValue(instances[i]) - responses[i].getNumericValue());
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			double tmp = (function.getLearnedValue(getTrainingInstances()[i])- responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= getNumberOfExamples();
+		rmse /= getNumberOfTrainingExamples();
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
 	
-	public double calculateRootMeanSquaredError() {
-		Attribute[] responses = dataset.getResponses();
+	public double calcTrainingRMSE() {
+		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
-			double tmp = (predictions[i] - responses[i].getNumericValue());
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+			double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= getNumberOfExamples();
+		rmse /= getNumberOfTrainingExamples();
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
 	
-	public double calculateRootMeanSquaredError(boolean[] inSample) {
-		Attribute[] responses = dataset.getResponses();
+	public double calcTrainingRMSE(boolean[] inSample) {
+		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
 		double count = 0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			if (inSample[i]) {
-				double tmp = (predictions[i] - responses[i].getNumericValue());
+				double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
 				count++;
 			}
@@ -119,16 +161,63 @@ public class GbmDataset {
 		return rmse;
 	}
 	
-	public double calculateRootMeanSquaredError(boolean[] inSample, boolean negate) {
+	public double calcTrainingRMSE(boolean[] inSample, boolean negate) {
 		if (!negate) {
-			return calculateRootMeanSquaredError(inSample);
+			return calcTrainingRMSE(inSample);
 		}
-		Attribute[] responses = dataset.getResponses();
+		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfExamples(); i++) {
+		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
 			if (!inSample[i]) {
-				double tmp = (predictions[i] - responses[i].getNumericValue());
+				double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
+				rmse += tmp * tmp;
+				count++;
+			}
+		}
+		rmse /= count;
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calcTestRMSE() {
+		Attribute[] responses = dataset.getTestResponses();
+		double rmse = 0.0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			double tmp = (testPredictions[i] - responses[i].getNumericValue());
+			rmse += tmp * tmp;
+		}
+		rmse /= getNumberOfTestExamples();
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calcTestRMSE(boolean[] inSample) {
+		Attribute[] responses = dataset.getTestResponses();
+		double rmse = 0.0;
+		double count = 0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			if (inSample[i]) {
+				double tmp = (testPredictions[i] - responses[i].getNumericValue());
+				rmse += tmp * tmp;
+				count++;
+			}
+		}
+		rmse /= count;
+		rmse = Math.sqrt(rmse);
+		return rmse;
+	}
+	
+	public double calcTestRMSE(boolean[] inSample, boolean negate) {
+		if (!negate) {
+			return calcTestRMSE(inSample);
+		}
+		Attribute[] responses = dataset.getTestResponses();
+		double rmse = 0.0;
+		int count = 0;
+		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+			if (!inSample[i]) {
+				double tmp = (testPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
 				count++;
 			}
@@ -139,8 +228,12 @@ public class GbmDataset {
 	}
 	
 	//-----------------------------GETTERS--------------------------------------------------------
-	public int getNumberOfExamples() {
-		return dataset.getNumberOfExamples();
+	public int getNumberOfTrainingExamples() {
+		return dataset.getNumberOfTrainingExamples();
+	}
+	
+	public int getNumberOfTestExamples() {
+		return dataset.getNumberOfTestExamples();
 	}
 
 	public int getNumberOfPredictors() {
@@ -155,8 +248,12 @@ public class GbmDataset {
 		return dataset.getPredictorNames();
 	}
 
-	public Attribute[][] getInstances() {
-		return dataset.getInstances();
+	public Attribute[][] getTrainingInstances() {
+		return dataset.getTrainingInstances();
+	}
+	
+	public Attribute[][] getTestInstances() {
+		return dataset.getTestInstances();
 	}
 
 	public Attribute.Type getResponseType() {
@@ -167,8 +264,12 @@ public class GbmDataset {
 		return dataset.getResponseName();
 	}
 
-	public Attribute[] getResponses() {
-		return dataset.getResponses();
+	public Attribute[] getTrainingResponses() {
+		return dataset.getTrainingResponses();
+	}
+	
+	public Attribute[] getTestResponses() {
+		return dataset.getTestResponses();
 	}
 
 	public int[][] getNumericalPredictorSortedIndexMap() {

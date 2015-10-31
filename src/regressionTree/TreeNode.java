@@ -17,65 +17,41 @@ public class TreeNode {
 	public HashSet<String> leftCategories = null;
 	public HashSet<String> rightCategories = null;
 	
-	public double leftTerminalValue = 0.0;
-	public double rightTerminalValue = 0.0;
-	public double missingTerminalValue = 0.0;
-	
-	public int leftInstanceCount = 0;
-	public int rightInstanceCount = 0;
-	public int missingInstanceCount = 0;
-	
-	public double leftSquaredError = Double.MAX_VALUE;
-	public double rightSquaredError = Double.MAX_VALUE;
-	public double missingSquaredError = Double.MAX_VALUE;
 	public double squaredErrorBeforeSplit = Double.MAX_VALUE;
 	
 	public TreeNode leftChild = null;
 	public TreeNode rightChild = null;
 	public TreeNode missingChild = null;
-	
-	public double maxLearningRate = 0.0;
+	public TerminalNode leftTerminalNode = null;
+	public TerminalNode rightTerminalNode = null;
+	public TerminalNode missingTerminalNode = null;
 	
 	/*
 	 * Use when unable to split the root node.
 	 */
-	public TreeNode(double missingTerminalValue, double maxLearningRate, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
+	public TreeNode(double missingTerminalValue, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
+		missingTerminalNode = new TerminalNode(missingTerminalValue, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
 		this.splitPredictorIndex = -1;
-		this.missingTerminalValue = missingTerminalValue;
-		this.maxLearningRate = maxLearningRate;
-		this.missingSquaredError = squaredErrorBeforeSplit;
-		this.missingInstanceCount = numOfInstancesBeforeSplit;
 	}
 	
-	public TreeNode(BestSplit bestSplit, double meanResponseInParent, double maxLearningRate) {
+	public TreeNode(BestSplit bestSplit, double meanResponseInParent) {
 		this.splitPredictorType = bestSplit.splitPredictorType;
 		this.splitPredictorIndex = bestSplit.splitPredictorIndex;
 		this.numericSplitValue = bestSplit.numericSplitValue;
 		this.leftCategories = bestSplit.leftCategories;
 		this.rightCategories = bestSplit.rightCategories;
 		
-		this.leftSquaredError = bestSplit.leftSquaredError;
-		this.rightSquaredError = bestSplit.rightSquaredError;
-		
-		this.leftInstanceCount = bestSplit.leftInstanceCount;
-		this.rightInstanceCount = bestSplit.rightInstanceCount;
-		
-		this.leftTerminalValue = bestSplit.leftMeanResponse;
-		this.rightTerminalValue = bestSplit.rightMeanResponse;
-		
-		// TODO: Refactor to actually support missing training data calculations
-		this.missingSquaredError = bestSplit.squaredErrorBeforeSplit; 
-		this.missingInstanceCount = 0;
-		this.missingTerminalValue = meanResponseInParent;
-		
 		this.squaredErrorBeforeSplit = bestSplit.squaredErrorBeforeSplit;
 		
-		this.maxLearningRate = maxLearningRate;
+		this.leftTerminalNode = new TerminalNode(bestSplit.leftMeanResponse, bestSplit.leftInstanceCount, bestSplit.leftSquaredError);
+		this.rightTerminalNode = new TerminalNode(bestSplit.rightMeanResponse, bestSplit.rightInstanceCount, bestSplit.rightSquaredError);
+		//this.missingTerminalNode = new TerminalNode(bestSplit.missingMeanResponse, bestSplit.missingInstanceCount, bestSplit.missingSquaredError);
+		this.missingTerminalNode = new TerminalNode(meanResponseInParent, 0, bestSplit.squaredErrorBeforeSplit);
 	}
 	
 	// TODO: Doesn't account for missing values;
 	public double getSquaredErrorImprovement() {
-		return squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError);
+		return squaredErrorBeforeSplit - (leftTerminalNode.squaredError + rightTerminalNode.squaredError);
 	}
 
 	/**
@@ -123,7 +99,7 @@ public class TreeNode {
 		return whichChild;
 	}
 					
-	public double getLearnedValue(Attribute[] instance) {
+	public TerminalNode getLearnedTerminalNode(Attribute[] instance) {
 		TreeNode current = this;
 		
 		while (true) {
@@ -134,7 +110,7 @@ public class TreeNode {
 			// TODO: THis needs to be refactored. Need to just make terminal node objects 
 			//	instead of keeping terminal info all in one object
 			if (current.splitPredictorIndex == -1) {
-				return current.missingTerminalValue;
+				return current.missingTerminalNode;
 				
 			}
 		
@@ -143,19 +119,19 @@ public class TreeNode {
 				case 1:
 					if (current.leftChild == null) {
 						// TODO: Finidh implementing, will likely require adding actual terminal nodes.
-						return maxLearningRate * current.leftTerminalValue;
+						return current.leftTerminalNode;
 					}
 					current = current.leftChild;
 					break;
 				case 2:
 					if (current.rightChild == null) {
-						return maxLearningRate * current.rightTerminalValue;
+						return current.rightTerminalNode;
 					}
 					current = current.rightChild;
 					break;
 				case 3:
 					if (current.missingChild == null) {
-						return maxLearningRate * current.missingTerminalValue;
+						return current.missingTerminalNode;
 					}
 					current = current.missingChild;
 					break;
@@ -176,22 +152,17 @@ public class TreeNode {
     private void printNodeValue(OutputStreamWriter out) throws IOException {
     	String s = null;
     	if (splitPredictorType == Type.Numeric) {
-    		//s= String.format("{Attr: %d Val: %.2f ErrorReduction: %.5f Weight: %d}", splitPredictorIndex, numericSplitValue, getSquaredErrorImprovement(), leftInstanceCount + rightInstanceCount);
     		s= String.format("{"
     				+ "Attr: %d "
     				+ "Val: %.5f "
     				+ "ErrorReduction: %.5f "
     				+ "Weight: %d "
-    				+ "LeftPred: %f "
-    				+ "RightPred: %f "
     				+ "}", 
     				
     				splitPredictorIndex, 
     				numericSplitValue, 
     				getSquaredErrorImprovement(), 
-    				leftInstanceCount + rightInstanceCount,
-    				maxLearningRate * leftTerminalValue,
-    				maxLearningRate * rightTerminalValue
+    				leftTerminalNode.instanceCount + rightTerminalNode.instanceCount
     				);
     	} else if (splitPredictorType == Type.Categorical) {
     		s= String.format("{"
@@ -199,26 +170,15 @@ public class TreeNode {
     				+ "Val: %.2s "
     				+ "ErrorReduction: %.5f "
     				+ "Weight: %d "
-    				+ "LeftPred: %f "
-    				+ "RightPred: %f "
     				+ "}", 
     				
     				splitPredictorIndex, 
     				"Categories coming soon", 
     				getSquaredErrorImprovement(), 
-    				leftInstanceCount + rightInstanceCount,
-    				maxLearningRate * leftTerminalValue,
-    				maxLearningRate * rightTerminalValue
+    				leftTerminalNode.instanceCount + rightTerminalNode.instanceCount
     				);
     	}
     	out.write(s);
-    	//out.write("{Attr: " + splitAttribute + 
-    		//	" Value: " + splitValue + 
-    			//" leftTerm: " + leftTerminalValue + 
-    			//" rightTerm: " + rightTerminalValue + 
-    			//" leftMSE: " + leftMeanSquaredError + 
-    			//" rightMSE: " + rightMeanSquaredError + 
-    		//	"}");
     	out.write("\n");
     	out.flush();
     }
@@ -226,6 +186,8 @@ public class TreeNode {
     private void printTree(OutputStreamWriter out, boolean isRight, String indent) throws IOException {
         if (rightChild != null) {
             rightChild.printTree(out, true, indent + (isRight ? "        " : " |      "));
+        } else {
+            rightTerminalNode.printNodeValue(out);
         }
         out.write(indent);
         if (isRight) {
@@ -239,20 +201,22 @@ public class TreeNode {
         printNodeValue(out);
         if (leftChild != null) {
         	leftChild.printTree(out, false, indent + (isRight ? " |      " : "        "));
+        } else {
+        	leftTerminalNode.printNodeValue(out);
         }
     }
     
 	public String toString() {
 		return "SplitAttribute: " + splitPredictorIndex + "\n" +
 				"splitValue: " + numericSplitValue + "\n" +
-				"leftInstanceCount: " + leftInstanceCount + "\n" +
-				"rightInstanceCount: " + rightInstanceCount + "\n" +
-				"leftTerminalValue: " + leftTerminalValue + "\n" +
-				"rightTerminalValue: " + rightTerminalValue + "\n" +
-				"leftSquaredError: " + leftSquaredError + "\n" +
-				"rightSquaredError: " + rightSquaredError + "\n" +
+				"leftInstanceCount: " + leftTerminalNode.instanceCount + "\n" +
+				"rightInstanceCount: " + rightTerminalNode.instanceCount + "\n" +
+				"leftTerminalValue: " + leftTerminalNode.terminalValue + "\n" +
+				"rightTerminalValue: " + rightTerminalNode.terminalValue + "\n" +
+				"leftSquaredError: " + leftTerminalNode.squaredError + "\n" +
+				"rightSquaredError: " + rightTerminalNode.squaredError + "\n" +
 				"squaredErrorBeforeSplit: " + squaredErrorBeforeSplit + "\n" +
-				"ErrorImprovement: " + (squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError)) + "\n";
+				"ErrorImprovement: " + getSquaredErrorImprovement() + "\n";
 	}
 
 }

@@ -55,16 +55,16 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		double currentY = 0.0;	
 		while(snapshot.left.getCount() < parameters.minExamplesInNode) {
 			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.pseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
+				currentY = parameters.dataset.trainingPseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
 				snapshot.left.addData(currentY);
 				lastSortedExampleIndexInLeft = sortedExampleIndex;
 			}
 			sortedExampleIndex++;
 		}
 		
-		while(sortedExampleIndex < parameters.dataset.getNumberOfExamples()) {
+		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
 			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.pseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
+				currentY = parameters.dataset.trainingPseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
 				snapshot.right.addData(currentY);
 			}
 			sortedExampleIndex++;
@@ -82,14 +82,14 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	private static BestSplit findBestNumericalSplit(FindOptimalSplitParameters parameters, SplitSnapshot snapshot, int splitPredictorIndex, int firstSplitIndex) {
 		// Going to be accessing these a lot so just grab the pointer.
 		int[][] numericalPredictorSortedIndexMap = parameters.dataset.getNumericalPredictorSortedIndexMap();
-		Attribute[][] instances = parameters.dataset.getInstances();
+		Attribute[][] instances = parameters.dataset.getTrainingInstances();
 		
 		BestSplit bestSplit = new BestSplit(parameters.squaredErrorBeforeSplit);
 
 		int lastLeftIndex = firstSplitIndex + 1;
 		int firstRightIndex = lastLeftIndex + 1;
 		while(snapshot.right.getCount() > parameters.minExamplesInNode) {
-			if (lastLeftIndex >= parameters.dataset.getNumberOfExamples()) {
+			if (lastLeftIndex >= parameters.dataset.getNumberOfTrainingExamples()) {
 				throw new IllegalStateException("There must be less than 2 * minExamplesInNode "
 						+ "examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
 			}
@@ -98,7 +98,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			Attribute lastLeftAttribute = instances[realLastLeftIndex][splitPredictorIndex];
 			Attribute firstRightAttribute = instances[realFirstRightIndex][splitPredictorIndex];
 			if (parameters.inParent[realLastLeftIndex]) {
-				double y = parameters.dataset.pseudoResponses[realLastLeftIndex];
+				double y = parameters.dataset.trainingPseudoResponses[realLastLeftIndex];
 				snapshot.left.addData(y);
 				snapshot.right.subtractData(y);
 				
@@ -142,7 +142,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			SumCountAverage categoryData = new SumCountAverage();
 			for (Integer exampleIndex : entry.getValue()) {
 				if (parameters.inParent[exampleIndex]) {
-					double pseudoResponse = parameters.dataset.pseudoResponses[exampleIndex];
+					double pseudoResponse = parameters.dataset.trainingPseudoResponses[exampleIndex];
 					categoryData.addData(pseudoResponse);
 				}
 			}

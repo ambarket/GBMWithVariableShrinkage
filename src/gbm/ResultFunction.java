@@ -20,6 +20,7 @@ public class ResultFunction {
 	
 	public ArrayList<Double> trainingError;
 	public ArrayList<Double> validationError;
+	public ArrayList<Double> testError;
 	
 	public GbmParameters parameters;
 	
@@ -36,14 +37,16 @@ public class ResultFunction {
 		trees = new ArrayList<RegressionTree> ();
 		trainingError = new ArrayList<Double>();
 		validationError = new ArrayList<Double>();
+		testError = new ArrayList<Double>();
 	}
 	
-	
-	public void addTree(RegressionTree newTree, double trainingError, double validationError) {
+	public void addTree(RegressionTree newTree, double trainingError, double validationError, double testError) {
 		this.trees.add(newTree);
 		this.trainingError.add(trainingError);
 		this.validationError.add(validationError);
+		this.testError.add(testError);
 	}
+	
 	// the following function is used to estimate the function
 	public double getLearnedValue(Attribute[] instance_x) {
 		double result = initialValue;
@@ -52,10 +55,8 @@ public class ResultFunction {
 			return result;
 		}
 		
-		Iterator<RegressionTree> iter = trees.iterator();
-		while (iter.hasNext()) {
-			RegressionTree tree = iter.next();
-			// Learning rate is accoutned for in the tree itself.
+		for (RegressionTree tree : trees){
+			// Learning rate is accounted for in the tree itself.
 			result += tree.getLearnedValue(instance_x);
 		}
 		
@@ -63,6 +64,10 @@ public class ResultFunction {
 	}
 	
 	public String getRelativeInfluencesString() {
+		return getRelativeInfluencesString(trees.size());
+	}
+	
+	public String getRelativeInfluencesString(int numberOfTrees) {
 		double[] relativeInf = calcRelativeInfluences();
 		StringBuffer s = new StringBuffer();
 		s.append("Relative Influences\n--------------------\n");
@@ -82,10 +87,15 @@ public class ResultFunction {
 		}
 		return s.toString();
 	}
-
+	
 	public double[] calcRelativeInfluences() {
+		return calcRelativeInfluences(trees.size());
+	}
+
+	public double[] calcRelativeInfluences(int numberOfTrees) {
 		double[] relativeInfluences = new double[numberOfPredictors];
-		for (RegressionTree tree : trees) {
+		for (int i = 0 ; i < numberOfTrees; i++) {
+			RegressionTree tree = trees.get(i);
 			calcRelativeInfluenceHelper(relativeInfluences, tree.root);
 		}
 		for (int i = 0; i < relativeInfluences.length; i++) {
@@ -104,7 +114,7 @@ public class ResultFunction {
 	
 	public static void calcRelativeInfluenceHelper(double[] relativeInfluences, TreeNode node) {
 		if (node == null) return;
-		relativeInfluences[node.splitPredictorIndex] += Math.round(((node.squaredErrorBeforeSplit - (node.leftSquaredError + node.rightSquaredError))) * 10) / 10.0;
+		relativeInfluences[node.splitPredictorIndex] += Math.round(((node.getSquaredErrorImprovement())) * 10) / 10.0;
 		calcRelativeInfluenceHelper(relativeInfluences, node.leftChild);
 		calcRelativeInfluenceHelper(relativeInfluences, node.rightChild);
 	}
@@ -112,10 +122,12 @@ public class ResultFunction {
 	public String getSummary() {
 		return String.format("\nTotalNumberOfTrees: %d \n"
 						+ "Training RMSE: %f \n"
-						+ "Validation RMSE: %f \n\n" 
+						+ "Validation RMSE: %f \n"
+						+ "Test RMSE: %f \n\n" 
 						+ getRelativeInfluencesString(),
 				trees.size(),
 				trainingError.get(trees.size()-1),
-				validationError.get(trees.size()-1));
+				validationError.get(trees.size()-1),
+				testError.get(trees.size()-1));
 	}
 }

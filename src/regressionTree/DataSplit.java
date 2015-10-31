@@ -34,7 +34,7 @@ import utilities.SumCountAverage;
 		/*
 		 *  Split data into the left node and the right node based on the best splitting point.
 		 */
-		public static DataSplit splitDataIntoChildren(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double maxLearningRate, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		public static DataSplit splitDataIntoChildren(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
 			DataSplit dataSplit = new DataSplit();
 			
 			StopWatch timer = (new StopWatch()).start();
@@ -48,17 +48,17 @@ import utilities.SumCountAverage;
 			}
 			
 			// Build a new tree node based on the best split information
-			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, maxLearningRate);
+			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent);
 			
 			// map training data to the correct child
-			int numOfExamples = dataset.getNumberOfExamples();
+			int numOfExamples = dataset.getNumberOfTrainingExamples();
 			dataSplit.inLeftChild = new boolean[numOfExamples];
 			dataSplit.inRightChild = new boolean[numOfExamples];
 			dataSplit.inMissingChild = new boolean[numOfExamples];
 			//int leftC = 0, rightC = 0, missingC= 0;
 			for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
 				if (inParent[instanceNum]) {
-					switch (dataSplit.node.whichChild(dataset.getInstances()[instanceNum])) {
+					switch (dataSplit.node.whichChild(dataset.getTrainingInstances()[instanceNum])) {
 						case 1:
 							dataSplit.inLeftChild[instanceNum] = true;
 							//leftC++;
