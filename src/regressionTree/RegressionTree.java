@@ -19,16 +19,20 @@ import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+import utilities.DoubleCompare;
 import utilities.Logger;
+import utilities.MersenneTwisterFast;
 import dataset.Attribute;
 public class RegressionTree {
 	public enum LearningRatePolicy {CONSTANT, VARIABLE};
+	public enum SplitsPolicy {CONSTANT, INCREASING, RANDOM};
 	// class members
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
 	private double maxLearningRate;
 	private int sampleSize;
 	private LearningRatePolicy learningRatePolicy;
+	private SplitsPolicy splitsPolicy;
 	
 	public TreeNode root;
 	
@@ -38,6 +42,7 @@ public class RegressionTree {
 		setMaxLearningRate(parameters.maxLearningRate);
 		setSampleSize(sampleSize);
 		this.learningRatePolicy = parameters.learningRatePolicy;
+		this.splitsPolicy = parameters.splitsPolicy;
 		root = null;
 	}
 	
@@ -81,7 +86,13 @@ public class RegressionTree {
 		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
 			return maxLearningRate * leaf.terminalValue;
 		} else {
-			return maxLearningRate * leaf.instanceCount / sampleSize * leaf.terminalValue;
+			double multiplier = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
+			/*if (DoubleCompare.equals(0.5, multiplier)) {
+				System.out.println("equal to 1");
+			} else {
+				System.out.println("Not equal to 1");
+			}*/
+			return  multiplier * leaf.terminalValue;
 		}
 	}
 	
@@ -115,7 +126,13 @@ public class RegressionTree {
 		
 		int numOfSplits = 1;
 		PriorityQueue<PossibleChild> possibleChildren = new PriorityQueue<PossibleChild>();
-		while (numOfSplits < maxNumberOfSplits) {
+		int maxSplits = 0;
+		switch(splitsPolicy) {
+		case CONSTANT: maxSplits = maxNumberOfSplits; break;
+		case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
+		case INCREASING: throw new UnsupportedOperationException();
+		}
+		while (numOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
 				DataSplit left = null, right = null, missing = null;

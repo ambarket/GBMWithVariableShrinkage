@@ -1,6 +1,7 @@
 package gbm;
 
 import regressionTree.RegressionTree.LearningRatePolicy;
+import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.Logger;
 
 public class GbmParameters {
@@ -9,19 +10,19 @@ public class GbmParameters {
 	public double maxLearningRate;
 	public int numOfTrees;
 	public LearningRatePolicy learningRatePolicy;
+	public SplitsPolicy splitsPolicy;
 	
 	// tree related parameters
 	public int minExamplesInNode;
 	public int maxNumberOfSplits;
-	public double timeInSeconds;
-	public int optimalNumberOfTrees;
-	public GbmParameters(double bagFraction, double maxLearningRate, int numOfTrees, int minExamplesInNode, int maxNumberOfSplits, LearningRatePolicy learningRatePolicy) {
+	public GbmParameters(double bagFraction, double maxLearningRate, int numOfTrees, int minExamplesInNode, int maxNumberOfSplits, LearningRatePolicy learningRatePolicy, SplitsPolicy splitsPolicy) {
 		setBagFraction(bagFraction);
 		setMaxLearningRate(maxLearningRate);
 		setNumOfTrees(numOfTrees);
 		setMinObsInNode(minExamplesInNode);
 		setmaxNumberOfSplits(maxNumberOfSplits);
 		this.learningRatePolicy = learningRatePolicy;
+		this.splitsPolicy = splitsPolicy;
 	}
 
 	private void setBagFraction(double bagFraction) {
@@ -97,9 +98,8 @@ public class GbmParameters {
 	}
 	
 	public static String getTabSeparatedHeader() {
-		return "TimeInSeconds\t"
-				+ "OptimalNumberOfTrees\t"
-				+ "LearningRatePolicy\t"
+		return 
+				"LearningRatePolicy\t"
 				+ "MaxLearningRate\t" 
 				+ "BagFraction\t"
 				+ "MaxNumberOfSplits\t"
@@ -108,14 +108,12 @@ public class GbmParameters {
 	}
 	public String getTabSeparatedPrintOut() {
 		return String.format(
-				"%.4f\t"
-				+ "%d\t"
-				+ learningRatePolicy.name() + "\t" 
+				learningRatePolicy.name() + "\t" 
 				+ "%.4f\t" 
 				+ "%.4f\t"
 				+ "%d\t"
 				+ "%d\t"
 				+ "%d\t",
-				timeInSeconds, optimalNumberOfTrees, maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
+				maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
 	}
 }

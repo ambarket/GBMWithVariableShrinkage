@@ -50,22 +50,35 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		// Going to be accessing these a lot so just grab the pointer.
 		int[][] numericalPredictorSortedIndexMap = parameters.dataset.getNumericalPredictorSortedIndexMap();
 		
+		Attribute[][] instances = parameters.dataset.getTrainingInstances();
+		int realExampleIndex = -1;
+		
 		int sortedExampleIndex = 0;
 		int lastSortedExampleIndexInLeft = -1;
 		double currentY = 0.0;	
 		while(snapshot.left.getCount() < parameters.minExamplesInNode) {
-			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.trainingPseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
-				snapshot.left.addData(currentY);
+			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
+			if (parameters.inParent[realExampleIndex]) {
+				if (instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
+					// TODO
+				} else {
+					currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
+					snapshot.left.addData(currentY);
+				}
 				lastSortedExampleIndexInLeft = sortedExampleIndex;
 			}
 			sortedExampleIndex++;
 		}
-		
+
 		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
-			if (parameters.inParent[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]]) {
-				currentY = parameters.dataset.trainingPseudoResponses[numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex]];
-				snapshot.right.addData(currentY);
+			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
+			if (parameters.inParent[realExampleIndex]) {
+				if (instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
+					// TODO
+				} else {
+					currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
+					snapshot.right.addData(currentY);
+				}
 			}
 			sortedExampleIndex++;
 		}

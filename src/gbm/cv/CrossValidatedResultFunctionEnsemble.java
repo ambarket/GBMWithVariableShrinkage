@@ -30,13 +30,15 @@ public class CrossValidatedResultFunctionEnsemble {
 	public double[] avgCvTrainingErrors;
 	public double[] avgCvTestErrors;
 	public String[] predictorNames;
+	public double timeInSeconds;
 	
-	public CrossValidatedResultFunctionEnsemble(GbmParameters parameters, CrossValidationStepper[] steppers, int totalNumberOfTrees) {
+	public CrossValidatedResultFunctionEnsemble(GbmParameters parameters, CrossValidationStepper[] steppers, int totalNumberOfTrees, double timeInSeconds) {
 		this.predictorNames = steppers[0].dataset.getPredictorNames();
 		this.parameters = parameters;
 		this.totalNumberOfTrees = totalNumberOfTrees;
 		this.stepSize = steppers[0].stepSize;
 		this.numOfFolds = steppers.length-1;
+		this.timeInSeconds = timeInSeconds;
 		
 		this.functions = new ResultFunction[steppers.length-1];
 		this.avgInitialValue = 0.0;
@@ -159,7 +161,8 @@ public class CrossValidatedResultFunctionEnsemble {
 	}
 	
 	public String getSummary() {
-		return String.format("Step Size: %d \n"
+		return String.format("Time In Seconds: %f \n"
+						+ "Step Size: %d \n"
 						+ "Number Of Folds: %d \n"
 						+ "TotalNumberOfTrees: %d \n"
 						+ "OptimalNumberOfTrees: %d \n"
@@ -170,6 +173,7 @@ public class CrossValidatedResultFunctionEnsemble {
 						+ "All Data Test RMSE: %f \n" 
 						+ getRelativeInfluencesString()
 						+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
+				timeInSeconds,
 				stepSize,
 				numOfFolds,
 				totalNumberOfTrees,

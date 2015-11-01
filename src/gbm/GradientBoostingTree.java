@@ -86,6 +86,7 @@ public class GradientBoostingTree {
 	
 	
 	public static CrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset training, int numOfFolds, int stepSize) {
+		StopWatch ensembleTimer = new StopWatch().start();
 		if (numOfFolds <= 1) {
 			throw new IllegalStateException("Number of folds must be > 1 for cross validation");
 		}
@@ -161,15 +162,16 @@ public class GradientBoostingTree {
 					"\nLast Avg Validation Error: " + lastAvgValidationError + 
 					"\nCurrent Avg Validation Error: " + avgValidError + 
 					"\nDifference: " + (lastAvgValidationError - avgValidError));
-			if (DoubleCompare.lessThan(avgValidError, lastAvgValidationError)) {
+			if (DoubleCompare.greaterThan(avgValidError, lastAvgValidationError, 0.001)) {
 				lastAvgValidationError = avgValidError;
+				remainingStepsPastMinimum = 3;
 			} else {
 				remainingStepsPastMinimum--;
 				Logger.println(LEVELS.INFO, "Reached minimum after " + lastTreeIndex + " iterations");
 			}
-			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds");
+			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds. Cv Error: " + avgValidError);
 		}
-
-		return new CrossValidatedResultFunctionEnsemble(parameters, steppers, lastTreeIndex+1);
+		
+		return new CrossValidatedResultFunctionEnsemble(parameters, steppers, lastTreeIndex+1, ensembleTimer.getElapsedSeconds());
 	}
 }

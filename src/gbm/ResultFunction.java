@@ -114,7 +114,9 @@ public class ResultFunction {
 	
 	public static void calcRelativeInfluenceHelper(double[] relativeInfluences, TreeNode node) {
 		if (node == null) return;
-		relativeInfluences[node.splitPredictorIndex] += Math.round(((node.getSquaredErrorImprovement())) * 10) / 10.0;
+		if (node.splitPredictorIndex != -1) {
+			relativeInfluences[node.splitPredictorIndex] += Math.round(((node.getSquaredErrorImprovement())) * 10) / 10.0;
+		}
 		calcRelativeInfluenceHelper(relativeInfluences, node.leftChild);
 		calcRelativeInfluenceHelper(relativeInfluences, node.rightChild);
 	}
