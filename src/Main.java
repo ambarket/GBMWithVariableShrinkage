@@ -84,7 +84,7 @@ public class Main {
 		int done = 0;
 		for (double learningRate = 2; learningRate >= 1; learningRate-=0.5) {
 			for (double bagFraction = 1; bagFraction >= 0.1; bagFraction -= 0.3) {
-				for (int numberOfSplits = 1; numberOfSplits > 0; numberOfSplits -= 100) {
+				for (int numberOfSplits = 1000; numberOfSplits > 0; numberOfSplits -= 100) {
 					String lrbfsDirectory = root + String.format("%.5fLR/%.5fBF/%dSplits/", learningRate, bagFraction, numberOfSplits);
 					new File(lrbfsDirectory).mkdirs();
 					//for (int minExamplesInNode = 1; minExamplesInNode <= 1000; minExamplesInNode *= 10) {
