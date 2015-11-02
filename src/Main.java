@@ -36,9 +36,9 @@ public class Main {
 	
 	
 	public static final double LEARNING_RATE = .001;
-	public static final double BAG_FRACTION = 1;
+	public static final double BAG_FRACTION = 0.5;
 	public static final int MAX_NUMBER_OF_SPLITS = 3;
-	public static final int MIN_EXAMPLES_IN_NODE = 10;
+	public static final int MIN_EXAMPLES_IN_NODE = 1;
 	public static final LearningRatePolicy LEARNING_RATE_POLICY = LearningRatePolicy.CONSTANT;
 	public static final SplitsPolicy SPLITS_POLICY = SplitsPolicy.CONSTANT;
 	
@@ -83,40 +83,34 @@ public class Main {
 		//PriorityQueue<Map.Entry<Double, GbmParameters>> sortedEnsembles = new PriorityQueue<Map.Entry<Double, GbmParameters>>(new EnsembleComparator());
 		int done = 0;
 		for (double learningRate = 2; learningRate >= 1; learningRate-=0.5) {
-			for (double bagFraction = 1; bagFraction >= 0.1; bagFraction -= 0.3) {
-				for (int numberOfSplits = 1000; numberOfSplits > 0; numberOfSplits -= 100) {
-					String lrbfsDirectory = root + String.format("%.5fLR/%.5fBF/%dSplits/", learningRate, bagFraction, numberOfSplits);
-					new File(lrbfsDirectory).mkdirs();
-					//for (int minExamplesInNode = 1; minExamplesInNode <= 1000; minExamplesInNode *= 10) {
-					int minExamplesInNode = 1;
-						//for (int i = 0; i <= 1; i++) {
-							GbmParameters parameters;
-							//if (i == 0) {
-								//parameters = new GbmParameters(bagFraction, learningRate, NUMBER_OF_TREES, minExamplesInNode, numberOfSplits, LearningRatePolicy.CONSTANT);
-							//} else {
-								parameters = new GbmParameters(bagFraction, learningRate, NUMBER_OF_TREES, minExamplesInNode, numberOfSplits, LearningRatePolicy.VARIABLE, SplitsPolicy.RANDOM);
-							//}
-							timer.start();
-							CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE);
-							if (ensemble != null) {
-								try {
-									ensemble.saveDataToFile("", lrbfsDirectory);
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-								//PlotGenerator.plotCVEnsemble(lrbfsDirectory, parameters.getFileNamePrefix(), parameters.getFileNamePrefix(), ensemble);
-								System.out.println("Finished " + parameters.getFileNamePrefix() + " in " + timer.getElapsedSeconds() + " seconds");
-							} else {
-								System.out.println("Failed to build because of inpossible parameters " + parameters.getFileNamePrefix() + " in " + timer.getElapsedSeconds() + " seconds");
-							}
-						//}
-						done+=2;
-						System.out.println("Have been running for " + globalTimer.getElapsedMinutes() + " minutes. Completed " + done + " out of 384");
-					}
+			for (int numberOfSplits = 100; numberOfSplits > 0; numberOfSplits -= 10) {
+				String lrbfsDirectory = root + String.format("%.5fLR/%.5fBF/%dSplits/", learningRate, BAG_FRACTION, numberOfSplits);
+				new File(lrbfsDirectory).mkdirs();
+				//for (int i = 0; i <= 1; i++) {
+				GbmParameters parameters;
+				//if (i == 0) {
+				//parameters = new GbmParameters(bagFraction, learningRate, NUMBER_OF_TREES, minExamplesInNode, numberOfSplits, LearningRatePolicy.CONSTANT);
+				//} else {
+				parameters = new GbmParameters(BAG_FRACTION, learningRate, NUMBER_OF_TREES, MIN_EXAMPLES_IN_NODE, numberOfSplits, LearningRatePolicy.VARIABLE, SplitsPolicy.RANDOM);
 				//}
+				timer.start();
+				CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE);
+				if (ensemble != null) {
+					try {
+						ensemble.saveDataToFile("", lrbfsDirectory);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					//PlotGenerator.plotCVEnsemble(lrbfsDirectory, parameters.getFileNamePrefix(), parameters.getFileNamePrefix(), ensemble);
+					System.out.println("Finished " + parameters.getFileNamePrefix() + " in " + timer.getElapsedSeconds() + " seconds");
+				} else {
+					System.out.println("Failed to build because of inpossible parameters " + parameters.getFileNamePrefix() + " in " + timer.getElapsedSeconds() + " seconds");
+				}
+				//}
+				done+=2;
+				System.out.println("Have been running for " + globalTimer.getElapsedMinutes() + " minutes. Completed " + done + " out of 384");
 			}
 		}
-		// crecordSortedParameters(sortedEnsembles);
 		GradientBoostingTree.executor.shutdownNow();
 	}
 	
