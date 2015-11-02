@@ -39,7 +39,7 @@ public class Main {
 	
 	public static final int NUMBER_OF_TREES = 250000;
 	public static final int CV_NUMBER_OF_FOLDS = 4;
-	public static final int CV_STEP_SIZE = 5;
+	public static final int CV_STEP_SIZE = 1000;
 	public static final double TRAINING_SAMPLE_FRACTION = 0.8;
 	
 	
