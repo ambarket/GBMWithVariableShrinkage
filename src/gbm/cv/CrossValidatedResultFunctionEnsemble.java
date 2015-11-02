@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
 import utilities.DoubleCompare;
+import utilities.MathematicaListCreator;
 import utilities.Matrix;
 import dataset.Attribute;
 import dataset.Dataset;
@@ -220,11 +221,11 @@ public class CrossValidatedResultFunctionEnsemble {
 		BufferedWriter normal = new BufferedWriter(new PrintWriter(new File(normalFileName)));
 		
 		//mathematica.write(getMathematicaCommentedSummary());
-		mathematica.write("avgCvTrainingError := " + convertToMathematicaList(avgCvTrainingErrors) + "\n");
-		mathematica.write("avgCvValidationError := " + convertToMathematicaList(avgCvValidationErrors) + "\n");
-		mathematica.write("avgCvTestError := " + convertToMathematicaList(avgCvTestErrors) + "\n");
-		mathematica.write("allDataTrainingError := " + convertToMathematicaList(allDataFunction.trainingError) + "\n");
-		mathematica.write("allDataTestError := " + convertToMathematicaList(allDataFunction.testError) + "\n");
+		mathematica.write("avgCvTrainingError := " + MathematicaListCreator.convertToMathematicaList(avgCvTrainingErrors) + "\n");
+		mathematica.write("avgCvValidationError := " + MathematicaListCreator.convertToMathematicaList(avgCvValidationErrors) + "\n");
+		mathematica.write("avgCvTestError := " + MathematicaListCreator.convertToMathematicaList(avgCvTestErrors) + "\n");
+		mathematica.write("allDataTrainingError := " + MathematicaListCreator.convertToMathematicaList(allDataFunction.trainingError) + "\n");
+		mathematica.write("allDataTestError := " + MathematicaListCreator.convertToMathematicaList(allDataFunction.testError) + "\n");
 		mathematica.write("optimalNumberOfTrees := {{" + optimalNumberOfTrees + ", 0}, {" + optimalNumberOfTrees + ", 15}}\n");
 		mathematica.write("ListLinePlot[{avgCvTrainingError,avgCvValidationError,avgCvTestError, allDataTrainingError, allDataTestError, optimalNumberOfTrees}"
 				+ ", PlotLegends -> {\"avgCvTrainingError\", \"avgCvValidationError\", \"avgCvTestError\", \"allDataTrainingError\", \"allDataTestError\", \"optimalNumberOfTrees\"}"
@@ -238,36 +239,9 @@ public class CrossValidatedResultFunctionEnsemble {
 		normal.write(convertToNormalFile());
 		normal.flush();
 		normal.close();
+	}
+	
 
-	}
-	
-	public String convertToMathematicaList(ArrayList<Double> error) {
-		StringBuffer retval = new StringBuffer();
-		retval.append("{\n");
-		for (int i = 0; i < error.size(); i++) {
-			retval.append(String.format("\t{ %d, %.5f }", i+1, error.get(i)));
-			if (i != error.size() - 1) {
-				retval.append(",");
-			} 
-			retval.append("\n");
-		}
-		retval.append("}");
-		return retval.toString();
-	}
-	
-	public String convertToMathematicaList(double[] error) {
-		StringBuffer retval = new StringBuffer();
-		retval.append("{\n");
-		for (int i = 0; i < error.length; i++) {
-			retval.append(String.format("\t{ %d, %.5f }", i+1, error[i]));
-			if (i != error.length - 1) {
-				retval.append(",");
-			} 
-			retval.append("\n");
-		}
-		retval.append("}");
-		return retval.toString();
-	}
 	
 	public String convertToNormalFile() {
 		StringBuffer retval = new StringBuffer();

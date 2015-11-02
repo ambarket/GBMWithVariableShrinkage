@@ -57,10 +57,16 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		int lastSortedExampleIndexInLeft = -1;
 		double currentY = 0.0;	
 		while(snapshot.left.getCount() < parameters.minExamplesInNode) {
+			if (sortedExampleIndex >= parameters.dataset.getNumberOfTrainingExamples()) {
+				// TODO:
+				//System.out.println("Whyd oes this happen?");
+				break;
+			}
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
+
 			if (parameters.inParent[realExampleIndex]) {
 				if (instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
-					// TODO
+					System.out.println("here"); //todo
 				} else {
 					currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
 					snapshot.left.addData(currentY);
