@@ -37,7 +37,7 @@ public class Main {
 	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
 	public static final String nasaFiles = System.getProperty("user.dir") + "/data/NASAAirFoild/";
 	
-	public static final int NUMBER_OF_TREES = 5;
+	public static final int NUMBER_OF_TREES = 250000;
 	public static final int CV_NUMBER_OF_FOLDS = 4;
 	public static final int CV_STEP_SIZE = 5;
 	public static final double TRAINING_SAMPLE_FRACTION = 0.8;
@@ -70,7 +70,7 @@ public class Main {
 		Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, TRAINING_SAMPLE_FRACTION);
 		tryDifferentParameters(trainingDataset, bikeSharingParamTune);
 		
-		
+		/*
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		Dataset trainingDataset2 = new Dataset(nasaFiles + "data.txt", true, true, 5, TRAINING_SAMPLE_FRACTION);
 		tryDifferentParameters(trainingDataset2, nasaParamTune);
@@ -79,7 +79,7 @@ public class Main {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		Dataset trainingDataset3 = new Dataset(powerPlantFiles + "Folds5x2_pp.txt", true, true,4, TRAINING_SAMPLE_FRACTION);
 		tryDifferentParameters(trainingDataset3, powerPlantParamTune);
-		
+		*/
 		//readOptimalParameterRecords();
 	}
 	
