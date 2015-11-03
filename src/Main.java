@@ -52,35 +52,38 @@ public class Main {
 	
 	
 	public static void main(String[] args) {
-		//recreateRExperiment();
-		//experiment2();
-		//crossVal1();
-		//tryDifferentParameters();
-		//readAndSortParameters();
-		/*
-		try {
-			//DataSetGen.gen();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		*/
-		
-		
-		Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, TRAINING_SAMPLE_FRACTION);
-		tryDifferentParameters(trainingDataset, bikeSharingParamTune);
-		
+		runNASA();
+		runBikeSharing();
+		runPowerPlant();
+	}
+	public static void runNASA() {
 		/*
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		Dataset trainingDataset2 = new Dataset(nasaFiles + "data.txt", true, true, 5, TRAINING_SAMPLE_FRACTION);
 		tryDifferentParameters(trainingDataset2, nasaParamTune);
-		
-		
+		*/
+		readAndSortParameters(nasaParamTune);
+		readOptimalParameterRecords(nasaParamTune);
+	}
+	
+	public static void runBikeSharing() {
+		/*
+		GradientBoostingTree.executor = Executors.newCachedThreadPool();
+		Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, TRAINING_SAMPLE_FRACTION);
+		tryDifferentParameters(trainingDataset, bikeSharingParamTune);
+		*/
+		readAndSortParameters(bikeSharingParamTune);
+		readOptimalParameterRecords(bikeSharingParamTune);
+	}
+	
+	public static void runPowerPlant() {
+		/*
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		Dataset trainingDataset3 = new Dataset(powerPlantFiles + "Folds5x2_pp.txt", true, true,4, TRAINING_SAMPLE_FRACTION);
 		tryDifferentParameters(trainingDataset3, powerPlantParamTune);
-		*/
-		//readOptimalParameterRecords();
+		 */
+		//readAndSortParameters(powerPlantParamTune);
+		//readOptimalParameterRecords(powerPlantParamTune);
 	}
 	
 
@@ -236,6 +239,70 @@ public class Main {
 			}
 		}
 	}
+	
+	public static void readAndSortParameters(String paramTuneDir) {
+		try {
+			PriorityQueue<OptimalParameterRecord> sortedByCvValidationError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.CvValidationErrorComparator());
+			PriorityQueue<OptimalParameterRecord> sortedByCvTestError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.CvTestErrorComparator());
+			PriorityQueue<OptimalParameterRecord> sortedByAllDataTestError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.AllDataTestErrorComparator());
+			PriorityQueue<OptimalParameterRecord> sortedByAllDataTrainingError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.AllDataTrainingErrorComparator());
+			PriorityQueue<OptimalParameterRecord> sortedByTimeInSeconds = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.TimeInSecondsComparator());
+			for (double learningRate = 2.5; learningRate >= 0.001; learningRate /=2) {
+				for (double bagFraction = 1; bagFraction >= 0.5; bagFraction -= 0.25) {
+					for (int numberOfSplits = 20; numberOfSplits > 0; numberOfSplits -= 4) {
+						String lrbfsDirectory = paramTuneDir + String.format("%.5fLR/%.5fBF/%dSplits/", learningRate, bagFraction, numberOfSplits);
+						new File(lrbfsDirectory).mkdirs();
+						int minExamplesInNode = 1;
+						for (int i = 0; i <= 1; i++) {
+							OptimalParameterRecord record = new OptimalParameterRecord();
+						
+							GbmParameters parameters;
+							if (i == 0) {
+								parameters = new GbmParameters(bagFraction, learningRate, NUMBER_OF_TREES, minExamplesInNode, numberOfSplits, LearningRatePolicy.CONSTANT, SPLITS_POLICY);
+							} else {
+								parameters = new GbmParameters(bagFraction, learningRate, NUMBER_OF_TREES, minExamplesInNode, numberOfSplits, LearningRatePolicy.VARIABLE, SPLITS_POLICY);
+							}
+							try {
+								// System.out.println(lrbfsDirectory + "normal/" + parameters.getFileNamePrefix() + "--normal.txt");
+								BufferedReader br = new BufferedReader(new FileReader(new File(lrbfsDirectory + "normal/" + parameters.getFileNamePrefix() + "--normal.txt")));
+								record.timeInSeconds = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								br.readLine(); // Skip Step Size
+								br.readLine(); // Skip number of Folds
+								record.totalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
+								record.optimalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
+								record.cvValidationError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								record.cvTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								record.allDataTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								record.cvTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								record.allDataTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+								record.parameters = parameters;
+								br.close();
+							} catch (FileNotFoundException e) {
+								System.out.println("File for " + parameters.getTabSeparatedPrintOut() + " not found");
+								continue;
+							}
+							sortedByCvValidationError.add(record);
+							sortedByAllDataTestError.add(record);
+							sortedByAllDataTrainingError.add(record);
+							sortedByTimeInSeconds.add(record);
+							sortedByCvTestError.add(record);
+						}
+					}
+				}
+				
+			}
+			recordSortedParameters(paramTuneDir, "SortedByCvValidationError", sortedByCvValidationError);
+			recordSortedParameters(paramTuneDir, "SortedByCvTestError", sortedByCvTestError);
+			recordSortedParameters(paramTuneDir, "SortedByAllDataTestError", sortedByAllDataTestError);
+			recordSortedParameters(paramTuneDir, "SortedByAllDataTrainingError", sortedByAllDataTrainingError);
+			recordSortedParameters(paramTuneDir, "SortedByTimeInSeconds", sortedByTimeInSeconds);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/*
 	public static void readAndSortParameters() {
 		try {
 			Dataset trainingDataset = new Dataset(powerPlantFiles + "Folds5x2_pp.txt", true, true, 4, TRAINING_SAMPLE_FRACTION);
@@ -314,11 +381,13 @@ public class Main {
 			e.printStackTrace();
 		}
 	}
+	*/
 	
-	public static void recordSortedParameters(String fileNamePrefix, PriorityQueue<OptimalParameterRecord> sortedEnsembles) {
-		String directory = System.getProperty("user.dir") + "/data/parameterTuning/";
+	public static void recordSortedParameters(String paramTuneDir, String fileNamePrefix, PriorityQueue<OptimalParameterRecord> sortedEnsembles) {
 		try {
-			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(directory + fileNamePrefix + "Parameters.txt")));
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
+			BufferedWriter constant = new BufferedWriter(new PrintWriter(new File( paramTuneDir + "Constant_" + fileNamePrefix + "Parameters.txt")));
+			BufferedWriter variable = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "Variable_" + fileNamePrefix + "Parameters.txt")));
 			bw.append("TimeInSeconds\tCvValidation\tCvTest\tAllDataTraining\tAllDataTest\tTotalNumberOfTreesTrained\tOptimalNumberOfTrees\t" + GbmParameters.getTabSeparatedHeader() + "\n");
 			while (!sortedEnsembles.isEmpty()) {
 				OptimalParameterRecord record = sortedEnsembles.poll();
@@ -329,8 +398,26 @@ public class Main {
 						record.allDataTestError,
 						record.totalNumberOfTrees, record.optimalNumberOfTrees) 
 						+ record.parameters.getTabSeparatedPrintOut() + "\n");
+				if (record.parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
+					constant.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
+							record.timeInSeconds, record.cvValidationError, 
+							record.cvTestError, record.allDataTrainingError, 
+							record.allDataTestError,
+							record.totalNumberOfTrees, record.optimalNumberOfTrees) 
+							+ record.parameters.getTabSeparatedPrintOut() + "\n");
+				} else {
+					variable.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
+							record.timeInSeconds, record.cvValidationError, 
+							record.cvTestError, record.allDataTrainingError, 
+							record.allDataTestError,
+							record.totalNumberOfTrees, record.optimalNumberOfTrees) 
+							+ record.parameters.getTabSeparatedPrintOut() + "\n");
+				}
 			}
-			
+			constant.flush();
+			constant.close();
+			variable.flush();
+			variable.close();
 			bw.flush();
 			bw.close();
 		} catch (IOException e) {
@@ -338,11 +425,10 @@ public class Main {
 		}
 	}
 	
-	public static void readOptimalParameterRecords() {
-		String directory = System.getProperty("user.dir") + "/data/parameterTuning_CompleteOriginal/";
+	public static void readOptimalParameterRecords(String paramTuneDir) {
 		ArrayList<OptimalParameterRecord> records = new ArrayList<>();
 		try {
-			BufferedReader br = new BufferedReader(new FileReader(new File(directory + "SortedByCvValidationErrorParameters.txt")));
+			BufferedReader br = new BufferedReader(new FileReader(new File(paramTuneDir + "All_SortedByCvValidationErrorParameters.txt")));
 			br.readLine(); // discard header
 			String text;
 			while ((text = br.readLine()) != null) {
@@ -369,27 +455,27 @@ public class Main {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.NOT_CVE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.NOT_CVE_ListEntryGetter());
 		
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.LR_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.BF_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.SPLITS_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.MEIN_TIME_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.LR_TIME_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.BF_TIME_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.SPLITS_TIME_ListEntryGetter());
+		//plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.MEIN_TIME_ListEntryGetter());
 		
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.LR_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.BF_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.SPLITS_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.MEIN_NOT_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.LR_NOT_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.BF_NOT_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.SPLITS_NOT_ListEntryGetter());
+		//plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.MEIN_NOT_ListEntryGetter());
 		
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.LR_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.BF_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.SPLITS_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.MEIN_CVE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.LR_CVE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.BF_CVE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.SPLITS_CVE_ListEntryGetter());
+		//plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.MEIN_CVE_ListEntryGetter());
 		
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.LR_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.BF_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.SPLITS_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.MEIN_ADTE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.LR_ADTE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.BF_ADTE_ListEntryGetter());
+		plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.SPLITS_ADTE_ListEntryGetter());
+		//plotStuffFromOptimalParameterRecords(paramTuneDir, records, new ListEntryGetter.MEIN_ADTE_ListEntryGetter());
 		
 		//plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.SPLITSPLUSLR_CVE_ListEntryGetter());
 		//plotStuffFromOptimalParameterRecords(records, new ListEntryGetter.ALL_CVE_ListEntryGetter());
@@ -397,8 +483,18 @@ public class Main {
 	}
 	
 	public static abstract class ListEntryGetter {
+		public static String CVEMin = "0", CVEMax = "All";
+		public static String TISMin = "0", TISMax = "All";
+		public static String NOTMin = "0", NOTMax = "" + NUMBER_OF_TREES;
+		public static String BFMin = "0.5", BFMax = "1";
+		public static String NOSMin = "0", NOSMax = "20";
+		public static String LRMin = "0", LRMax = "2.5";
 		public abstract String getXLabel();
 		public abstract String getYLabel();
+		public abstract String getXMin();
+		public abstract String getXMax();
+		public abstract String getYMin();
+		public abstract String getYMax();
 		public String getPlotLabel() {
 			return getXLabel() + "vs" + getYLabel();
 		}
@@ -417,6 +513,22 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.optimalNumberOfTrees, record.cvValidationError);
 			}
+			@Override
+			public String getXMin() {
+				return NOTMin;
+			}
+			@Override
+			public String getXMax() {
+				return NOTMax;
+			}
+			@Override
+			public String getYMin() {
+				return ListEntryGetter.CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				return CVEMax;
+			}
 		}
 		
 		public static class BF_NOT_ListEntryGetter extends ListEntryGetter {
@@ -428,6 +540,26 @@ public class Main {
 			}
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.optimalNumberOfTrees);
+			}
+			@Override
+			public String getXMin() {
+				// 
+				return BFMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return BFMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return NOTMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return NOTMax;
 			}
 		}
 		
@@ -441,8 +573,29 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.optimalNumberOfTrees);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return NOSMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return ListEntryGetter.NOSMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return ListEntryGetter.NOTMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return NOTMax;
+			}
 		}
 		
+		/*
 		public static class MEIN_NOT_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "MinExamplesInNode";
@@ -453,7 +606,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.optimalNumberOfTrees);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
+			}
 		}
+		*/
 		
 		public static class LR_NOT_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
@@ -464,6 +638,26 @@ public class Main {
 			}
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.optimalNumberOfTrees);
+			}
+			@Override
+			public String getXMin() {
+				// 
+				return LRMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return LRMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return NOTMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return NOTMax;
 			}
 		}
 		
@@ -477,6 +671,26 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.cvValidationError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return BFMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return BFMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
+			}
 		}
 		
 		public static class SPLITS_CVE_ListEntryGetter extends ListEntryGetter {
@@ -489,8 +703,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.cvValidationError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return NOSMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return NOSMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
+			}
 		}
-		
+		/*
 		public static class MEIN_ADTE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "MinExamplesInNode";
@@ -501,8 +735,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.allDataTestError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
+			}
 		}
-		
+		*/
 		public static class LR_ADTE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "LearningRate";
@@ -512,6 +766,26 @@ public class Main {
 			}
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.allDataTestError);
+			}
+			@Override
+			public String getXMin() {
+				// 
+				return LRMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return LRMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
 			}
 		}
 		
@@ -525,6 +799,26 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.allDataTestError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return BFMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return BFMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
+			}
 		}
 		
 		public static class SPLITS_ADTE_ListEntryGetter extends ListEntryGetter {
@@ -537,8 +831,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.allDataTestError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return NOSMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return NOSMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
+			}
 		}
-		
+		/*
 		public static class MEIN_CVE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "MinExamplesInNode";
@@ -549,7 +863,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.cvValidationError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
+			}
 		}
+		*/
 		
 		public static class LR_CVE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
@@ -560,6 +895,26 @@ public class Main {
 			}
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.cvValidationError);
+			}
+			@Override
+			public String getXMin() {
+				// 
+				return LRMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return LRMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return CVEMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return CVEMax;
 			}
 		}
 		
@@ -573,6 +928,26 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.timeInSeconds);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return BFMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return BFMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return TISMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return TISMax;
+			}
 		}
 		
 		public static class SPLITS_TIME_ListEntryGetter extends ListEntryGetter {
@@ -585,8 +960,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.timeInSeconds);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return NOSMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return NOSMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return TISMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return TISMax;
+			}
 		}
-		
+		/*
 		public static class MEIN_TIME_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "MinExamplesInNode";
@@ -597,8 +992,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.timeInSeconds);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
+			}
 		}
-		
+		*/
 		public static class LR_TIME_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "LearningRate";
@@ -609,8 +1024,28 @@ public class Main {
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.timeInSeconds);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return LRMin;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return LRMax;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return TISMin;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return TISMax;
+			}
 		}
-		
+		/*
 		public static class SPLITSPLUSLR_CVE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "SplitsPlusLearningRate";
@@ -620,6 +1055,26 @@ public class Main {
 			}
 			public String getEntry(OptimalParameterRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits + record.parameters.maxLearningRate, record.cvValidationError);
+			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
 			}
 		}
 		
@@ -638,10 +1093,32 @@ public class Main {
 						record.parameters.maxNumberOfSplits * 1000,
 						record.cvValidationError);
 			}
+			@Override
+			public String getXMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getXMax() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMin() {
+				// 
+				return null;
+			}
+			@Override
+			public String getYMax() {
+				// 
+				return null;
+			}
 		}
+		*/
 	}
 	
-	public static void plotStuffFromOptimalParameterRecords(ArrayList<OptimalParameterRecord> records, ListEntryGetter entryGetter) {
+	
+	public static void plotStuffFromOptimalParameterRecords(String paramTuningDir, ArrayList<OptimalParameterRecord> records, ListEntryGetter entryGetter) {
 		StringBuffer constantBuffer = new StringBuffer();
 		StringBuffer variableBuffer = new StringBuffer();
 		constantBuffer.append("constant" + entryGetter.getPlotLabel() + " := {");
@@ -688,6 +1165,7 @@ public class Main {
 		constantBuffer.append("ListPlot[constant" + entryGetter.getPlotLabel()
 				//+ ", DataRange -> \"All\""
 				//+ ", PlotRange -> \"All\""
+				+ ", PlotRange -> {{" + entryGetter.getXMin() + ", " + entryGetter.getXMax() + "}, {" + entryGetter.getYMin() + ", " + entryGetter.getYMax() + "}}"
 				+ ", ColorFunction -> \"Rainbow\""
 				+ ", AxesLabel->{\"" + entryGetter.getXLabel() + "\", \"" + entryGetter.getYLabel() + "\"}"
 				+ ", PlotLabel->{\"" + "ConstantLR " +entryGetter.getPlotLabel() + "\"}"
@@ -696,12 +1174,13 @@ public class Main {
 		variableBuffer.append("ListPlot[variable" + entryGetter.getPlotLabel()
 				//+ ", DataRange -> {All}"
 				//+ ", PlotRange -> {All}"
+				+ ", PlotRange -> {{" + entryGetter.getXMin() + ", " + entryGetter.getXMax() + "}, {" + entryGetter.getYMin() + ", " + entryGetter.getYMax() + "}}"
 				+ ", ColorFunction -> \"Rainbow\""
 				+ ", AxesLabel->{\"" + entryGetter.getXLabel() + "\", \"" + entryGetter.getYLabel() + "\"}"
 				+ ", PlotLabel->{\"" + "VariableLR " + entryGetter.getPlotLabel() + "\"}"
 				+ "] \n\n");
 		try {
-			String directory = System.getProperty("user.dir") + "/data/parameterTuning_CompleteOriginal/pairWiseGraphs/";
+			String directory = paramTuningDir + "pairWiseGraphs/";
 			new File(directory).mkdirs();
 			BufferedWriter file = new BufferedWriter(new PrintWriter(new File(directory + entryGetter.getFileName())));
 			file.write(constantBuffer.toString() + variableBuffer.toString());
