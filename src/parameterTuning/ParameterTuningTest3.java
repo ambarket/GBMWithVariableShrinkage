@@ -4,10 +4,14 @@ import gbm.GradientBoostingTree;
 import gbm.cv.CrossValidatedResultFunctionEnsemble;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 
@@ -93,6 +97,34 @@ public class ParameterTuningTest3 {
 		*/
 	}
 	
+	public static boolean checkAndClaimHostLock(String hostLockFilePath) {
+		File hostLock;
+		if ((hostLock = new File(hostLockFilePath)).exists()) {
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(hostLock));
+				String hostName = br.readLine();
+				br.close();
+				return (hostName).equals(InetAddress.getLocalHost().getHostName());
+			} catch (FileNotFoundException e) {
+				System.out.println("Host lock file exists but file not found. Makes no sense.");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			try {
+				BufferedWriter bw = new BufferedWriter(new PrintWriter(hostLock));
+				bw.write(InetAddress.getLocalHost().getHostName() + "\n");
+				bw.flush();
+				bw.close();
+				return true;
+			} catch (IOException e) {
+				e.printStackTrace();
+			} 
+		}
+		System.out.println("ERROR Shouldnt reach here in checkAndClaimHostLock");
+		return false;
+	}
+	
 	public static void tryDifferentRevisedVariableParameters(Dataset trainingDataset, String paramTuneDir, int runNumber) {
 		int done = 0, total = minLearningRates.length * maxLearningRates.length * splits.length;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
@@ -105,6 +137,12 @@ public class ParameterTuningTest3 {
 							minLR, maxLR, numberOfSplits, 
 							BAG_FRACTION, MIN_EXAMPLES_IN_NODE, NUMBER_OF_TREES, 
 							LearningRatePolicy.REVISED_VARIABLE, SplitsPolicy.CONSTANT);
+					if (!checkAndClaimHostLock(lrbfsDirectory + parameters.getFileNamePrefix() + "--hostLock.txt")) {
+						System.out.println(String.format("Another host has already claimed %s on run number %d. (%d out of %d)\n "
+								+ "Have been runnung for %.4f minutes total.", 
+								parameters.getFileNamePrefix(), runNumber, ++done, total, globalTimer.getElapsedMinutes()));
+						continue;
+					}
 					if (new File(lrbfsDirectory + parameters.getFileNamePrefix() + "--runData.txt").exists()) {
 						System.out.println(String.format("Skipping %s. (%d out of %d)\n "
 								+ "Have been runnung for %.4f minutes total.", 
@@ -143,6 +181,12 @@ public class ParameterTuningTest3 {
 						LR, numberOfSplits, 
 						BAG_FRACTION, MIN_EXAMPLES_IN_NODE, NUMBER_OF_TREES, 
 						LearningRatePolicy.CONSTANT, SplitsPolicy.CONSTANT);
+				if (!checkAndClaimHostLock(lrbfsDirectory + parameters.getFileNamePrefix() + "--hostLock.txt")) {
+					System.out.println(String.format("Another host has already claimed %s on run number %d. (%d out of %d)\n "
+							+ "Have been runnung for %.4f minutes total.", 
+							parameters.getFileNamePrefix(), runNumber, ++done, total, globalTimer.getElapsedMinutes()));
+					continue;
+				}
 				if (new File(lrbfsDirectory + parameters.getFileNamePrefix() + "--runData.txt").exists()) {
 					System.out.println(String.format("Skipping %s. (%d out of %d)\n "
 							+ "Have been runnung for %.4f minutes total.", 

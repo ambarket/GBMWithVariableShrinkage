@@ -39,6 +39,7 @@ import utilities.SumCountAverage;
 			
 			StopWatch timer = (new StopWatch()).start();
 			// Find the optimal attribute/value combination to perform the split.
+			//BestSplit bestSplit = getOptimalSplitSingleThread(new FindOptimalSplitParameters(dataset, inParent, minExamplesInNode, squaredErrorBeforeSplit));
 			BestSplit bestSplit = getOptimalSplit(new FindOptimalSplitParameters(dataset, inParent, minExamplesInNode, squaredErrorBeforeSplit));
 			Logger.println(Logger.LEVELS.DEBUG, "\t\t\t Found optimal split " + timer.getElapsedSeconds());
 			
@@ -99,6 +100,23 @@ import utilities.SumCountAverage;
 					System.exit(1);
 				}
 				
+				if (bestSplit == null || !bestSplit.success) {
+					bestSplit = tmpSplit;
+				} else if (tmpSplit != null && tmpSplit.success && 
+						(DoubleCompare.lessThan(bestSplit.getErrorImprovement(), tmpSplit.getErrorImprovement()))) {
+					bestSplit = tmpSplit;
+				}
+			}
+			return bestSplit;
+		}
+		
+		protected static BestSplit getOptimalSplitSingleThread(FindOptimalSplitParameters parameters) {
+			BestSplit bestSplit = null, tmpSplit = null;
+
+			// Find the best attribute to split on
+			int numOfPredictors = parameters.dataset.getNumberOfPredictors();
+			for (int splitPredictorIndex = 0; splitPredictorIndex < numOfPredictors; splitPredictorIndex ++) {
+				tmpSplit = new OptimalSplitFinder(parameters, splitPredictorIndex).call();
 				if (bestSplit == null || !bestSplit.success) {
 					bestSplit = tmpSplit;
 				} else if (tmpSplit != null && tmpSplit.success && 
