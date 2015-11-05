@@ -26,11 +26,11 @@ public class ParameterTuningTest3 {
 	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
 	public static final String nasaFiles = System.getProperty("user.dir") + "/data/NASAAirFoild/";
 	
-	public static final int NUMBER_OF_TREES = 2;
+	public static final int NUMBER_OF_TREES = 150000;
 	public static final double BAG_FRACTION = 0.75;
 	public static final int MIN_EXAMPLES_IN_NODE = 1;
 	public static final int CV_NUMBER_OF_FOLDS = 4;
-	public static final int CV_STEP_SIZE = 2;
+	public static final int CV_STEP_SIZE = 5000;
 	public static final double TRAINING_SAMPLE_FRACTION = 0.8;
 	
 	public static final LearningRatePolicy LEARNING_RATE_POLICY = LearningRatePolicy.CONSTANT;
