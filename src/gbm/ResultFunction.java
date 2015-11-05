@@ -1,10 +1,13 @@
 package gbm;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
@@ -28,6 +31,8 @@ public class ResultFunction {
 	public int numberOfPredictors;
 	public String[] predictorNames;
 	
+	int sumOfSplits = 0;
+	
 	// construction function
 	ResultFunction(GbmParameters parameters, double intialValue, String[] predictorNames) {
 		this.numberOfPredictors = predictorNames.length;
@@ -45,6 +50,11 @@ public class ResultFunction {
 		this.trainingError.add(trainingError);
 		this.validationError.add(validationError);
 		this.testError.add(testError);
+		this.sumOfSplits += newTree.actualNumberOfSplits;
+	}
+	
+	public double getAvgNumberOfSplits() {
+		return sumOfSplits / trees.size();
 	}
 	
 	// the following function is used to estimate the function
@@ -131,5 +141,32 @@ public class ResultFunction {
 				trainingError.get(trees.size()-1),
 				validationError.get(trees.size()-1),
 				testError.get(trees.size()-1));
+	}
+	
+	public void allowUserToPrintTrees() {
+		String userInput = "";
+		Scanner sc = new Scanner(System.in);
+		while(!userInput.equalsIgnoreCase("n")) {
+			System.out.println("Would you like to print an individual tree? Enter a number between 0 and " + (trees.size()-1) + " or type 'N'");
+			userInput = sc.nextLine();
+			int value = 0;
+			try {
+				value = Integer.parseInt(userInput);
+			} catch(Exception e) {
+				System.out.println("Try again :)");
+				continue;
+			}
+			
+			if (value > (trees.size()-1)) {
+				continue;
+			}
+			
+			try {
+				this.trees.get(value).root.printTree(new OutputStreamWriter(System.out));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		sc.close();
 	}
 }

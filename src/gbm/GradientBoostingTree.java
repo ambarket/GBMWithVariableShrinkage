@@ -84,6 +84,57 @@ public class GradientBoostingTree {
 		return function;
 	}
 	
+	public static ResultFunction standardValidation(GbmParameters parameters, Dataset basicDataset) {
+		GbmDataset gbmDataset = new GbmDataset(basicDataset);
+				
+		// Initialize the function approximation to the mean response in the training data
+		double meanTrainingResponse = gbmDataset.calcMeanTrainingResponse();
+		ResultFunction function = new ResultFunction(parameters, meanTrainingResponse, gbmDataset.getPredictorNames());
+		
+		// Initialize predictions of all instances to the initial function value.
+		gbmDataset.initializePredictions(meanTrainingResponse);
+		
+		int treeSampleSize = (int)(parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples());
+		if (parameters.minExamplesInNode * 2 > treeSampleSize) {
+			Logger.println(Logger.LEVELS.INFO, "parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples() "
+					+ "must be >= minExamplesInNode * 2 in order to grow a tree "
+					+ "Just returning a function with no trees.");
+			return function;
+		}
+	
+		// begin the boosting process
+		StopWatch timer = (new StopWatch());
+		for (int iterationNum = 0; iterationNum < parameters.numOfTrees; iterationNum++) {
+			timer.start();
+			// Update the current pseudo responses (gradients) of all the training instances.
+			gbmDataset.updatePseudoResponses();
+			
+			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
+			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(gbmDataset.getNumberOfTrainingExamples());
+			boolean[] inSample = new boolean[gbmDataset.getNumberOfTrainingExamples()];
+			for (int i = 0; i < treeSampleSize; i++ ) {
+				inSample[shuffledIndices[i]] = true;
+			}
+			
+			// Fit a regression tree to predict the current pseudo responses on the training data.
+			
+			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample);
+			
+			// Update our predictions for each training and validation instance using the new tree.
+			gbmDataset.updatePredictionsWithLearnedValueFromNewTree(tree);
+
+			// Calculate the training and validation error for this iteration.
+			double trainingRMSE = gbmDataset.calcTrainingRMSE();
+			double testRMSE = gbmDataset.calcTestRMSE();
+			
+			// Add the tree to the function approximation, keep track of the training, validation, and test errors.
+			// Note validation is only used for cross validation. 
+			function.addTree(tree, trainingRMSE, Double.NaN, testRMSE);
+			
+			Logger.println(Logger.LEVELS.DEBUG, "\tAdded 1 tree in : " + timer.getElapsedSeconds());
+		}
+		return function;
+	}
 	
 	public static CrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset training, int numOfFolds, int stepSize) {
 		StopWatch ensembleTimer = new StopWatch().start();

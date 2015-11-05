@@ -172,6 +172,7 @@ public class CrossValidatedResultFunctionEnsemble {
 						+ "All Data Training RMSE: %f \n"
 						+ "CV Test RMSE: %f \n" 
 						+ "All Data Test RMSE: %f \n" 
+						+ "All Data Avg Number Of Splits: %f\n"
 						+ getRelativeInfluencesString()
 						+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
 				timeInSeconds,
@@ -183,7 +184,8 @@ public class CrossValidatedResultFunctionEnsemble {
 				avgCvTrainingErrors[optimalNumberOfTrees-1],
 				allDataFunction.trainingError.get(optimalNumberOfTrees-1),
 				avgCvTestErrors[optimalNumberOfTrees-1],
-				allDataFunction.testError.get(optimalNumberOfTrees-1));
+				allDataFunction.testError.get(optimalNumberOfTrees-1),
+				allDataFunction.getAvgNumberOfSplits());
 	}
 	
 	public String getMathematicaCommentedSummary() {
@@ -210,13 +212,13 @@ public class CrossValidatedResultFunctionEnsemble {
 				allDataFunction.testError.get(optimalNumberOfTrees));
 	}
 	
-	public void saveDataToFile(String postFix, String directory) throws IOException {
+	public void saveDataToFileOld(String postFix, String directory) throws IOException {
 		String mathDirectory = directory + "/mathematica/";
 		String normalDirectory = directory + "/normal/";
 		new File(mathDirectory).mkdirs();
 		new File(normalDirectory).mkdirs();
-		String mathematicFileName = mathDirectory + parameters.getFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--mathematica.txt";
-		String normalFileName = normalDirectory + parameters.getFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--normal.txt";
+		String mathematicFileName = mathDirectory + parameters.getOldFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--mathematica.txt";
+		String normalFileName = normalDirectory + parameters.getOldFileNamePrefix() + ((postFix.isEmpty()) ? "" : "--" + postFix) + "--normal.txt";
 		BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicFileName)));
 		BufferedWriter normal = new BufferedWriter(new PrintWriter(new File(normalFileName)));
 		
@@ -235,6 +237,17 @@ public class CrossValidatedResultFunctionEnsemble {
 				+ "] \n");
 		mathematica.flush();
 		mathematica.close();
+		normal.write(getSummary());
+		normal.write(convertToNormalFile());
+		normal.flush();
+		normal.close();
+	}
+	
+	public void saveDataToFile(String directory) throws IOException {
+		new File(directory).mkdirs();
+		String normalFileName = directory + parameters.getFileNamePrefix() + "--runData.txt";
+		BufferedWriter normal = new BufferedWriter(new PrintWriter(new File(normalFileName)));
+		
 		normal.write(getSummary());
 		normal.write(convertToNormalFile());
 		normal.flush();

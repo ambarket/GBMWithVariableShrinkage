@@ -24,25 +24,37 @@ import utilities.Logger;
 import utilities.MersenneTwisterFast;
 import dataset.Attribute;
 public class RegressionTree {
-	public enum LearningRatePolicy {CONSTANT, VARIABLE};
+	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE};
 	public enum SplitsPolicy {CONSTANT, INCREASING, RANDOM};
 	// class members
 	private int minExamplesInNode;
 	private int maxNumberOfSplits;
 	private double maxLearningRate;
+	private double minLearningRate;
 	private int sampleSize;
 	private LearningRatePolicy learningRatePolicy;
 	private SplitsPolicy splitsPolicy;
 	
+	private double learningRateToExampleCountRatio;
 	public TreeNode root;
+	
+	public double actualNumberOfSplits = 0; // Will be set after growing
 	
 	public RegressionTree(GbmParameters parameters, int sampleSize) {
 		setMinObsInNode(parameters.minExamplesInNode);
 		setMaxNumberOfSplits(parameters.maxNumberOfSplits);
 		setMaxLearningRate(parameters.maxLearningRate);
+		if (parameters.learningRatePolicy != LearningRatePolicy.REVISED_VARIABLE) {
+			this.minLearningRate = -1; // Wont ever be used
+		} else {
+			setMinLearningRate(parameters.minLearningRate); 
+		}
 		setSampleSize(sampleSize);
 		this.learningRatePolicy = parameters.learningRatePolicy;
 		this.splitsPolicy = parameters.splitsPolicy;
+		
+		// No need to recalculate this everytime since its constant for this regression tree
+		this.learningRateToExampleCountRatio = (maxLearningRate - minLearningRate) / (sampleSize - minExamplesInNode);
 		root = null;
 	}
 	
@@ -60,6 +72,14 @@ public class RegressionTree {
 			System.exit(0);
 		}
 		this.maxLearningRate = maxLearningRate;
+	}
+	
+	private void setMinLearningRate(double minLearningRate) {
+		if (minLearningRate <= 0) {
+			Logger.println(Logger.LEVELS.INFO, "Learning rate must be > 0");
+			System.exit(0);
+		}
+		this.minLearningRate = minLearningRate;
 	}
 	
 	public void setMinObsInNode(int minExamplesInNode) {
@@ -85,14 +105,10 @@ public class RegressionTree {
 		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
 		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
 			return maxLearningRate * leaf.terminalValue;
+		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return  (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate) * leaf.terminalValue;
 		} else {
-			double multiplier = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
-			/*if (DoubleCompare.equals(0.5, multiplier)) {
-				System.out.println("equal to 1");
-			} else {
-				System.out.println("Not equal to 1");
-			}*/
-			return  multiplier * leaf.terminalValue;
+			return Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize) * leaf.terminalValue;
 		}
 	}
 	
@@ -124,7 +140,7 @@ public class RegressionTree {
 		}
 		leaves.add(rootSplit);
 		
-		int numOfSplits = 1;
+		actualNumberOfSplits = 1;
 		PriorityQueue<PossibleChild> possibleChildren = new PriorityQueue<PossibleChild>();
 		int maxSplits = 0;
 		switch(splitsPolicy) {
@@ -132,7 +148,7 @@ public class RegressionTree {
 		case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
 		case INCREASING: throw new UnsupportedOperationException();
 		}
-		while (numOfSplits < maxSplits) {
+		while (actualNumberOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
 				DataSplit left = null, right = null, missing = null;
@@ -168,7 +184,7 @@ public class RegressionTree {
 			}
 			
 			leaves.add(bestChild.child);
-			numOfSplits++;
+			actualNumberOfSplits++;
 		}
 		return rootSplit.node;
 	}
