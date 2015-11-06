@@ -18,8 +18,12 @@ public class GbmParameters {
 	public int minExamplesInNode;
 	public int maxNumberOfSplits;
 	public GbmParameters(double minLearningRate, double maxLearningRate, int maxNumberOfSplits, double bagFraction, int minExamplesInNode, int numOfTrees, LearningRatePolicy learningRatePolicy, SplitsPolicy splitsPolicy) {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			setMinLearningRate(minLearningRate);
+		} else {
+			minLearningRate = -1;
+		}
 		setBagFraction(bagFraction);
-		setMinLearningRate(minLearningRate);
 		setMaxLearningRate(maxLearningRate);
 		setNumOfTrees(numOfTrees);
 		setMinObsInNode(minExamplesInNode);
@@ -161,25 +165,46 @@ public class GbmParameters {
 		}
 	}
 	
+	public String getRunDataSubDirectory() {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format("RevisedVariable/%.5fMinLR/%.5fMaxLR/%dSplits/", 
+					minLearningRate, maxLearningRate, maxNumberOfSplits);
+		} else {
+			return String.format("Constant/%.5fLR/%dSplits/", maxLearningRate, maxNumberOfSplits);
+		}
+	}
+	
 	public static String getTabSeparatedHeader() {
-		return 
-				"LearningRatePolicy\t"
-				+ "MinLearningRate\t"
-				+ "MaxLearningRate\t" 
-				+ "MaxNumberOfSplits\t"
-				+ "BagFraction\t"
-				+ "MinExamplesInNode\t"
-				+ "NumberOfTrees\t";
+			return 
+					"LearningRatePolicy\t"
+					+ "MinLearningRate\t"
+					+ "MaxLearningRate\t" 
+					+ "MaxNumberOfSplits\t"
+					+ "BagFraction\t"
+					+ "MinExamplesInNode\t"
+					+ "NumberOfTrees\t";
 	}
 	public String getTabSeparatedPrintOut() {
-		return String.format(
-				learningRatePolicy.name() + "\t" 
-				+ "%.4f\t" 
-				+ "%.4f\t"
-				+ "%d\t"
-				+ "%.4f\t"
-				+ "%d\t"
-				+ "%d\t",
-				minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format(
+					learningRatePolicy.name() + "\t" 
+					+ "%.4f\t" 
+					+ "%.4f\t"
+					+ "%d\t"
+					+ "%.4f\t"
+					+ "%d\t"
+					+ "%d\t",
+					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+		} else {
+			return String.format(
+					learningRatePolicy.name() + "\t" 
+					+ "0\t" 
+					+ "%.4f\t"
+					+ "%d\t"
+					+ "%.4f\t"
+					+ "%d\t"
+					+ "%d\t",
+					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+		}
 	}
 }

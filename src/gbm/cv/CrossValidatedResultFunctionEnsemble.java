@@ -14,8 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
+import parameterTuning.plotting.MathematicaListCreator;
 import utilities.DoubleCompare;
-import utilities.MathematicaListCreator;
 import utilities.Matrix;
 import dataset.Attribute;
 import dataset.Dataset;

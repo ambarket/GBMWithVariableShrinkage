@@ -3,7 +3,6 @@ import java.util.ArrayList;
 
 import parameterTuning.OptimalParameterRecord;
 import utilities.DoubleCompare;
-import utilities.MathematicaListCreator;
 
 
 	public abstract class ListEntryGetter {

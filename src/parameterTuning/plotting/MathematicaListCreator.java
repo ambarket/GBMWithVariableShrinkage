@@ -1,4 +1,4 @@
-package utilities;
+package parameterTuning.plotting;
 
 import java.util.ArrayList;
 
@@ -28,16 +28,6 @@ public class MathematicaListCreator {
 			retval.append("\n");
 		}
 		retval.append("}");
-		return retval.toString();
-	}
-	
-	public static String convertNDoublesIntoNDimensionalListEntry(double... args) {
-		StringBuffer retval = new StringBuffer();
-		retval.append("{");
-		for (int i = 0; i < args.length-1; i++) {
-			retval.append(args[i] + ", ");
-		}
-		retval.append(args[args.length-1] + "}");
 		return retval.toString();
 	}
 	
