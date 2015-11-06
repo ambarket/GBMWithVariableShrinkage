@@ -207,4 +207,42 @@ public class GbmParameters {
 					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
 		}
 	}
+	
+	public String getLearningCurveLatexCaption() {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format(learningRatePolicy.name() 
+					+ " MinLR: %.4f" 
+					+ " MaxLR: %.4f" 
+					+ " SPLITS: %d"
+					+ " BF: %.4f"
+					+ " MEIN: %d",
+					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		} else {
+			return String.format(learningRatePolicy.name() 
+					+ " LR: %.4f" 
+					+ " MaxSplits: %d"
+					+ " BF: %.4f"
+					+ " MEIN: %d",
+					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		}
+	}
+	
+	public String getLearningCurveLatexFigureReference() {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format(learningRatePolicy.name() 
+					+ "MinLR%.4f" 
+					+ "MaxLR%.4f" 
+					+ "SPLITS%d"
+					+ "BF%.4f"
+					+ "MEIN%d",
+					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		} else {
+			return String.format(learningRatePolicy.name() 
+					+ "LR%.4f" 
+					+ "MaxSplits%d"
+					+ "BF%.4f"
+					+ "MEIN%d",
+					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		}
+	}
 }

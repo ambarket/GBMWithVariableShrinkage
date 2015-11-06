@@ -85,7 +85,7 @@ public class PairwiseOptimalParameterRecordPlots {
 				//+ ", ColorFunction -> \"Rainbow\""
 				+ ", AxesLabel->{\"" + entryGetter.getXLabel() + "\", \"" + entryGetter.getYLabel() + "\"}"
 				//+ ", PlotLabel->\"" + entryGetter.getPlotTitle(datasetName, "ConstantLR") + "\""
-				+ "] \n\n");
+				+ "] \nconstantPlot\n\n");
 		
 		variableBuffer.append("variablePlot := ListPlot[" + entryGetter.getMathematicaVeriableName(datasetName, "VariableLR")
 				//+ ", DataRange -> {All}"
@@ -94,7 +94,7 @@ public class PairwiseOptimalParameterRecordPlots {
 				//+ ", ColorFunction -> \"Rainbow\""
 				+ ", AxesLabel->{\"" + entryGetter.getXLabel() + "\", \"" + entryGetter.getYLabel() + "\"}"
 				//+ ", PlotLabel->\"" + entryGetter.getPlotTitle(datasetName, "Variable_LR") + "\""
-				+ "] \n\n");
+				+ "] \nvariablePlot\n\n");
 		
 		String pairWiseGraphsDirectory = (paramTuningDir + "pairWiseGraphs/").replace("\\", "/");
 		

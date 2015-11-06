@@ -218,6 +218,11 @@ public class OptimalParameterRecord {
 		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--runData.txt";
 		OptimalParameterRecord record = new OptimalParameterRecord();
 		
+		if (!new File(runDataFilePath).exists()) {
+			System.out.println(String.format("Couldn't find " + runDataFilePath));
+			return null;
+		}
+		
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(runDataFilePath)));
 			record.timeInSeconds = Double.parseDouble(br.readLine().split(": ")[1].trim());

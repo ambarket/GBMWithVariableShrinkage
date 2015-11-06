@@ -10,6 +10,8 @@ public class Main {
 				ParameterTuningTest3.runNASA();
 			case "bikeSharing":
 				ParameterTuningTest3.runBikeSharing();
+			case "processBikeSharing":
+				ParameterTuningTest3.processBikeSharing();
 		}
 	}
 }

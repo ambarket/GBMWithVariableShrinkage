@@ -48,22 +48,20 @@ public class ParameterTuningTest3 {
 	}
 	
 	public static void runBikeSharing() {
-		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
 			Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, ranges.TRAINING_SAMPLE_FRACTION);
 			tryDifferentParameters(trainingDataset, bikeSharingParamTune, i);
 		}
 		GradientBoostingTree.executor.shutdownNow();
-		
-		
-		/*
+	}
+	
+	public static void processBikeSharing() {
 		averageAllRunData(bikeSharingParamTune);
-		generateMathematicaLearningCurvesForAllRunData(bikeSharingParamTune + "Averages/");
+		generateMathematicaLearningCurvesForAllRunData("Bike Sharing", bikeSharingParamTune + "Averages/");
 		readSortAndSaveOptimalParameterRecordsFromRunData(bikeSharingParamTune + "Averages/");
 		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("BikeSharing", bikeSharingParamTune + "Averages/");
 		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("BikeSharing", bikeSharingParamTune + "Averages/", records);
-		*/
 	}
 	
 	public static void runPowerPlant() {
@@ -164,11 +162,16 @@ public class ParameterTuningTest3 {
 									timer.start();
 
 									OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataDirectory, parameters);
-									sortedByCvValidationError.add(record);
-									sortedByAllDataTestError.add(record);
-									sortedByTimeInSeconds.add(record);
-									System.out.println(String.format("Averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									if (record != null) {
+										sortedByCvValidationError.add(record);
+										sortedByAllDataTestError.add(record);
+										sortedByTimeInSeconds.add(record);
+										System.out.println(String.format("Created optimalParameterRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									} else {
+										System.out.println(String.format("Failed to create optimalParameterRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									}
 								}
 							}
 						}
@@ -181,7 +184,7 @@ public class ParameterTuningTest3 {
 		OptimalParameterRecord.saveOptimalParameterRecords(runDataDirectory, "SortedByTimeInSeconds", sortedByTimeInSeconds);
 	}
 	
-	public static void generateMathematicaLearningCurvesForAllRunData(String runDataDirectory) {
+	public static void generateMathematicaLearningCurvesForAllRunData(String datasetName, String runDataDirectory) {
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
@@ -196,7 +199,7 @@ public class ParameterTuningTest3 {
 												bagFraction, minExamplesInNode, ranges.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
-									MathematicaLearningCurveCreator.createLearningCurveForParameters(runDataDirectory, parameters);
+									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetName, runDataDirectory, parameters);
 									System.out.println(String.format("Created learning curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 											parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
@@ -220,11 +223,6 @@ public class ParameterTuningTest3 {
 		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
 		}
-		// Temporary to be backwards compatible.
-		if (new File(runDataDir + parameters.getFileNamePrefix() + "--runData.txt").exists()) {
-			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
-			return "I've already completed %s on run number %d. (%d out of %d)";
-        }
 		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, ranges.CV_NUMBER_OF_FOLDS, ranges.CV_STEP_SIZE);
 		if (ensemble != null) {
 			try {
@@ -257,18 +255,20 @@ public class ParameterTuningTest3 {
 		int numberOfRunsFound = 0;
 		// Read through all the files cooresponding to these parameters and average the data.
 		for (int runNumber = 0; runNumber < ranges.NUMBER_OF_RUNS; runNumber++) {
-			numberOfRunsFound++;
+			
 			String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt";
 			if (!new File(runDataFilePath).exists()) {
 				System.out.println(String.format("Couldn't find Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt");
 				continue;
+			} else {
+				numberOfRunsFound++;
 			}
 			try {
 				BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 				
 				timeInSeconds += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				stepSize = Integer.parseInt(br.readLine().split(": ")[1].trim());
-				numberOfFolds = Integer.parseInt(br.readLine().split(": ")[1].trim());
+				stepSize += Integer.parseInt(br.readLine().split(": ")[1].trim());
+				numberOfFolds += Integer.parseInt(br.readLine().split(": ")[1].trim());
 				totalNumberOfTrees += Integer.parseInt(br.readLine().split(": ")[1].trim());
 				optimalNumberOfTrees += Integer.parseInt(br.readLine().split(": ")[1].trim());
 				cvValidationError += Double.parseDouble(br.readLine().split(": ")[1].trim());
@@ -316,72 +316,80 @@ public class ParameterTuningTest3 {
 				br.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-				numberOfRunsFound--;
+				System.exit(1);
 			}
-			// Compute the averages
-			timeInSeconds /= numberOfRunsFound;
-			stepSize  /= numberOfRunsFound;
-			numberOfFolds  /= numberOfRunsFound;
-			totalNumberOfTrees  /= numberOfRunsFound;
-			optimalNumberOfTrees  /= numberOfRunsFound;
-			cvValidationError  /= numberOfRunsFound;
-			cvTrainingError  /= numberOfRunsFound;
-			allDataTrainingError  /= numberOfRunsFound;
-			cvTestError  /= numberOfRunsFound;
-			allDataTestError  /= numberOfRunsFound;
-			allDataAvgNumberOfSplits  /= numberOfRunsFound;
-			for (int index = 0; index < numberOfTreesFound; index++) {
-				avgCvTrainingErrorByIteration.set(index, avgCvTrainingErrorByIteration.get(index) / avgCvTrainingErrorByIterationCount.get(index));
-				avgCvValidationErrorByIteration.set(index, avgCvValidationErrorByIteration.get(index)  / avgCvValidationErrorByIterationCount.get(index));
-				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / avgCvTestErrorByIterationCount.get(index));
-				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / allDataTrainingErrorByIterationCount.get(index));
-				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / allDataTestErrorByIterationCount.get(index));
-			}
+		} // End runNumber Loop
+		if (numberOfRunsFound == 0) {
+			return;
 			
-			// Save them to a new file to be processed later.
-			try {
-				String averageRunDataDirectory = paramTuneDir + "Averages/" + parameters.getRunDataSubDirectory();
-				new File(averageRunDataDirectory).mkdirs();
-				BufferedWriter bw = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix() + "--runData.txt"));
-			
-				bw.write(String.format("Time In Seconds: %f \n"
-						+ "Step Size: %d \n"
-						+ "Number Of Folds: %d \n"
-						+ "TotalNumberOfTrees: %d \n"
-						+ "OptimalNumberOfTrees: %d \n"
-						+ "CV Validation RMSE: %f \n" 
-						+ "CV Training RMSE: %f \n"
-						+ "All Data Training RMSE: %f \n"
-						+ "CV Test RMSE: %f \n" 
-						+ "All Data Test RMSE: %f \n" 
-						+ "All Data Avg Number Of Splits: %f\n",
-						timeInSeconds,
-						stepSize,
-						numberOfFolds,
-						totalNumberOfTrees,
-						optimalNumberOfTrees, 
-						cvValidationError,
-						cvTrainingError,
-						allDataTrainingError,
-						cvTestError,
-						allDataTestError,
-						allDataAvgNumberOfSplits));
+		}
+		// Compute the averages
+		timeInSeconds /= numberOfRunsFound;
+		stepSize  /= numberOfRunsFound;
+		numberOfFolds  /= numberOfRunsFound;
+		totalNumberOfTrees  /= numberOfRunsFound;
+		optimalNumberOfTrees  /= numberOfRunsFound;
+		cvValidationError  /= numberOfRunsFound;
+		cvTrainingError  /= numberOfRunsFound;
+		allDataTrainingError  /= numberOfRunsFound;
+		cvTestError  /= numberOfRunsFound;
+		allDataTestError  /= numberOfRunsFound;
+		allDataAvgNumberOfSplits  /= numberOfRunsFound;
+		for (int index = 0; index < numberOfTreesFound; index++) {
+			avgCvTrainingErrorByIteration.set(index, avgCvTrainingErrorByIteration.get(index) / avgCvTrainingErrorByIterationCount.get(index));
+			avgCvValidationErrorByIteration.set(index, avgCvValidationErrorByIteration.get(index)  / avgCvValidationErrorByIterationCount.get(index));
+			avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / avgCvTestErrorByIterationCount.get(index));
+			allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / allDataTrainingErrorByIterationCount.get(index));
+			allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / allDataTestErrorByIterationCount.get(index));
+		}
+		
+		// Save them to a new file to be processed later.
+		try {
+			String averageRunDataDirectory = paramTuneDir + "Averages/" + parameters.getRunDataSubDirectory();
+			new File(averageRunDataDirectory).mkdirs();
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix() + "--runData.txt"));
+		
+			bw.write(String.format("Time In Seconds: %f \n"
+					+ "Step Size: %d \n"
+					+ "Number Of Folds: %d \n"
+					+ "TotalNumberOfTrees: %d \n"
+					+ "OptimalNumberOfTrees: %d \n"
+					+ "CV Validation RMSE: %f \n" 
+					+ "CV Training RMSE: %f \n"
+					+ "All Data Training RMSE: %f \n"
+					+ "CV Test RMSE: %f \n" 
+					+ "All Data Test RMSE: %f \n" 
+					+ "All Data Avg Number Of Splits: %f\n"
+					+ "Number of runs found: %d\n"
+					+ "Number of trees found: %d\n",
+					timeInSeconds,
+					stepSize,
+					numberOfFolds,
+					totalNumberOfTrees,
+					optimalNumberOfTrees, 
+					cvValidationError,
+					cvTrainingError,
+					allDataTrainingError,
+					cvTestError,
+					allDataTestError,
+					allDataAvgNumberOfSplits,
+					numberOfRunsFound,
+					numberOfTreesFound));
 
-				bw.write("TreeNumber\tAvgCvTrainingError\tAvgCvValidationError\tAvgCvTestError\tAllDataTrainingError\tAllDataTestError\n");
-				for (int i = 0; i < totalNumberOfTrees; i++) {
-					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\n", 
-							i+1,
-							avgCvTrainingErrorByIteration.get(i),
-							avgCvValidationErrorByIteration.get(i),
-							avgCvTestErrorByIteration.get(i),
-							allDataTrainingErrorByIteration.get(i),
-							allDataTestErrorByIteration.get(i)));
-				}
-				bw.flush();
-				bw.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+			bw.write("TreeNumber\tAvgCvTrainingError\tAvgCvValidationError\tAvgCvTestError\tAllDataTrainingError\tAllDataTestError\n");
+			for (int i = 0; i < numberOfTreesFound; i++) {
+				bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\n", 
+						i+1,
+						avgCvTrainingErrorByIteration.get(i),
+						avgCvValidationErrorByIteration.get(i),
+						avgCvTestErrorByIteration.get(i),
+						allDataTrainingErrorByIteration.get(i),
+						allDataTestErrorByIteration.get(i)));
 			}
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }
