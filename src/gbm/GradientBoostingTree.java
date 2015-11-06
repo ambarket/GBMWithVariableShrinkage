@@ -84,6 +84,12 @@ public class GradientBoostingTree {
 		return function;
 	}
 	
+	/**
+	 * TODO: Unimplemented
+	 * @param parameters
+	 * @param basicDataset
+	 * @return
+	 */
 	public static ResultFunction standardValidation(GbmParameters parameters, Dataset basicDataset) {
 		GbmDataset gbmDataset = new GbmDataset(basicDataset);
 				
@@ -163,7 +169,7 @@ public class GradientBoostingTree {
 		for (int i = 0; i < numOfFolds+1; i++) {
 			double meanResponse =  training.calcMeanTrainingResponse(trainingInEachFold[i]);
 			steppers[i] = new CrossValidationStepper(parameters, 
-					new ResultFunction(parameters, meanResponse, training.getPredictorNames()),
+					new DummyResultFunction(parameters, meanResponse, training.getPredictorNames()),
 					new GbmDataset(training),
 					trainingInEachFold[i],
 					(numOfFolds-1)*foldSize, 

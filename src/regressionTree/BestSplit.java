@@ -12,8 +12,8 @@ public class BestSplit {
 	public Type splitPredictorType = null;
 	public int splitPredictorIndex = 0;
 	public double numericSplitValue = 0;
-	public ArrayList<String> leftCategories = new ArrayList<>();
-	public ArrayList<String> rightCategories = new ArrayList<>();
+	public ArrayList<String> leftCategories = null;
+	public ArrayList<String> rightCategories = null;
 	public double leftSquaredError = 0.0;
 	public double rightSquaredError = 0.0;
 	public double missingSquaredError = 0.0;
@@ -30,6 +30,8 @@ public class BestSplit {
 	}
 	
 	public void updateLeftAndRightCategories(ArrayList<String> left, ArrayList<String> right) {
+		if (leftCategories == null) {leftCategories = new ArrayList<>();}
+		if (rightCategories == null) {rightCategories = new ArrayList<>();}
 		int i;
 		for (i = 0; i < left.size(); i++) {
 			if (i < leftCategories.size()) {

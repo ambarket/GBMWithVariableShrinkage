@@ -129,12 +129,14 @@ public class RegressionTree {
 	
 	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, inSample, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
+		int[] rootTrainingDataToChildMap = new int[inSample.length];
+		int count = 0;
+		for (int i = 0; i < inSample.length; i++) {
+			rootTrainingDataToChildMap[i] = (inSample[i]) ? 1 : 0;
+			count += rootTrainingDataToChildMap[i];
+		}
+		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, rootTrainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
-			int count = 0;
-			for (int i = 0; i < inSample.length; i++) {
-				count += (inSample[i]) ? 1 : 0;
-			}
 			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
 		}
@@ -149,50 +151,32 @@ public class RegressionTree {
 		case INCREASING: throw new UnsupportedOperationException();
 		}
 		int numOfExamples = dataset.getNumberOfTrainingExamples();
-		boolean[] inLeftChild = new boolean[numOfExamples];
-		boolean[] inRightChild = new boolean[numOfExamples];
-		boolean[] inMissingChild = new boolean[numOfExamples];
+		//boolean[] inLeftChild = new boolean[numOfExamples];
+		//boolean[] inRightChild = new boolean[numOfExamples];
+		//boolean[] inMissingChild = new boolean[numOfExamples];
+		int[] trainingDataToChildMap = new int[numOfExamples];
 		while (actualNumberOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
 				// map training data to the correct child
+				Attribute[][] trainingInstances = dataset.getTrainingInstances();
 				for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
 					//if (parent.inParentHash.contains(instanceNum)) {
 					if (parent.inParent[instanceNum]) {
-						switch (parent.node.whichChild(dataset.getTrainingInstances()[instanceNum])) {
-							case 1:
-								inLeftChild[instanceNum] = true;
-								inRightChild[instanceNum] = false;
-								inMissingChild[instanceNum] = false;
-								break;
-							case 2:
-								inLeftChild[instanceNum] = false;
-								inRightChild[instanceNum] = true;
-								inMissingChild[instanceNum] = false;
-								break;
-							case 3:
-								inLeftChild[instanceNum] = false;
-								inRightChild[instanceNum] = false;
-								inMissingChild[instanceNum] = true;
-								break;
-							default:
-								throw new IllegalStateException("Trrenode.whichChild returned an unexpected value to DataSplit.splitDataIntoChildren");
-						}
+						trainingDataToChildMap[instanceNum] = parent.node.whichChild(trainingInstances[instanceNum]);
 					} else {
-						inLeftChild[instanceNum] = false;
-						inRightChild[instanceNum] = false;
-						inMissingChild[instanceNum] = false;
+						trainingDataToChildMap[instanceNum] = 0;
 					}
 				}
 				DataSplit left = null, right = null, missing = null;
 				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, inLeftChild, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
+					left = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 1, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
 				}
 				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, inRightChild, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
+					right = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 2, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
 				}
 				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
-					missing = DataSplit.splitDataIntoChildren(dataset, inMissingChild, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
+					missing = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 3, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));

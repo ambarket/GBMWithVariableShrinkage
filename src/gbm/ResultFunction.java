@@ -32,7 +32,7 @@ public class ResultFunction {
 	public String[] predictorNames;
 	
 	int sumOfSplits = 0;
-	
+
 	// construction function
 	ResultFunction(GbmParameters parameters, double intialValue, String[] predictorNames) {
 		this.numberOfPredictors = predictorNames.length;

@@ -5,6 +5,8 @@ import gbm.GradientBoostingTree;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import regressionTree.OptimalSplitFinder.FindOptimalSplitParameters;
@@ -16,6 +18,7 @@ import utilities.StopWatch;
 	 *  The following class is used to define a split in the regression tree method
 	 */
 	public class DataSplit {
+		
 		public TreeNode node;
 		public boolean[] inParent;
 		//public HashSet<Integer> inParentHash;
@@ -24,14 +27,18 @@ import utilities.StopWatch;
 		/*
 		 *  Split data into the left node and the right node based on the best splitting point.
 		 */
-		public static DataSplit splitDataIntoChildren(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		public static DataSplit splitDataIntoChildren(GbmDataset dataset, int[] trainingDataToChildMap, int childNum, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
 			DataSplit dataSplit = new DataSplit();
 			
-			StopWatch timer = (new StopWatch()).start();
-			// Find the optimal attribute/value combination to perform the split.
-			//BestSplit bestSplit = getOptimalSplitSingleThread(new FindOptimalSplitParameters(dataset, inParent, minExamplesInNode, squaredErrorBeforeSplit));
-			BestSplit bestSplit = getOptimalSplit(new FindOptimalSplitParameters(dataset, inParent, minExamplesInNode, squaredErrorBeforeSplit));
-			Logger.println(Logger.LEVELS.DEBUG, "\t\t\t Found optimal split " + timer.getElapsedSeconds());
+			dataSplit.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+			for (int i = 0; i < trainingDataToChildMap.length; i++) {
+				dataSplit.inParent[i] = trainingDataToChildMap[i] == childNum;
+			}
+			
+			//StopWatch timer = (new StopWatch()).start();
+			
+			BestSplit bestSplit = getOptimalSplitSingleThread(new FindOptimalSplitParameters(dataset, dataSplit.inParent, minExamplesInNode, squaredErrorBeforeSplit));
+			//Logger.println(Logger.LEVELS.DEBUG, "\t\t\t Found optimal split " + timer.getElapsedSeconds());
 			
 			// If no split can be found then return null.
 			if (!bestSplit.success) {
@@ -40,16 +47,7 @@ import utilities.StopWatch;
 			
 			// Build a new tree node based on the best split information
 			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, minExamplesInNode);
-			dataSplit.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
-			//dataSplit.inParentHash = new HashSet<>();
-			for (int i = 0; i < inParent.length; i++) {
-				if (inParent[i]) {
-				//	dataSplit.inParentHash.add(i);
-				}
-				dataSplit.inParent[i] = inParent[i];
-			}
-			//System.out.println(leftC + " " + rightC + " " + missingC);
-			//System.out.println(dataSplit.node.leftInstanceCount + " " + dataSplit.node.rightInstanceCount + " " + dataSplit.node.missingInstanceCount);
+
 			return dataSplit;
 		}
 		

@@ -172,9 +172,9 @@ public class CrossValidatedResultFunctionEnsemble {
 						+ "All Data Training RMSE: %f \n"
 						+ "CV Test RMSE: %f \n" 
 						+ "All Data Test RMSE: %f \n" 
-						+ "All Data Avg Number Of Splits: %f\n"
-						+ getRelativeInfluencesString()
-						+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
+						+ "All Data Avg Number Of Splits: %f\n",
+						//+ getRelativeInfluencesString()
+						//+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees),
 				timeInSeconds,
 				stepSize,
 				numOfFolds,
