@@ -3,6 +3,7 @@ import gbm.GbmDataset;
 import gbm.GradientBoostingTree;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -16,8 +17,8 @@ import utilities.StopWatch;
 	 */
 	public class DataSplit {
 		public TreeNode node;
-		public boolean[] inLeftChild, inRightChild, inMissingChild;
-
+		public boolean[] inParent;
+		//public HashSet<Integer> inParentHash;
 		private DataSplit () {}
 
 		/*
@@ -39,32 +40,13 @@ import utilities.StopWatch;
 			
 			// Build a new tree node based on the best split information
 			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, minExamplesInNode);
-			
-			// map training data to the correct child
-			int numOfExamples = dataset.getNumberOfTrainingExamples();
-			dataSplit.inLeftChild = new boolean[numOfExamples];
-			dataSplit.inRightChild = new boolean[numOfExamples];
-			dataSplit.inMissingChild = new boolean[numOfExamples];
-			//int leftC = 0, rightC = 0, missingC= 0;
-			for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
-				if (inParent[instanceNum]) {
-					switch (dataSplit.node.whichChild(dataset.getTrainingInstances()[instanceNum])) {
-						case 1:
-							dataSplit.inLeftChild[instanceNum] = true;
-							//leftC++;
-							break;
-						case 2:
-							dataSplit.inRightChild[instanceNum] = true;
-							//rightC++;
-							break;
-						case 3:
-							dataSplit.inMissingChild[instanceNum] = true;
-							//missingC++;
-							break;
-						default:
-							throw new IllegalStateException("Trrenode.whichChild returned an unexpected value to DataSplit.splitDataIntoChildren");
-					}
+			dataSplit.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+			//dataSplit.inParentHash = new HashSet<>();
+			for (int i = 0; i < inParent.length; i++) {
+				if (inParent[i]) {
+				//	dataSplit.inParentHash.add(i);
 				}
+				dataSplit.inParent[i] = inParent[i];
 			}
 			//System.out.println(leftC + " " + rightC + " " + missingC);
 			//System.out.println(dataSplit.node.leftInstanceCount + " " + dataSplit.node.rightInstanceCount + " " + dataSplit.node.missingInstanceCount);

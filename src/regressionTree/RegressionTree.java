@@ -148,18 +148,41 @@ public class RegressionTree {
 		case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
 		case INCREASING: throw new UnsupportedOperationException();
 		}
+		int numOfExamples = dataset.getNumberOfTrainingExamples();
+		boolean[] inLeftChild = new boolean[numOfExamples];
+		boolean[] inRightChild = new boolean[numOfExamples];
+		boolean[] inMissingChild = new boolean[numOfExamples];
 		while (actualNumberOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
 				DataSplit parent = leaves.poll();
+				// map training data to the correct child
+				for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
+					//if (parent.inParentHash.contains(instanceNum)) {
+					if (parent.inParent[instanceNum]) {
+						switch (parent.node.whichChild(dataset.getTrainingInstances()[instanceNum])) {
+							case 1:
+								inLeftChild[instanceNum] = true;
+								break;
+							case 2:
+								inRightChild[instanceNum] = true;
+								break;
+							case 3:
+								inMissingChild[instanceNum] = true;
+								break;
+							default:
+								throw new IllegalStateException("Trrenode.whichChild returned an unexpected value to DataSplit.splitDataIntoChildren");
+						}
+					}
+				}
 				DataSplit left = null, right = null, missing = null;
 				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, parent.inLeftChild, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
+					left = DataSplit.splitDataIntoChildren(dataset, inLeftChild, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
 				}
 				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, parent.inRightChild, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
+					right = DataSplit.splitDataIntoChildren(dataset, inRightChild, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
 				}
 				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
-					missing = DataSplit.splitDataIntoChildren(dataset, parent.inMissingChild, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
+					missing = DataSplit.splitDataIntoChildren(dataset, inMissingChild, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));
