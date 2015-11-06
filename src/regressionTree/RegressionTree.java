@@ -19,7 +19,7 @@ import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-import utilities.DoubleCompare;
+import regressionTree.OptimalSplitFinder.TreeNodeAndInParentPair;
 import utilities.Logger;
 import utilities.MersenneTwisterFast;
 import dataset.Attribute;
@@ -128,36 +128,33 @@ public class RegressionTree {
 	}
 	
 	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
-		Queue<DataSplit> leaves = new LinkedList<DataSplit>();
+		Queue<TreeNodeAndInParentPair> leaves = new LinkedList<TreeNodeAndInParentPair>();
 		int[] rootTrainingDataToChildMap = new int[inSample.length];
 		int count = 0;
 		for (int i = 0; i < inSample.length; i++) {
 			rootTrainingDataToChildMap[i] = (inSample[i]) ? 1 : 0;
 			count += rootTrainingDataToChildMap[i];
 		}
-		DataSplit rootSplit = DataSplit.splitDataIntoChildren(dataset, rootTrainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
+		TreeNodeAndInParentPair rootSplit = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, rootTrainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
 		}
 		leaves.add(rootSplit);
-		
+
 		actualNumberOfSplits = 1;
 		PriorityQueue<PossibleChild> possibleChildren = new PriorityQueue<PossibleChild>();
 		int maxSplits = 0;
 		switch(splitsPolicy) {
-		case CONSTANT: maxSplits = maxNumberOfSplits; break;
-		case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
-		case INCREASING: throw new UnsupportedOperationException();
+			case CONSTANT: maxSplits = maxNumberOfSplits; break;
+			case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
+			case INCREASING: throw new UnsupportedOperationException();
 		}
 		int numOfExamples = dataset.getNumberOfTrainingExamples();
-		//boolean[] inLeftChild = new boolean[numOfExamples];
-		//boolean[] inRightChild = new boolean[numOfExamples];
-		//boolean[] inMissingChild = new boolean[numOfExamples];
 		int[] trainingDataToChildMap = new int[numOfExamples];
 		while (actualNumberOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
-				DataSplit parent = leaves.poll();
+				TreeNodeAndInParentPair parent = leaves.poll();
 				// map training data to the correct child
 				Attribute[][] trainingInstances = dataset.getTrainingInstances();
 				for (int instanceNum = 0; instanceNum < numOfExamples; instanceNum++) {
@@ -168,15 +165,15 @@ public class RegressionTree {
 						trainingDataToChildMap[instanceNum] = 0;
 					}
 				}
-				DataSplit left = null, right = null, missing = null;
+				TreeNodeAndInParentPair left = null, right = null, missing = null;
 				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
-					left = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 1, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
+					left = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
 				}
 				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
-					right = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 2, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
+					right = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 2, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
 				}
 				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
-					missing = DataSplit.splitDataIntoChildren(dataset, trainingDataToChildMap, 3, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
+					missing = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 3, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));
@@ -211,11 +208,11 @@ public class RegressionTree {
 	}
 	
 	private class PossibleChild implements Comparable<PossibleChild>{
-		DataSplit parent;
-		DataSplit child;
+		TreeNodeAndInParentPair parent;
+		TreeNodeAndInParentPair child;
 		int whichNode; // 1 = left, 2 = right, 3 = missing
 		double errorImprovement;
-		PossibleChild(DataSplit parent, DataSplit child, int whichNode, double errorImprovement) {
+		PossibleChild(TreeNodeAndInParentPair parent, TreeNodeAndInParentPair child, int whichNode, double errorImprovement) {
 			this.parent = parent;
 			this.child = child;
 			this.whichNode = whichNode;

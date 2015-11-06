@@ -1,6 +1,7 @@
 package regressionTree;
 
 import gbm.GbmDataset;
+import gbm.GradientBoostingTree;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,18 +10,101 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
-import dataset.Attribute;
-import dataset.Attribute.Type;
 import utilities.DoubleCompare;
 import utilities.SumCountAverage;
+import dataset.Attribute;
+import dataset.Attribute.Type;
 
 public class OptimalSplitFinder implements Callable<BestSplit> {
-	FindOptimalSplitParameters parameters;
-	int splitPredictorIndex;
-	public OptimalSplitFinder(FindOptimalSplitParameters parameters, int splitPredictorIndex) {
+	//-----------------------------------------Public Static Methods to getOptimalSplit------------------------------------------------
+	public static class TreeNodeAndInParentPair {
+		public TreeNode node;
+		public boolean[] inParent;
+	}
+	
+	public static TreeNodeAndInParentPair getOptimalSplit(GbmDataset dataset, int[] trainingDataToChildMap, int childNum, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		// Make a boolean array unique to this split to indicate what training examples were in the parent.
+		TreeNodeAndInParentPair pair = new TreeNodeAndInParentPair();
+		pair.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+		for (int i = 0; i < trainingDataToChildMap.length; i++) {
+			pair.inParent[i] = trainingDataToChildMap[i] == childNum;
+		}
+	
+		// Find the best attribute to split on
+		BestSplit bestSplit = null, tmpSplit = null;
+		FindOptimalSplitParameters parameters = new FindOptimalSplitParameters(dataset, pair.inParent, minExamplesInNode, squaredErrorBeforeSplit);
+		int numOfPredictors = parameters.dataset.getNumberOfPredictors();
+		ArrayList<Future<BestSplit>> splits = new ArrayList<Future<BestSplit>> ();
+		for (int splitPredictorIndex = 0; splitPredictorIndex < numOfPredictors; splitPredictorIndex ++) {
+			splits.add(GradientBoostingTree.executor.submit(new OptimalSplitFinder(parameters, splitPredictorIndex)));
+		}
+		
+		for (Future<BestSplit> split : splits) {
+			try {
+				tmpSplit = split.get();
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			
+			if (bestSplit == null || !bestSplit.success) {
+				bestSplit = tmpSplit;
+			} else if (tmpSplit != null && tmpSplit.success && 
+					(DoubleCompare.lessThan(bestSplit.getErrorImprovement(), tmpSplit.getErrorImprovement()))) {
+				bestSplit = tmpSplit;
+			}
+		}
+		
+		if (bestSplit == null || !bestSplit.success) {
+			return null;
+		}
+		
+		// Create a new tree node representing the best split.
+		pair.node = new TreeNode(bestSplit, meanResponseInParent, minExamplesInNode);
+		
+		return pair;
+	}
+	
+	public static TreeNodeAndInParentPair getOptimalSplitSingleThread(GbmDataset dataset, int[] trainingDataToChildMap, int childNum, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
+		// Make a boolean array unique to this split to indicate what training examples were in the parent.
+		TreeNodeAndInParentPair pair = new TreeNodeAndInParentPair();
+		pair.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+		for (int i = 0; i < trainingDataToChildMap.length; i++) {
+			pair.inParent[i] = trainingDataToChildMap[i] == childNum;
+		}
+	
+		// Find the best attribute to split on
+		BestSplit bestSplit = null, tmpSplit = null;
+		FindOptimalSplitParameters parameters = new FindOptimalSplitParameters(dataset, pair.inParent, minExamplesInNode, squaredErrorBeforeSplit);
+		int numOfPredictors = parameters.dataset.getNumberOfPredictors();
+		for (int splitPredictorIndex = 0; splitPredictorIndex < numOfPredictors; splitPredictorIndex ++) {
+			tmpSplit = new OptimalSplitFinder(parameters, splitPredictorIndex).call();
+			if (bestSplit == null || !bestSplit.success) {
+				bestSplit = tmpSplit;
+			} else if (tmpSplit != null && tmpSplit.success && 
+					(DoubleCompare.lessThan(bestSplit.getErrorImprovement(), tmpSplit.getErrorImprovement()))) {
+				bestSplit = tmpSplit;
+			}
+		}
+		
+		if (bestSplit == null || !bestSplit.success) {
+			return null;
+		}
+		
+		// Create a new tree node representing the best split.
+		pair.node = new TreeNode(bestSplit, meanResponseInParent, minExamplesInNode);
+		
+		return pair;
+	}
+	
+	//------Actual class implementing Callable, private constructor so only way to use it is through the getOptimalSplit methods------------------------------------------------
+	private FindOptimalSplitParameters parameters;
+	private int splitPredictorIndex;
+	private OptimalSplitFinder(FindOptimalSplitParameters parameters, int splitPredictorIndex) {
 		this.parameters = parameters;
 		this.splitPredictorIndex = splitPredictorIndex;
 	}
@@ -283,7 +367,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		}
 	}
 	
-	public static class FindOptimalSplitParameters {
+	private static class FindOptimalSplitParameters {
 		public FindOptimalSplitParameters(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double squaredErrorBeforeSplit) {
 			this.dataset = dataset;
 			this.inParent = inParent;
