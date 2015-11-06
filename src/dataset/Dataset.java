@@ -2,17 +2,22 @@ package dataset;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import jdk.nashorn.internal.ir.SetSplitState;
 import utilities.RandomSample;
 import utilities.RawFile;
 import utilities.StopWatch;
 
 public class Dataset {
+	public static HashSet<String> formsOfMissingValue = new HashSet<String>(Arrays.asList("NA", "N/A", "?", "NULL"));
 	public double trainingSampleFraction;
 	private int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors;
 	
@@ -32,7 +37,7 @@ public class Dataset {
 	private int[][] numericalPredictorSortedIndexMap;
 	
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
-	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
+	private ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 
 	//--------------------------------------Object Construction-----------------------------------------------------------
 	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn, double trainingSampleFraction) {
@@ -59,16 +64,6 @@ public class Dataset {
 		// Pre-process trainingData to improve speed of split calculation
 		buildCategoricalPredictorIndexMap();
 		buildnumericalPredictorSortedIndexMap();
-		
-		/* TODO come back to this.
-		// Set aside trainingSampleFraction * numberOfExamples examples for training use. The remaining will be used as the test set.
-		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(numberOfExamples);
-		int sampleSize = (int)(trainingSampleFraction * shuffledIndices.length);
-		this.inTrainingSample = new boolean[numberOfExamples];
-		for (int i = 0; i < sampleSize; i++ ) {
-			inTrainingSample[shuffledIndices[i]] = true;
-		}
-		*/
 		
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}
@@ -126,21 +121,24 @@ public class Dataset {
 			for (int attributeIndex = 0; attributeIndex < file.numberOfAttributes; attributeIndex++) {
 				String stringElement = file.data.get(shuffledIndices[recordIndex])[attributeIndex];
 				boolean missingValue = false;
-				// TODO: Make more generic?
-				if (stringElement.equalsIgnoreCase("NA")) {
+				if (formsOfMissingValue.contains(stringElement)) {
 					missingValue = true;
 				}
 				if (attributeIndex != responseVariableColumn) {
 					if (predictorTypes[attributeIndex] == Attribute.Type.Numeric) {
-						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = new Attribute((missingValue) ? null : Double.parseDouble(stringElement));
+						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = (missingValue) ? new Attribute(Attribute.Type.Numeric) : new Attribute(Double.parseDouble(stringElement));
 					} else if (predictorTypes[attributeIndex] == Attribute.Type.Categorical) {
-						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = new Attribute((missingValue) ? null : stringElement);
+						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = (missingValue) ? new Attribute(Attribute.Type.Categorical) : new Attribute(stringElement);
 					}
 				} else {
-					if (responseType == Attribute.Type.Numeric) {
-						response = new Attribute((missingValue) ? null : Double.parseDouble(stringElement));
-					} else if (responseType  == Attribute.Type.Categorical) {
-						response= new Attribute((missingValue) ? null : stringElement);
+					if (missingValue) {
+						throw new IllegalStateException("Missing values not allowed in response field");
+					} else {
+						if (responseType == Attribute.Type.Numeric) {
+							response = new Attribute(Double.parseDouble(stringElement));
+						} else if (responseType  == Attribute.Type.Categorical) {
+								response= new Attribute(stringElement);
+						}
 					}
 				} 
 			}
@@ -164,8 +162,12 @@ public class Dataset {
 				HashMap<String, HashSet<Integer>> predictorIndexMap = new HashMap<String, HashSet<Integer>>();
 				categoricalPredictorIndexMap.put(predictorIndex, predictorIndexMap);
 				
+				// No matter what we need to have this special missing category for the findOptimalSplit to work properly.
+				predictorIndexMap.put(Attribute.MISSING_CATEGORY, new HashSet<Integer>());
+				
 				for (int instanceIndex = 0; instanceIndex < numberOfTrainingExamples; instanceIndex++) {
-					String category = trainingInstances[instanceIndex][predictorIndex].getCategoricalValue();
+					// Note missing values have the special category "MISSING_CATEGORY" enforced by the Attribute constructor.
+					String category = trainingInstances[instanceIndex][predictorIndex].getCategoricalValue(); 
 					predictorIndexMap.putIfAbsent(category, new HashSet<Integer>());
 					HashSet<Integer> examplesWithCategory = predictorIndexMap.get(category);
 					examplesWithCategory.add(instanceIndex);
@@ -202,16 +204,11 @@ public class Dataset {
 			Attribute arg0Value = arg0.getValue()[attributeNum];
 			Attribute arg1Value = arg1.getValue()[attributeNum];
 			
-			if (arg0Value == null) {
-				if (arg1Value == null) {
-					return 0;
-				} else {
-					return 1; // null > anyValue so push it to the back of the sortedIndices.
-				}
+			if (arg0Value == null || arg1Value == null) {
+				throw new IllegalStateException("Attribute objects are null in InstanceAttributeComparator, this shouldn't be possible");
 			}
-			if (arg1Value == null) {
-				return -1; 
-			}
+			// Note missing values are considered equal to eachother and greater than any real value, so they will always
+			//	appear at the end of the numericalPredictorSortedIndexMap
 			return arg0Value.compareTo(arg1Value);
 		}
 	}
@@ -265,7 +262,7 @@ public class Dataset {
 		return numericalPredictorSortedIndexMap;
 	}
 
-	public HashMap<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
+	public Map<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
 		return categoricalPredictorIndexMap;
 	}
 	

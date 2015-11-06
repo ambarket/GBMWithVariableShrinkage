@@ -26,15 +26,20 @@ public class TreeNode {
 	public TerminalNode rightTerminalNode = null;
 	public TerminalNode missingTerminalNode = null;
 	
-	/*
-	 * Use when unable to split the root node.
+	/**
+	 * Use when unable to split the root node. No split is more optimal than just keeping everything in the root.
 	 */
-	public TreeNode(double missingTerminalValue, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
-		missingTerminalNode = new TerminalNode(missingTerminalValue, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
+	public TreeNode(double meanResponseInParent, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
+		missingTerminalNode = new TerminalNode(meanResponseInParent, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
 		this.splitPredictorIndex = -1;
 	}
 	
-	public TreeNode(BestSplit bestSplit, double meanResponseInParent) {
+	/** MeanResponseInParent and minExamplesInNode are required in case there were no missing values,
+	 *	in that case the missing terminal node will be set to have the MeanResponseInParent as the prediction
+	 *	and its instance count will be set to the minimum so that when using the variable learning rate scheme
+	 *	it will receive the lowest possible learning rate.
+	 */
+	public TreeNode(BestSplit bestSplit, double meanResponseInParent, int minExamplesInNode) {
 		this.splitPredictorType = bestSplit.splitPredictorType;
 		this.splitPredictorIndex = bestSplit.splitPredictorIndex;
 		this.numericSplitValue = bestSplit.numericSplitValue;
@@ -45,13 +50,34 @@ public class TreeNode {
 		
 		this.leftTerminalNode = new TerminalNode(bestSplit.leftMeanResponse, bestSplit.leftInstanceCount, bestSplit.leftSquaredError);
 		this.rightTerminalNode = new TerminalNode(bestSplit.rightMeanResponse, bestSplit.rightInstanceCount, bestSplit.rightSquaredError);
-		//this.missingTerminalNode = new TerminalNode(bestSplit.missingMeanResponse, bestSplit.missingInstanceCount, bestSplit.missingSquaredError);
-		this.missingTerminalNode = new TerminalNode(meanResponseInParent, 0, bestSplit.squaredErrorBeforeSplit);
+		
+		if (bestSplit.missingInstanceCount > 0) {
+			this.missingTerminalNode = new TerminalNode(bestSplit.missingMeanResponse, bestSplit.missingInstanceCount, bestSplit.missingSquaredError);
+		} else {
+			/* 
+			 * We still need a missing node in case test data is missing at this point. 
+			 *	In that case need to return prediction as though the parent was never split.
+			 * Squared error in this node is 0 because there weren't any actual missing values, this makes sure 
+			 *	getSquaredErrorImprovement() will work as expected.
+			 * I debated about what this instance count should be. Note it only matters when using variable learning rates.
+			 * 	On one hand it should never be allowed to be below minExamplesInNode because that allows lower than the 
+			 * 	minimum learning rate to be computed. However, in the case where there actually were missing values (directly above), 
+			 *  we allow the count to be below minExamplesInNode anyway because there's really no choice. Thus I think 0 makes the most sense 
+			 * 	here. And it also makes sense that test instances with missing values where the training data has no missing values
+			 * 	should receive the ultimate punishment from the variable learning rate scheme, as we truly have learned nothing about 
+			 *  that data.
+			 */
+			this.missingTerminalNode = new TerminalNode(meanResponseInParent, 0, 0);
+		}
 	}
 	
-	// TODO: Doesn't account for missing values;
 	public double getSquaredErrorImprovement() {
-		return squaredErrorBeforeSplit - (leftTerminalNode.squaredError + rightTerminalNode.squaredError);
+		// If we couldn't split the root node, then there was no improvement.
+		if (splitPredictorIndex == -1) {
+			return 0; 
+		} else {
+			return squaredErrorBeforeSplit - (leftTerminalNode.squaredError + rightTerminalNode.squaredError + missingTerminalNode.squaredError);
+		}
 	}
 
 	/**
@@ -105,10 +131,7 @@ public class TreeNode {
 		while (true) {
 			// SplitAttribute will be -1 only if we failed to split the root node and reduce the error.
 			//	In that case we will just return the mean response over all the training data passed to
-			//	the build function which will be stored in current.missingTerminalValue. 
-			
-			// TODO: THis needs to be refactored. Need to just make terminal node objects 
-			//	instead of keeping terminal info all in one object
+			//	the build function which will be stored in current.missingTerminalNode. 
 			if (current.splitPredictorIndex == -1) {
 				return current.missingTerminalNode;
 				
@@ -118,7 +141,6 @@ public class TreeNode {
 			switch(whichChild) {
 				case 1:
 					if (current.leftChild == null) {
-						// TODO: Finidh implementing, will likely require adding actual terminal nodes.
 						return current.leftTerminalNode;
 					}
 					current = current.leftChild;

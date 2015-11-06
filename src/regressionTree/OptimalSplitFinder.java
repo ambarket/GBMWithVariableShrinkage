@@ -1,5 +1,7 @@
 package regressionTree;
 
+import gbm.GbmDataset;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -33,6 +35,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		} else if (parameters.dataset.getPredictorTypes()[splitPredictorIndex] == Type.Categorical) {
 			HashMap<String, SumCountAverage> sumCountAverageByCategory = initializeSumCountAverageByCategory(parameters, splitPredictorIndex);
 			tmpSplit = findBestCategoricalSplit(parameters, splitPredictorIndex, sumCountAverageByCategory);
+			sumCountAverageByCategory.clear();
 		}
 		
 		return tmpSplit;
@@ -55,20 +58,17 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		
 		int sortedExampleIndex = 0;
 		int lastSortedExampleIndexInLeft = -1;
-		double currentY = 0.0;	
-		while(snapshot.left.getCount() < parameters.minExamplesInNode) {
-			if (sortedExampleIndex >= parameters.dataset.getNumberOfTrainingExamples()) {
-				// TODO:
-				//System.out.println("Whyd oes this happen?");
-				break;
-			}
+		double currentY = 0.0;
+		
+		// Start with minimum in the left
+		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples() && 
+				snapshot.left.getCount() < parameters.minExamplesInNode) {
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
-
 			if (parameters.inParent[realExampleIndex]) {
+				currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
 				if (instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
-					System.out.println("here"); //todo
+					break; // All remaining values will be missing too
 				} else {
-					currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
 					snapshot.left.addData(currentY);
 				}
 				lastSortedExampleIndexInLeft = sortedExampleIndex;
@@ -76,14 +76,29 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			sortedExampleIndex++;
 		}
 
+		// And everything else except missing values in right
 		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
 			if (parameters.inParent[realExampleIndex]) {
+				currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
 				if (instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
-					// TODO
+					break; // All remaining values will be missing too
 				} else {
-					currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
 					snapshot.right.addData(currentY);
+				}
+			}
+			sortedExampleIndex++;
+		}
+		
+		// And all the missing values in their own node where they will stay.
+		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
+			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
+			if (parameters.inParent[realExampleIndex]) {
+				currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
+				if (!instances[realExampleIndex][splitPredictorIndex].isMissingValue()) {
+					throw new IllegalStateException("Made it to the missing value loop, yet its not a missing value. Logic is broken somewhere");
+				} else {
+					snapshot.missing.addData(currentY);
 				}
 			}
 			sortedExampleIndex++;
@@ -110,13 +125,16 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		while(snapshot.right.getCount() > parameters.minExamplesInNode) {
 			if (lastLeftIndex >= parameters.dataset.getNumberOfTrainingExamples()) {
 				throw new IllegalStateException("There must be less than 2 * minExamplesInNode "
-						+ "examples in DataSplit.getOptimalSplit. Shouldn't be possible.");
+						+ "examples in OptimalSplitFinder.findBestNumericalSplit. Shouldn't be possible.");
 			}
 			int realLastLeftIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][lastLeftIndex];
 			int realFirstRightIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][firstRightIndex];
 			Attribute lastLeftAttribute = instances[realLastLeftIndex][splitPredictorIndex];
 			Attribute firstRightAttribute = instances[realFirstRightIndex][splitPredictorIndex];
 			if (parameters.inParent[realLastLeftIndex]) {
+				if (lastLeftAttribute.isMissingValue()) {
+					return bestSplit; // All will be missing values after this so were done with possible split points.
+				}
 				double y = parameters.dataset.trainingPseudoResponses[realLastLeftIndex];
 				snapshot.left.addData(y);
 				snapshot.right.subtractData(y);
@@ -135,12 +153,20 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 						bestSplit.splitPredictorType = Type.Numeric;
 						bestSplit.splitPredictorIndex = splitPredictorIndex;
 						bestSplit.numericSplitValue = (lastLeftAttribute.getNumericValue() + firstRightAttribute.getNumericValue())/2;
+						
 						bestSplit.leftSquaredError = snapshot.currentLeftError;
-						bestSplit.rightSquaredError = snapshot.currentRightError;
 						bestSplit.leftInstanceCount = snapshot.left.getCount();
-						bestSplit.rightInstanceCount = snapshot.right.getCount();
 						bestSplit.leftMeanResponse = snapshot.left.getMean();
+						
+						bestSplit.rightSquaredError = snapshot.currentRightError;
+						bestSplit.rightInstanceCount = snapshot.right.getCount();
 						bestSplit.rightMeanResponse = snapshot.right.getMean();
+						
+						// These actually won't change, could set them earlier.
+						bestSplit.missingSquaredError = snapshot.currentMissingError;
+						bestSplit.missingInstanceCount = snapshot.missing.getCount();
+						bestSplit.missingMeanResponse = snapshot.missing.getMean();
+						
 						bestSplit.success = true;
 						snapshot.minimumTotalError = snapshot.currentTotalError;
 					}
@@ -174,6 +200,10 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		BestSplit bestSplit = new BestSplit(parameters.squaredErrorBeforeSplit);
 		SplitSnapshot snapshot = new SplitSnapshot(parameters.squaredErrorBeforeSplit);
 		
+		// Associate the missing branch with all the missing values for this splitPredictorIndex. Also remove them
+		//	so they won't be included in the sortedEntries used to compute the best left/right split below.
+		snapshot.missing = sumCountAverageByCategory.remove(Attribute.MISSING_CATEGORY);
+		
 		ArrayList<Map.Entry<String, SumCountAverage>> sortedEntries = new ArrayList<Map.Entry<String, SumCountAverage>>(sumCountAverageByCategory.entrySet());
 		
 		Collections.sort(sortedEntries, new CategoryAverageComparator());
@@ -184,13 +214,14 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			snapshot.right.addSumCountAverage(entry.getValue());
 			rightCategories.add(entry.getKey());
 		}
+		
 		// Move one category at a time into the left child, recompute errors, and keep the best split
-
 		for (Map.Entry<String, SumCountAverage> entry : sortedEntries) {
 			leftCategories.add(entry.getKey());
 			rightCategories.remove(entry.getKey());
 			snapshot.left.addSumCountAverage(entry.getValue());
 			snapshot.right.subtractSumCountAverage(entry.getValue());
+			entry.setValue(null);
 			
 			if (snapshot.left.getCount() < parameters.minExamplesInNode || snapshot.right.getCount() < parameters.minExamplesInNode) {
 				continue;
@@ -201,18 +232,29 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			if (DoubleCompare.lessThan(snapshot.currentTotalError, snapshot.minimumTotalError)) {
 				bestSplit.splitPredictorType = Type.Categorical;
 				bestSplit.splitPredictorIndex = splitPredictorIndex;
+				if (bestSplit.leftCategories != null) {bestSplit.leftCategories.clear();}
+				if (bestSplit.rightCategories != null) {bestSplit.rightCategories.clear();}
 				bestSplit.leftCategories = new HashSet<String>(leftCategories);
 				bestSplit.rightCategories = new HashSet<String>(rightCategories);
+				
 				bestSplit.leftSquaredError = snapshot.currentLeftError;
-				bestSplit.rightSquaredError = snapshot.currentRightError;
 				bestSplit.leftInstanceCount = snapshot.left.getCount();
-				bestSplit.rightInstanceCount = snapshot.right.getCount();
 				bestSplit.leftMeanResponse = snapshot.left.getMean();
+				
+				bestSplit.rightSquaredError = snapshot.currentRightError;
+				bestSplit.rightInstanceCount = snapshot.right.getCount();
 				bestSplit.rightMeanResponse = snapshot.right.getMean();
+				
+				// These actually won't change, could set them earlier.
+				bestSplit.missingSquaredError = snapshot.currentMissingError;
+				bestSplit.missingInstanceCount = snapshot.missing.getCount();
+				bestSplit.missingMeanResponse = snapshot.missing.getMean();
+				
 				bestSplit.success = true;
 				snapshot.minimumTotalError = snapshot.currentTotalError;
 			}
 		}
+		sortedEntries.clear();
 		return bestSplit;
 	}
 	
@@ -222,6 +264,38 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		public int compare(Map.Entry<String, SumCountAverage> arg0, Map.Entry<String, SumCountAverage> arg1) {
 			return DoubleCompare.compare(arg0.getValue().getMean(), arg1.getValue().getMean());
 		}
+	}
+	
+
+	// Used only by getOptimalSplit to pass data around without a ton of arguments.
+	private static class SplitSnapshot {
+		public SumCountAverage left = new SumCountAverage(), right = new SumCountAverage(), missing = new SumCountAverage();
+		public double currentLeftError = Double.MAX_VALUE, currentRightError = Double.MAX_VALUE, currentMissingError = Double.MAX_VALUE,
+					currentTotalError = Double.MAX_VALUE, minimumTotalError = Double.MAX_VALUE;
+		
+		SplitSnapshot(double squaredErrorBeforeSplit) {
+			this.minimumTotalError = squaredErrorBeforeSplit;
+		}
+		
+		public void recomputeErrors() {
+			currentLeftError = left.getSumOfSquares() - (left.getMean() * left.getSum());
+			currentRightError = right.getSumOfSquares() - (right.getMean() * right.getSum());
+			currentMissingError = missing.getSumOfSquares() - (missing.getMean() * missing.getSum());
+			currentTotalError = currentLeftError + currentRightError + currentMissingError;
+		}
+	}
+	
+	public static class FindOptimalSplitParameters {
+		public FindOptimalSplitParameters(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double squaredErrorBeforeSplit) {
+			this.dataset = dataset;
+			this.inParent = inParent;
+			this.minExamplesInNode = minExamplesInNode;
+			this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
+		}
+		public final GbmDataset dataset;
+		public final boolean[] inParent;
+		public final int minExamplesInNode;
+		public final double squaredErrorBeforeSplit;
 	}
 }
 		

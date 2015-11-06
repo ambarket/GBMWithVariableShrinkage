@@ -3,24 +3,13 @@ import gbm.GbmDataset;
 import gbm.GradientBoostingTree;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import dataset.Attribute;
-import dataset.Attribute.Type;
+import regressionTree.OptimalSplitFinder.FindOptimalSplitParameters;
 import utilities.DoubleCompare;
 import utilities.Logger;
 import utilities.StopWatch;
-import utilities.SumCountAverage;
 
 	/*
 	 *  The following class is used to define a split in the regression tree method
@@ -49,7 +38,7 @@ import utilities.SumCountAverage;
 			}
 			
 			// Build a new tree node based on the best split information
-			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent);
+			dataSplit.node = new TreeNode(bestSplit, meanResponseInParent, minExamplesInNode);
 			
 			// map training data to the correct child
 			int numOfExamples = dataset.getNumberOfTrainingExamples();
@@ -131,47 +120,3 @@ import utilities.SumCountAverage;
 			return node.toString();
 		}
 }
-	
-
-	class FindOptimalSplitParameters {
-		public FindOptimalSplitParameters(GbmDataset dataset, boolean[] inParent, int minExamplesInNode, double squaredErrorBeforeSplit) {
-			this.dataset = dataset;
-			this.inParent = inParent;
-			this.minExamplesInNode = minExamplesInNode;
-			this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
-		}
-		public final GbmDataset dataset;
-		public final boolean[] inParent;
-		public final int minExamplesInNode;
-		public final double squaredErrorBeforeSplit;
-	}
-	
-	// Used only by getOptimalSplit to pass data around without a ton of arguments.
-	class SplitSnapshot {
-		public SumCountAverage left = new SumCountAverage(), right = new SumCountAverage();
-		public double currentLeftError = Double.MAX_VALUE, currentRightError = Double.MAX_VALUE,
-					currentTotalError = Double.MAX_VALUE, minimumTotalError = Double.MAX_VALUE;
-		
-		SplitSnapshot(double squaredErrorBeforeSplit) {
-			this.minimumTotalError = squaredErrorBeforeSplit;
-		}
-		
-		public void recomputeErrors() {
-			currentLeftError = left.getSumOfSquares() - (left.getMean() * left.getSum());
-			currentRightError = right.getSumOfSquares() - (right.getMean() * right.getSum());
-			currentTotalError = currentLeftError + currentRightError;
-		}
-		
-		/* TODO: What is this formula and why/how is it used in GBM. Do I need to use it?
-		public void recomputeImprovement() {
-			improvement = left.getCount() * right.getCount() * (left.getMean() - right.getMean()) * (left.getMean() - right.getMean()) / left.getCount() + right.getCount();
-			double improvement2 = squaredErrorBeforeSplit - (currentTotalError);
-			if (improvement2 == improvement) {
-				System.out.println();
-			}
-		}
-		*/
-	}
-	
-
-	

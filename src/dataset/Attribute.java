@@ -4,6 +4,7 @@ import utilities.DoubleCompare;
 
 public class Attribute implements Comparable<Attribute> {
 	public enum Type {Numeric, Categorical};
+	public static String MISSING_CATEGORY = "MISSING_CATEGORY";
 	
 	private Type type;
 	private boolean missing;
@@ -17,6 +18,14 @@ public class Attribute implements Comparable<Attribute> {
 	
 	public Type getType() {
 		return type;
+	}
+	
+	public Attribute(Type attributeType) {
+		missing = true;
+		this.type = attributeType;
+		if (this.type == Type.Categorical) {
+			categoricalValue = MISSING_CATEGORY;
+		}
 	}
 	
 	public Attribute(Double numericValue) {

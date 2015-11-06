@@ -102,6 +102,9 @@ public class ParameterTuningTest3 {
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, paramTuneDir, runNumber);
 									System.out.println(String.format(resultMessage + "\n This test took %.4f minutes. Have been runnung for %.4f minutes total.", 
 											parameters.getFileNamePrefix(), runNumber, ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									timer.start();
+									System.gc();
+									System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
 								}
 							}
 						}

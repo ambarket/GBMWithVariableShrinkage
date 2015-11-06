@@ -16,10 +16,13 @@ public class BestSplit {
 	public HashSet<String> rightCategories = null;
 	public double leftSquaredError = 0.0;
 	public double rightSquaredError = 0.0;
+	public double missingSquaredError = 0.0;
 	public int leftInstanceCount = 0;
 	public int rightInstanceCount = 0;
+	public int missingInstanceCount = 0;
 	public double leftMeanResponse = 0.0;
 	public double rightMeanResponse = 0.0;
+	public double missingMeanResponse = 0.0;
 	
 	public double squaredErrorBeforeSplit = 0.0;
 	public BestSplit(double squaredErrorBeforeSplit) {
@@ -38,6 +41,6 @@ public class BestSplit {
 	}
 	
 	public double getErrorImprovement() {
-		return squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError);
+		return squaredErrorBeforeSplit - (leftSquaredError + rightSquaredError + missingSquaredError);
 	}
 }

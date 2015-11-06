@@ -2,10 +2,11 @@ package gbm;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
+import regressionTree.RegressionTree;
 import dataset.Attribute;
 import dataset.Dataset;
-import regressionTree.RegressionTree;
 
 /**
  * Wraps a Dataset object and adds an array for storing the current predictions and pseudo responses for each
@@ -276,7 +277,7 @@ public class GbmDataset {
 		return dataset.getNumericalPredictorSortedIndexMap();
 	}
 
-	public HashMap<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
+	public Map<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
 		return dataset.getCategoricalPredictorIndexMap();
 	}
 }
