@@ -37,4 +37,24 @@ public class SimpleHostLock {
 		System.out.println("ERROR Shouldnt reach here in checkAndClaimHostLock");
 		return false;
 	}
+	
+	public static boolean checkDoneLock(String doneLockFilePath) {
+		return new File(doneLockFilePath).exists();
+	}
+	
+	public static boolean writeDoneLock(String doneLockFilePath) {
+		File doneLock;
+		doneLock = new File(doneLockFilePath);
+		try {
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(doneLock));
+			bw.write(InetAddress.getLocalHost().getHostName() + "\n");
+			bw.flush();
+			bw.close();
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+		System.out.println("ERROR Shouldnt reach here in writeDoneLock");
+		return false;
+	}
 }

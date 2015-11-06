@@ -217,7 +217,12 @@ public class ParameterTuningTest3 {
 		if (!SimpleHostLock.checkAndClaimHostLock(runDataDir + parameters.getFileNamePrefix() + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
+		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
+			return "Already completed %s on run number %d. (%d out of %d)";
+		}
+		// Temporary to be backwards compatible.
 		if (new File(runDataDir + parameters.getFileNamePrefix() + "--runData.txt").exists()) {
+			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
 			return "I've already completed %s on run number %d. (%d out of %d)";
         }
 		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, ranges.CV_NUMBER_OF_FOLDS, ranges.CV_STEP_SIZE);
@@ -227,11 +232,12 @@ public class ParameterTuningTest3 {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
 			return "Finished %s on run number %d. (%d out of %d)";
 		} else {
+			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
 			return "Failed to build %s on run number %d due to impossible parameters. (%d out of %d)";
 		}
-		
 	}
 	
 	private static void averageRunDataForParameters(GbmParameters parameters, String paramTuneDir) {
