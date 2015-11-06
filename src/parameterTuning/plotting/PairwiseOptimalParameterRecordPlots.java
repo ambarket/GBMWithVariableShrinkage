@@ -40,9 +40,7 @@ public class PairwiseOptimalParameterRecordPlots {
 	public static void plotStuffFromOptimalParameterRecords(String datasetName, String paramTuningDir, ArrayList<OptimalParameterRecord> records, ListEntryGetter entryGetter) {
 		StringBuffer constantBuffer = new StringBuffer();
 		StringBuffer variableBuffer = new StringBuffer();
-		if (!entryGetter.onlyMakeVariableLRPlot()) {
-			constantBuffer.append(entryGetter.getMathematicaVeriableName(datasetName, "ConstantLR") + " := {");
-		}
+		constantBuffer.append(entryGetter.getMathematicaVeriableName(datasetName, "ConstantLR") + " := {");
 		variableBuffer.append(entryGetter.getMathematicaVeriableName(datasetName, "VariableLR") + " := {");
 		boolean firstConstantWritten = false, firstVariableWritten = false;
 		for (int i = 0; i < records.size(); i++) {
