@@ -63,15 +63,15 @@ public class MathematicaLearningCurveCreator {
 
 		String mathematicFileName = runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--learningCurve.txt";
 		mathematicFileName = mathematicFileName.replace("\\", "/");
-		
+		String imageFileNameNoExtension = (runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()).replace("\\", "/");
 		StringBuffer saveToFile = new StringBuffer();
 		StringBuffer latexCode = new StringBuffer();
 		
-		saveToFile.append("fileName := \"" + runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix() + "\"\n");
-		saveToFile.append("Export[fileName <> \".png\", learningCurve, ImageResolution -> 300]\n\n");
+		saveToFile.append("fileName := \"" + imageFileNameNoExtension + "\"\n");
+		saveToFile.append("Export[fileName <> \".png\", learningCurve]\n\n");
 
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{" + runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix() + "}\n");
+		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + imageFileNameNoExtension + "}.png}\n");
 		latexCode.append("\\caption{" + datasetName + " " + parameters.getLearningCurveLatexCaption() + "}\n");
 		latexCode.append("\\label{fig:" +  datasetName.replace(" ", "") + parameters.getLearningCurveLatexFigureReference()  + "}\n");
 		latexCode.append("\\end{figure}\n\n");

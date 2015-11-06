@@ -12,19 +12,27 @@ import utilities.DoubleCompare;
 		public static String NOTMin = "0", NOTMax = "500000";
 		public static String BFMin = "0.4", BFMax = "1.1";
 		public static String NOSMin = "0", NOSMax = "20";
-		public static String LRMin = "0", LRMax = "2.5";
+		public static String MAXLRMin = "0", MAXLRMax = "2.5";
+		public static String MINLRMin = "0", MINLRMax = "2.5";
 		public static String MEINMin = "0", MEINMax = "1000";
 		
 		public abstract String getXLabel();
 		public abstract String getYLabel();
+		public abstract String getZLabel();
 		public abstract String getXMin();
 		public abstract String getXMax();
 		public abstract String getYMin();
 		public abstract String getYMax();
+		public abstract String getZMin();
+		public abstract String getZMax();
 		public abstract boolean is3D();
 		
 		public String getMathematicaVeriableName(String datasetName, String prefix) {
-			return datasetName + prefix + getXLabel() + "vs" + getYLabel();
+			if (is3D()) {
+				return datasetName + prefix + getXLabel() + "vs" + getYLabel() + "vs" + getZLabel();
+			} else {
+				return datasetName + prefix + getXLabel() + "vs" + getYLabel();
+			}
 		}
 		
 		public String getPlotTitle(String datasetName, String prefix) {
@@ -49,7 +57,8 @@ import utilities.DoubleCompare;
 					   maxADTE = 0.0, minADTE = Double.MAX_VALUE,
 					   maxTIME = 0.0, minTIME = Double.MAX_VALUE,
 					   maxBF = 0.0, minBF = Double.MAX_VALUE,
-					   maxLR = 0.0, minLR = Double.MAX_VALUE;
+					   maxMAXLR = 0.0, minMAXLR = Double.MAX_VALUE,
+					   maxMINLR = 0.0, minMINLR = Double.MAX_VALUE;
 			int maxNOT  = 0, minNOT  = Integer.MAX_VALUE,
 			    maxNOS = 0, minNOS  = Integer.MAX_VALUE,
 			    maxMEIN = 0, minMEIN = Integer.MAX_VALUE;
@@ -79,11 +88,17 @@ import utilities.DoubleCompare;
 					if (DoubleCompare.greaterThan(record.parameters.bagFraction, maxBF)) {
 						maxBF = record.parameters.bagFraction;
 					}
-					if (DoubleCompare.lessThan(record.parameters.maxLearningRate, minLR)) {
-						minLR = record.parameters.maxLearningRate;
+					if (DoubleCompare.lessThan(record.parameters.maxLearningRate, minMAXLR)) {
+						minMAXLR = record.parameters.maxLearningRate;
 					}
-					if (DoubleCompare.greaterThan(record.parameters.maxLearningRate, maxLR)) {
-						maxLR = record.parameters.maxLearningRate;
+					if (DoubleCompare.greaterThan(record.parameters.maxLearningRate, maxMAXLR)) {
+						maxMAXLR = record.parameters.maxLearningRate;
+					}
+					if (DoubleCompare.lessThan(record.parameters.minLearningRate, minMINLR)) {
+						minMINLR = record.parameters.minLearningRate;
+					}
+					if (DoubleCompare.greaterThan(record.parameters.minLearningRate, maxMINLR)) {
+						maxMINLR = record.parameters.minLearningRate;
 					}
 					if (record.optimalNumberOfTrees < minNOT) {
 						minNOT = record.optimalNumberOfTrees;
@@ -114,8 +129,10 @@ import utilities.DoubleCompare;
 					NOTMin = "" + (minNOT - ((maxNOT-minNOT)/5)); 
 					NOSMax = "" + (maxNOS + ((maxNOS-minNOS)/5)); 
 					NOSMin = "" + (minNOS - ((maxNOS-minNOS)/5)); 
-					LRMax = "" + (maxLR + ((maxLR-minLR)/5)); 
-					LRMin = "" + (minLR - ((maxLR-minLR)/5)); 
+					MAXLRMax = "" + (maxMAXLR + ((maxMAXLR-minMAXLR)/5)); 
+					MAXLRMin = "" + (minMAXLR - ((maxMAXLR-minMAXLR)/5)); 
+					MINLRMax = "" + (maxMINLR + ((maxMINLR-minMINLR)/5)); 
+					MINLRMin = "" + (minMINLR - ((maxMINLR-minMINLR)/5)); 
 					BFMax = "" + (maxBF + ((maxBF-minBF)/5)); 
 					BFMin = "" + (minBF - ((maxBF-minBF)/5)); 
 					MEINMax = "" + (maxMEIN + ((maxMEIN-minMEIN)/5));
@@ -123,8 +140,56 @@ import utilities.DoubleCompare;
 				}
 		}
 		
+		public static class MaxLR_MinLR_ADTE_ListEntryGetter extends ListEntryGetter {
+			public String getXLabel() {
+				return "MaxLearningRate";
+			}
+			public String getYLabel() {
+				return "MinLearningRate";
+			}
+			@Override
+			public String getZLabel() {
+				return "AllDataTestError";
+			}
+			public String getEntry(OptimalParameterRecord record) {
+				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(
+						record.parameters.maxLearningRate, 
+						record.parameters.minLearningRate, 
+						record.allDataTestError);
+			}
+			@Override
+			public String getXMin() {
+				return MAXLRMin;
+			}
+			@Override
+			public String getXMax() {
+				return MAXLRMax;
+			}
+			@Override
+			public String getYMin() {
+				return MINLRMin;
+			}
+			@Override
+			public String getYMax() {
+				return MINLRMax;
+			}
+			@Override
+			public boolean is3D() {
+				return true;
+			}
+
+			@Override
+			public String getZMin() {
+				return ADTEMin;
+			}
+			@Override
+			public String getZMax() {
+				return ADTEMax;
+			}
+		}
 		
-		public static class LR_NOS_ADTE_ListEntryGetter extends ListEntryGetter {
+		
+		public static class MaxLR_NOS_ADTE_ListEntryGetter extends ListEntryGetter {
 			public String getXLabel() {
 				return "OptimalNumberOfTrees";
 			}
@@ -157,6 +222,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return true;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class NOT_CVE_ListEntryGetter extends ListEntryGetter {
@@ -188,6 +268,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -223,6 +318,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class BF_CVE_ListEntryGetter extends ListEntryGetter {
@@ -254,6 +364,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -287,6 +412,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class BF_TIME_ListEntryGetter extends ListEntryGetter {
@@ -318,6 +458,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -352,6 +507,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class SPLITS_ADTE_ListEntryGetter extends ListEntryGetter {
@@ -383,6 +553,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 
@@ -416,6 +601,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class SPLITS_TIME_ListEntryGetter extends ListEntryGetter {
@@ -448,6 +648,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		//--------------------------LEARNING_RATE--------------------------------------
@@ -463,11 +678,11 @@ import utilities.DoubleCompare;
 			}
 			@Override
 			public String getXMin() {
-				return LRMin;
+				return MAXLRMin;
 			}
 			@Override
 			public String getXMax() {
-				return LRMax;
+				return MAXLRMax;
 			}
 			@Override
 			public String getYMin() {
@@ -480,6 +695,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -495,11 +725,11 @@ import utilities.DoubleCompare;
 			}
 			@Override
 			public String getXMin() {
-				return LRMin;
+				return MAXLRMin;
 			}
 			@Override
 			public String getXMax() {
-				return LRMax;
+				return MAXLRMax;
 			}
 			@Override
 			public String getYMin() {
@@ -512,6 +742,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -527,11 +772,11 @@ import utilities.DoubleCompare;
 			}
 			@Override
 			public String getXMin() {
-				return LRMin;
+				return MAXLRMin;
 			}
 			@Override
 			public String getXMax() {
-				return LRMax;
+				return MAXLRMax;
 			}
 			@Override
 			public String getYMin() {
@@ -544,6 +789,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -559,11 +819,11 @@ import utilities.DoubleCompare;
 			}
 			@Override
 			public String getXMin() {
-				return LRMin;
+				return MAXLRMin;
 			}
 			@Override
 			public String getXMax() {
-				return LRMax;
+				return MAXLRMax;
 			}
 			@Override
 			public String getYMin() {
@@ -576,6 +836,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 		
@@ -610,6 +885,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 	
 	
@@ -643,6 +933,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 
 		public static class MEIN_CVE_ListEntryGetter extends ListEntryGetter {
@@ -675,6 +980,21 @@ import utilities.DoubleCompare;
 			public boolean is3D() {
 				return false;
 			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 		}
 		
 		public static class MEIN_TIME_ListEntryGetter extends ListEntryGetter {
@@ -706,6 +1026,21 @@ import utilities.DoubleCompare;
 			@Override
 			public boolean is3D() {
 				return false;
+			}
+			@Override
+			public String getZLabel() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMin() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+			@Override
+			public String getZMax() {
+				// TODO Auto-generated method stub
+				return null;
 			}
 		}
 	}

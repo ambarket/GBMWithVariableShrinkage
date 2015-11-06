@@ -57,9 +57,9 @@ public class ParameterTuningTest3 {
 	}
 	
 	public static void processBikeSharing() {
-		averageAllRunData(bikeSharingParamTune);
-		generateMathematicaLearningCurvesForAllRunData("Bike Sharing", bikeSharingParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(bikeSharingParamTune + "Averages/");
+		//averageAllRunData(bikeSharingParamTune);
+		//generateMathematicaLearningCurvesForAllRunData("Bike Sharing", bikeSharingParamTune + "Averages/");
+		//readSortAndSaveOptimalParameterRecordsFromRunData(bikeSharingParamTune + "Averages/");
 		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("BikeSharing", bikeSharingParamTune + "Averages/");
 		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("BikeSharing", bikeSharingParamTune + "Averages/", records);
 	}

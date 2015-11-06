@@ -2,6 +2,8 @@ package parameterTuning.plotting;
 
 import java.util.ArrayList;
 
+import utilities.DoubleCompare;
+
 public class MathematicaListCreator {
 	public static String convertToMathematicaList(ArrayList<Double> error) {
 		StringBuffer retval = new StringBuffer();
@@ -32,12 +34,34 @@ public class MathematicaListCreator {
 	}
 	
 	public static String convertNObjectsIntoNDimensionalListEntry(Object... args) {
+
 		StringBuffer retval = new StringBuffer();
 		retval.append("{");
 		for (int i = 0; i < args.length-1; i++) {
-			retval.append(args[i].toString() + ", ");
+			double doub = Double.MIN_NORMAL;
+			try {
+				doub = (double)args[i];
+			} catch (ClassCastException e) {
+				
+			}
+			if (DoubleCompare.equals(doub, Double.MIN_VALUE)) {
+				retval.append(args[i].toString() + ", ");
+			} else {
+				retval.append(String.format("%f", doub) + ", ");
+			}
 		}
-		retval.append(args[args.length-1].toString() + "}");
+		double doub = Double.MIN_NORMAL;
+		try {
+			doub = (double)args[args.length-1];
+		} catch (ClassCastException e) {
+			
+		}
+		if (DoubleCompare.equals(doub, Double.MIN_VALUE)) {
+			retval.append(args[args.length-1].toString() + "}");
+		} else {
+			retval.append(String.format("%f", doub) + "}");
+		}
+		
 		return retval.toString();
 	}
 }

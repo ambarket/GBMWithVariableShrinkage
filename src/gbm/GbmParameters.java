@@ -210,7 +210,7 @@ public class GbmParameters {
 	
 	public String getLearningCurveLatexCaption() {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format(learningRatePolicy.name() 
+			return String.format("Revised Variable - "
 					+ " MinLR: %.4f" 
 					+ " MaxLR: %.4f" 
 					+ " SPLITS: %d"
@@ -218,7 +218,7 @@ public class GbmParameters {
 					+ " MEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format(learningRatePolicy.name() 
+			return String.format("Constant - " 
 					+ " LR: %.4f" 
 					+ " MaxSplits: %d"
 					+ " BF: %.4f"
