@@ -1,6 +1,6 @@
 package regressionTree;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 
 import dataset.Attribute.Type;
 
@@ -12,8 +12,8 @@ public class BestSplit {
 	public Type splitPredictorType = null;
 	public int splitPredictorIndex = 0;
 	public double numericSplitValue = 0;
-	public HashSet<String> leftCategories = null;
-	public HashSet<String> rightCategories = null;
+	public ArrayList<String> leftCategories = new ArrayList<>();
+	public ArrayList<String> rightCategories = new ArrayList<>();
 	public double leftSquaredError = 0.0;
 	public double rightSquaredError = 0.0;
 	public double missingSquaredError = 0.0;
@@ -27,6 +27,31 @@ public class BestSplit {
 	public double squaredErrorBeforeSplit = 0.0;
 	public BestSplit(double squaredErrorBeforeSplit) {
 		this.squaredErrorBeforeSplit = squaredErrorBeforeSplit;
+	}
+	
+	public void updateLeftAndRightCategories(ArrayList<String> left, ArrayList<String> right) {
+		int i;
+		for (i = 0; i < left.size(); i++) {
+			if (i < leftCategories.size()) {
+				leftCategories.set(i, left.get(i));
+			} else {
+				leftCategories.add(left.get(i));
+			}
+		}
+		for (; i < leftCategories.size(); i++) {
+			leftCategories.remove(i);
+		}
+		
+		for (i = 0; i < right.size(); i++) {
+			if (i < rightCategories.size()) {
+				rightCategories.set(i, right.get(i));
+			} else {
+				rightCategories.add(right.get(i));
+			}
+		}
+		for (; i < rightCategories.size(); i++) {
+			rightCategories.remove(i);
+		}
 	}
 	public String toString() {
 		return "SplitAttribute: " + splitPredictorIndex + "\n" +

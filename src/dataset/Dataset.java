@@ -37,7 +37,7 @@ public class Dataset {
 	private int[][] numericalPredictorSortedIndexMap;
 	
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
-	private ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new ConcurrentHashMap<Integer, HashMap<String, HashSet<Integer>>> ();
+	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 
 	//--------------------------------------Object Construction-----------------------------------------------------------
 	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn, double trainingSampleFraction) {

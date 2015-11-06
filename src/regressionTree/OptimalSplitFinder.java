@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 
 import dataset.Attribute;
@@ -208,8 +209,8 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		
 		Collections.sort(sortedEntries, new CategoryAverageComparator());
 		// Start with everything in the right child
-		HashSet<String> leftCategories = new HashSet<String>();
-		HashSet<String> rightCategories = new HashSet<String>();
+		ArrayList<String> leftCategories = new ArrayList<String>();
+		ArrayList<String> rightCategories = new ArrayList<String>();
 		for (Map.Entry<String, SumCountAverage> entry : sortedEntries) {
 			snapshot.right.addSumCountAverage(entry.getValue());
 			rightCategories.add(entry.getKey());
@@ -234,8 +235,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 				bestSplit.splitPredictorIndex = splitPredictorIndex;
 				if (bestSplit.leftCategories != null) {bestSplit.leftCategories.clear();}
 				if (bestSplit.rightCategories != null) {bestSplit.rightCategories.clear();}
-				bestSplit.leftCategories = new HashSet<String>(leftCategories);
-				bestSplit.rightCategories = new HashSet<String>(rightCategories);
+				bestSplit.updateLeftAndRightCategories(leftCategories, rightCategories);
 				
 				bestSplit.leftSquaredError = snapshot.currentLeftError;
 				bestSplit.leftInstanceCount = snapshot.left.getCount();
@@ -258,14 +258,12 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		return bestSplit;
 	}
 	
-	
 	private static class CategoryAverageComparator implements Comparator<Map.Entry<String, SumCountAverage>> {
 		@Override
 		public int compare(Map.Entry<String, SumCountAverage> arg0, Map.Entry<String, SumCountAverage> arg1) {
 			return DoubleCompare.compare(arg0.getValue().getMean(), arg1.getValue().getMean());
 		}
 	}
-	
 
 	// Used only by getOptimalSplit to pass data around without a ton of arguments.
 	private static class SplitSnapshot {

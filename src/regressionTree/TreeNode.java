@@ -2,11 +2,11 @@ package regressionTree;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.HashSet;
+import java.util.ArrayList;
 
+import utilities.DoubleCompare;
 import dataset.Attribute;
 import dataset.Attribute.Type;
-import utilities.DoubleCompare;
 
 public class TreeNode {
 	public Attribute.Type splitPredictorType = null;
@@ -14,8 +14,8 @@ public class TreeNode {
 	
 	// Numerical splits use splitValue, categorical splits use left/right categories
 	public double numericSplitValue = 0;
-	public HashSet<String> leftCategories = null;
-	public HashSet<String> rightCategories = null;
+	public ArrayList<String> leftCategories = null;
+	public ArrayList<String> rightCategories = null;
 	
 	public double squaredErrorBeforeSplit = Double.MAX_VALUE;
 	
