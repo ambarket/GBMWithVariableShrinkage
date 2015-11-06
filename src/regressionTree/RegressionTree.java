@@ -162,16 +162,26 @@ public class RegressionTree {
 						switch (parent.node.whichChild(dataset.getTrainingInstances()[instanceNum])) {
 							case 1:
 								inLeftChild[instanceNum] = true;
+								inRightChild[instanceNum] = false;
+								inMissingChild[instanceNum] = false;
 								break;
 							case 2:
+								inLeftChild[instanceNum] = false;
 								inRightChild[instanceNum] = true;
+								inMissingChild[instanceNum] = false;
 								break;
 							case 3:
+								inLeftChild[instanceNum] = false;
+								inRightChild[instanceNum] = false;
 								inMissingChild[instanceNum] = true;
 								break;
 							default:
 								throw new IllegalStateException("Trrenode.whichChild returned an unexpected value to DataSplit.splitDataIntoChildren");
 						}
+					} else {
+						inLeftChild[instanceNum] = false;
+						inRightChild[instanceNum] = false;
+						inMissingChild[instanceNum] = false;
 					}
 				}
 				DataSplit left = null, right = null, missing = null;
