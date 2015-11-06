@@ -6,10 +6,13 @@ public class Main {
 		switch(args[0]) {
 			case "powerPlant":
 				ParameterTuningTest3.runPowerPlant();
+				break;
 			case "nasa":
 				ParameterTuningTest3.runNASA();
+				break;
 			case "bikeSharing":
 				ParameterTuningTest3.runBikeSharing();
+				break;
 			case "processBikeSharing":
 				ParameterTuningTest3.processBikeSharing();
 		}
