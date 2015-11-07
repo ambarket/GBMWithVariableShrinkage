@@ -27,12 +27,23 @@ public class ParameterTuningTest3 {
 	public static final String powerPlantParamTune = System.getProperty("user.dir") + "/data/paramTuning3/powerPlantParameterTuning/";
 	public static final String nasaParamTune = System.getProperty("user.dir") + "/data/paramTuning3/nasaParameterTuning/";
 	public static final String bikeSharingParamTune = System.getProperty("user.dir") + "/data/paramTuning3/bikeSharingParameterTuning/";
+	public static final String crimeCommunitiesParamTune = System.getProperty("user.dir") + "/data/paramTuning3/crimeCommunitiesParameterTuning/";
 	
 	public static final String bikeSharingFiles = System.getProperty("user.dir") + "/data/BikeSharing/";
 	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
 	public static final String nasaFiles = System.getProperty("user.dir") + "/data/NASAAirFoild/";
+	public static final String crimeFiles = System.getProperty("user.dir") + "/data/CrimeCommunities/";
 	
 	public static final ParameterTuningParameterRanges ranges = ParameterTuningParameterRanges.getRangesForTest3();
+	
+	public static void runCrimeCommunities() {
+		GradientBoostingTree.executor = Executors.newCachedThreadPool();
+		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
+			Dataset trainingDataset2 = new Dataset(crimeFiles + "communitiesOnlyPredictive.txt", true, true, 122, ranges.TRAINING_SAMPLE_FRACTION);
+			tryDifferentParameters(trainingDataset2, crimeCommunitiesParamTune, i);
+		}
+		GradientBoostingTree.executor.shutdownNow();
+	}
 	
 	public static void runNASA() {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
@@ -41,11 +52,16 @@ public class ParameterTuningTest3 {
 			tryDifferentParameters(trainingDataset2, nasaParamTune, i);
 		}
 		GradientBoostingTree.executor.shutdownNow();
-		/*
-		readSortAndSaveResultsAsSortedOptimalParameterRecords(nasaParamTune);
-		readOptimalParameterRecordsOldFormat("AirFoil", nasaParamTune);
-		*/
 	}
+	
+	public static void processNASA() {
+		averageAllRunData(nasaParamTune);
+		generateMathematicaLearningCurvesForAllRunData("NASA Air Foil", nasaParamTune + "Averages/");
+		readSortAndSaveOptimalParameterRecordsFromRunData(nasaParamTune + "Averages/");
+		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("NASA Air Foil", nasaParamTune + "Averages/");
+		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("NASA Air Foil", nasaParamTune + "Averages/", records);
+	}
+	
 	
 	public static void runBikeSharing() {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();

@@ -4,6 +4,9 @@ import parameterTuning.ParameterTuningTest3;
 public class Main {
 	public static void main(String[] args) {
 		switch(args[0]) {
+			case "communities":
+				ParameterTuningTest3.runCrimeCommunities();
+				break;
 			case "powerPlant":
 				ParameterTuningTest3.runPowerPlant();
 				break;
@@ -15,6 +18,10 @@ public class Main {
 				break;
 			case "processBikeSharing":
 				ParameterTuningTest3.processBikeSharing();
+				break;
+			case "processNasa":
+				ParameterTuningTest3.processNASA();
+				break;
 		}
 	}
 }

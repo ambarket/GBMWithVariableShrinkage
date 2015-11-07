@@ -219,7 +219,7 @@ public class GradientBoostingTree {
 					"\nLast Avg Validation Error: " + lastAvgValidationError + 
 					"\nCurrent Avg Validation Error: " + avgValidError + 
 					"\nDifference: " + (lastAvgValidationError - avgValidError));
-			if (DoubleCompare.lessThan(avgValidError, lastAvgValidationError, 0.005)) {
+			if (DoubleCompare.lessThan(avgValidError, lastAvgValidationError, training.getMinErrorDelta())) {
 				lastAvgValidationError = avgValidError;
 				remainingStepsPastMinimum = 3;
 			} else {

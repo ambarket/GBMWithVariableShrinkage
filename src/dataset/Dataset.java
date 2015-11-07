@@ -30,6 +30,9 @@ public class Dataset {
 	private String responseName;
 	private Attribute[] trainingResponses;
 	private Attribute[] testResponses;
+	
+	// The minimum amount of improvement necessary to get training.
+	private double minErrorDelta;
 	/*  
 	 *  sortedAttributeIndices is [numberOfPredictors][numberOfExamples], each element stores an index into instances/labels_y. 
 	 *  They are sorted in ascending order of instances.get(instanceNum).get(attributeNum)
@@ -65,7 +68,14 @@ public class Dataset {
 		buildCategoricalPredictorIndexMap();
 		buildnumericalPredictorSortedIndexMap();
 		
+		
+		this.minErrorDelta = calcMeanTrainingResponse() * 0.000001;
+		System.out.println(minErrorDelta);
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
+	}
+	
+	public double getMinErrorDelta() {
+		return minErrorDelta;
 	}
 	
 	private void extractAndStoreAttributeTypes(RawFile file, int responseVariableColumn) {
