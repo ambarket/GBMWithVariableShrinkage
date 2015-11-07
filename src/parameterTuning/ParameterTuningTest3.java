@@ -40,7 +40,7 @@ public class ParameterTuningTest3 {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
 			Dataset trainingDataset2 = new Dataset(crimeFiles + "communitiesOnlyPredictive.txt", true, true, 122, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters(trainingDataset2, crimeCommunitiesParamTune, i);
+			tryDifferentParameters("Crime Communities", trainingDataset2, crimeCommunitiesParamTune, i);
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
@@ -49,7 +49,7 @@ public class ParameterTuningTest3 {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
 			Dataset trainingDataset2 = new Dataset(nasaFiles + "data.txt", true, true, 5, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters(trainingDataset2, nasaParamTune, i);
+			tryDifferentParameters("NASA", trainingDataset2, nasaParamTune, i);
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
@@ -67,7 +67,7 @@ public class ParameterTuningTest3 {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
 			Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters(trainingDataset, bikeSharingParamTune, i);
+			tryDifferentParameters("Bike Sharing", trainingDataset, bikeSharingParamTune, i);
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
@@ -85,7 +85,7 @@ public class ParameterTuningTest3 {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
 			Dataset trainingDataset3 = new Dataset(powerPlantFiles + "Folds5x2_pp.txt", true, true, 4, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters(trainingDataset3, powerPlantParamTune, i);
+			tryDifferentParameters("Power Plant", trainingDataset3, powerPlantParamTune, i);
 		}
 		
 		GradientBoostingTree.executor.shutdownNow();
@@ -100,7 +100,7 @@ public class ParameterTuningTest3 {
 		
 	}
 
-	public static void tryDifferentParameters(Dataset dataset, String paramTuneDir, int runNumber) {
+	public static void tryDifferentParameters(String datasetName, Dataset dataset, String paramTuneDir, int runNumber) {
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
@@ -116,11 +116,11 @@ public class ParameterTuningTest3 {
 												learningRatePolicy, splitPolicy);
 									timer.start();
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, paramTuneDir, runNumber);
-									System.out.println(String.format(resultMessage + "\n This test took %.4f minutes. Have been runnung for %.4f minutes total.", 
+									System.out.println(String.format(resultMessage + "\n This " + datasetName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
 											parameters.getFileNamePrefix(), runNumber, ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
-									timer.start();
-									System.gc();
-									System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
+									//timer.start();
+									//System.gc();
+									//System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
 								}
 							}
 						}
