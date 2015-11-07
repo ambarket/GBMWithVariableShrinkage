@@ -4,24 +4,26 @@ import parameterTuning.ParameterTuningTest3;
 public class Main {
 	public static void main(String[] args) {
 		switch(args[0]) {
-			case "communities":
-				ParameterTuningTest3.runCrimeCommunities();
+			case "runParamTuning3":
+				runParamTuning3();
 				break;
-			case "powerPlant":
-				ParameterTuningTest3.runPowerPlant();
-				break;
-			case "nasa":
-				ParameterTuningTest3.runNASA();
-				break;
-			case "bikeSharing":
-				ParameterTuningTest3.runBikeSharing();
-				break;
-			case "processBikeSharing":
-				ParameterTuningTest3.processBikeSharing();
-				break;
-			case "processNasa":
-				ParameterTuningTest3.processNASA();
+			case "processParamTuning3":
+				processParamTuning3();
 				break;
 		}
 	}
+	
+	public static void runParamTuning3() {
+		ParameterTuningTest3.runCrimeCommunities();
+		ParameterTuningTest3.runPowerPlant();
+		ParameterTuningTest3.runNASA();
+		ParameterTuningTest3.runBikeSharing();
+	}
+	
+	public static void processParamTuning3() {
+		ParameterTuningTest3.processNASA();
+		ParameterTuningTest3.processBikeSharing();
+	}
+	
+	
 }
