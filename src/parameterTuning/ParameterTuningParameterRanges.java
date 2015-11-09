@@ -27,9 +27,9 @@ public class ParameterTuningParameterRanges {
 		if (test3Parameters == null) {
 			test3Parameters = new ParameterTuningParameterRanges();
 			test3Parameters.NUMBER_OF_RUNS = 10;
-			test3Parameters.NUMBER_OF_TREES = 2;
+			test3Parameters.NUMBER_OF_TREES = 150000;
 			test3Parameters.CV_NUMBER_OF_FOLDS = 4;
-			test3Parameters.CV_STEP_SIZE = 2;
+			test3Parameters.CV_STEP_SIZE = 5000;
 			test3Parameters.TRAINING_SAMPLE_FRACTION = 0.8;
 			
 			test3Parameters.constantLearningRates = new double[] {1, 0.7, 0.4, 0.1, 0.01, 0.001, 0.0001};
