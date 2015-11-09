@@ -8,10 +8,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-import jdk.nashorn.internal.ir.SetSplitState;
 import utilities.RandomSample;
 import utilities.RawFile;
 import utilities.StopWatch;
@@ -30,6 +27,9 @@ public class Dataset {
 	private String responseName;
 	private Attribute[] trainingResponses;
 	private Attribute[] testResponses;
+	
+	// Store this so that we can later print out the responses along with their original position in the dataset file.
+	private int[] shuffledIndices;
 	
 	// The minimum amount of improvement necessary to get training.
 	private double minErrorDelta;
@@ -68,9 +68,11 @@ public class Dataset {
 		buildCategoricalPredictorIndexMap();
 		buildnumericalPredictorSortedIndexMap();
 		
-		
+		// Used to stop cross validation. Basically will stop when after n steps of m trees (Set to 3 steps of 5000 trees each)
+		//	we didn't improve on the error by more than the minErrorDelta. Using this value is more fair across datasets, as the
+		//	magnitude of the response variables in different datasets can differ significantly.
 		this.minErrorDelta = calcMeanTrainingResponse() * 0.000001;
-		System.out.println(minErrorDelta);
+		
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}
 	
@@ -118,7 +120,7 @@ public class Dataset {
 	}
 	
 	private void extractAndStoreExamples(RawFile file, int responseVariableColumn, double trainingSampleFraction) {
-		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(file.numberOfRecords);
+		this.shuffledIndices = (new RandomSample()).fisherYatesShuffle(file.numberOfRecords);
 		
 		trainingInstances = new Attribute[numberOfTrainingExamples][file.numberOfAttributes - 1];
 		trainingResponses = new Attribute[numberOfTrainingExamples];
@@ -276,23 +278,26 @@ public class Dataset {
 		return categoricalPredictorIndexMap;
 	}
 	
+	public int[] getShuffledIndicies() {
+		return shuffledIndices;
+	}
+	
 	public double calcMeanTrainingResponse() {
 		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			meanY += responses[i].getNumericValue();
 		}
-		meanY = meanY / getNumberOfTrainingExamples();
+		meanY = meanY / numberOfTrainingExamples;
 		return meanY;
 	}
 	
 	public double calcMeanTrainingResponse(boolean[] inSample) {
-		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			if (inSample[i]) {
-				meanY += responses[i].getNumericValue();
+				meanY += trainingResponses[i].getNumericValue();
 				count++;
 			}
 		}
@@ -304,12 +309,11 @@ public class Dataset {
 		if (!negate) {
 			return calcMeanTrainingResponse(inSample);
 		}
-		Attribute[] responses = getTrainingResponses();
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			if (!inSample[i]) {
-				meanY += responses[i].getNumericValue();
+				meanY += trainingResponses[i].getNumericValue();
 				count++;
 			}
 		}
@@ -318,22 +322,20 @@ public class Dataset {
 	}
 	
 	public double calcMeanTestResponse() {
-		Attribute[] responses = getTestResponses();
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
-			meanY += responses[i].getNumericValue();
+		for (int i = 0; i < numberOfTestExamples; i++) {
+			meanY += testResponses[i].getNumericValue();
 		}
-		meanY = meanY / getNumberOfTestExamples();
+		meanY = meanY / numberOfTestExamples;
 		return meanY;
 	}
 	
 	public double calcMeanTestResponse(boolean[] inSample) {
-		Attribute[] responses = getTestResponses();
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			if (inSample[i]) {
-				meanY += responses[i].getNumericValue();
+				meanY += testResponses[i].getNumericValue();
 				count++;
 			}
 		}
@@ -345,12 +347,11 @@ public class Dataset {
 		if (!negate) {
 			return calcMeanTrainingResponse(inSample);
 		}
-		Attribute[] responses = getTestResponses();
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			if (!inSample[i]) {
-				meanY += responses[i].getNumericValue();
+				meanY += testResponses[i].getNumericValue();
 				count++;
 			}
 		}

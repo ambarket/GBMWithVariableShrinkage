@@ -5,16 +5,17 @@ import java.io.OutputStreamWriter;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Scanner;
 
-import dataset.Attribute;
+import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import regressionTree.TreeNode;
 import utilities.DoubleCompare;
+import utilities.SumCountAverage;
+import dataset.Attribute;
 
 public class ResultFunction {
 	// class members
@@ -31,7 +32,7 @@ public class ResultFunction {
 	public int numberOfPredictors;
 	public String[] predictorNames;
 	
-	int sumOfSplits = 0;
+	public SumCountAverage numberOfSplits = new SumCountAverage();
 
 	// construction function
 	ResultFunction(GbmParameters parameters, double intialValue, String[] predictorNames) {
@@ -50,11 +51,7 @@ public class ResultFunction {
 		this.trainingError.add(trainingError);
 		this.validationError.add(validationError);
 		this.testError.add(testError);
-		this.sumOfSplits += newTree.actualNumberOfSplits;
-	}
-	
-	public double getAvgNumberOfSplits() {
-		return sumOfSplits / trees.size();
+		this.numberOfSplits.addData(newTree.actualNumberOfSplits);
 	}
 	
 	// the following function is used to estimate the function
@@ -66,21 +63,38 @@ public class ResultFunction {
 		}
 		
 		for (RegressionTree tree : trees){
-			// Learning rate is accounted for in the tree itself.
-			result += tree.getLearnedValue(instance_x);
+			LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(instance_x);
+			result += pair.learningRate * pair.terminalValue;
 		}
 		
 		return result;
 	}
 	
-	public String getRelativeInfluencesString() {
-		return getRelativeInfluencesString(trees.size());
+	public double getLearnedValue(Attribute[] instance_x, int numberOfTrees) {
+		double result = initialValue;
+		
+		if (trees.size() == 0) {
+			return result;
+		}
+		if ( numberOfTrees > trees.size()) {
+			System.out.println("ERROR: Cannot predict using " + numberOfTrees + " when only " + trees.size() + " trees exists.");
+		}
+		
+		for (int i = 0; i < numberOfTrees; i++) {
+			result += trees.get(i).getLearnedValueWithLearningRateApplied(instance_x);
+		}
+		
+		return result;
 	}
 	
-	public String getRelativeInfluencesString(int numberOfTrees) {
+	public String getRelativeInfluencesString( String header) {
+		return getRelativeInfluencesString(trees.size(), header);
+	}
+	
+	public String getRelativeInfluencesString(int numberOfTrees, String header) {
 		double[] relativeInf = calcRelativeInfluences();
 		StringBuffer s = new StringBuffer();
-		s.append("Relative Influences\n--------------------\n");
+		s.append(header);
 		PriorityQueue<Map.Entry<String, Double>> sortedRelativeInfluences = 
 				new PriorityQueue<Map.Entry<String, Double>>(new Comparator<Map.Entry<String, Double>>() {
 					@Override
@@ -136,7 +150,7 @@ public class ResultFunction {
 						+ "Training RMSE: %f \n"
 						+ "Validation RMSE: %f \n"
 						+ "Test RMSE: %f \n\n" 
-						+ getRelativeInfluencesString(),
+						+ getRelativeInfluencesString("--------------Relative Influences-------------"),
 				trees.size(),
 				trainingError.get(trees.size()-1),
 				validationError.get(trees.size()-1),

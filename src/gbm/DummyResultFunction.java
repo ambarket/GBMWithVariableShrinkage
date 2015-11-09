@@ -1,13 +1,8 @@
 package gbm;
 
-import java.util.ArrayList;
-
 import regressionTree.RegressionTree;
 import dataset.Attribute;
 
-/**
- * Exactly
- */
 public class DummyResultFunction extends ResultFunction{
 	
 	// construction function
@@ -21,11 +16,7 @@ public class DummyResultFunction extends ResultFunction{
 		this.trainingError.add(trainingError);
 		this.validationError.add(validationError);
 		this.testError.add(testError);
-		this.sumOfSplits += newTree.actualNumberOfSplits;
-	}
-	
-	public double getAvgNumberOfSplits() {
-		return sumOfSplits / trainingError.size();
+		this.numberOfSplits.addData(newTree.actualNumberOfSplits);
 	}
 	
 	// the following function is used to estimate the function

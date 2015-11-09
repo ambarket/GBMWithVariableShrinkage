@@ -29,7 +29,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	public static TreeNodeAndInParentPair getOptimalSplit(GbmDataset dataset, int[] trainingDataToChildMap, int childNum, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		// Make a boolean array unique to this split to indicate what training examples were in the parent.
 		TreeNodeAndInParentPair pair = new TreeNodeAndInParentPair();
-		pair.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+		pair.inParent = new boolean[trainingDataToChildMap.length];
 		for (int i = 0; i < trainingDataToChildMap.length; i++) {
 			pair.inParent[i] = trainingDataToChildMap[i] == childNum;
 		}
@@ -72,7 +72,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	public static TreeNodeAndInParentPair getOptimalSplitSingleThread(GbmDataset dataset, int[] trainingDataToChildMap, int childNum, int minExamplesInNode, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		// Make a boolean array unique to this split to indicate what training examples were in the parent.
 		TreeNodeAndInParentPair pair = new TreeNodeAndInParentPair();
-		pair.inParent = new boolean[dataset.getNumberOfTrainingExamples()];
+		pair.inParent = new boolean[trainingDataToChildMap.length];
 		for (int i = 0; i < trainingDataToChildMap.length; i++) {
 			pair.inParent[i] = trainingDataToChildMap[i] == childNum;
 		}
@@ -146,7 +146,8 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		double currentY = 0.0;
 		
 		// Start with minimum in the left
-		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples() && 
+		int numberOfTrainingExamples = parameters.dataset.getNumberOfTrainingExamples();
+		while(sortedExampleIndex < numberOfTrainingExamples && 
 				snapshot.left.getCount() < parameters.minExamplesInNode) {
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
 			if (parameters.inParent[realExampleIndex]) {
@@ -162,7 +163,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		}
 
 		// And everything else except missing values in right
-		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
+		while(sortedExampleIndex < numberOfTrainingExamples) {
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
 			if (parameters.inParent[realExampleIndex]) {
 				currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
@@ -176,7 +177,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		}
 		
 		// And all the missing values in their own node where they will stay.
-		while(sortedExampleIndex < parameters.dataset.getNumberOfTrainingExamples()) {
+		while(sortedExampleIndex < numberOfTrainingExamples) {
 			realExampleIndex = numericalPredictorSortedIndexMap[splitPredictorIndex][sortedExampleIndex];
 			if (parameters.inParent[realExampleIndex]) {
 				currentY = parameters.dataset.trainingPseudoResponses[realExampleIndex];
@@ -204,11 +205,11 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 		Attribute[][] instances = parameters.dataset.getTrainingInstances();
 		
 		BestSplit bestSplit = new BestSplit(parameters.squaredErrorBeforeSplit);
-
+		int numberOfTrainingExamples = parameters.dataset.getNumberOfTrainingExamples();
 		int lastLeftIndex = firstSplitIndex + 1;
 		int firstRightIndex = lastLeftIndex + 1;
 		while(snapshot.right.getCount() > parameters.minExamplesInNode) {
-			if (lastLeftIndex >= parameters.dataset.getNumberOfTrainingExamples()) {
+			if (lastLeftIndex >= numberOfTrainingExamples) {
 				throw new IllegalStateException("There must be less than 2 * minExamplesInNode "
 						+ "examples in OptimalSplitFinder.findBestNumericalSplit. Shouldn't be possible.");
 			}

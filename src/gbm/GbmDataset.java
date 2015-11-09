@@ -1,10 +1,13 @@
 package gbm;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
+import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Dataset;
 
@@ -17,47 +20,82 @@ import dataset.Dataset;
 public class GbmDataset {
 	public double[] trainingPseudoResponses;
 	public double[] trainingPredictions;
+	
 	public double[] testPseudoResponses;
 	public double[] testPredictions;
+	
+	// Should be interesting to see the average learning rate applied to each example in the dataset.
+	public SumCountAverage[] avgTrainingLearningRates;
+	public SumCountAverage[] avgTestLearningRates;
+	
+	public ArrayList<SumCountAverage> avgLearningRatesForEachTree;
+	public ArrayList<SumCountAverage> avgExamplesInNodeForEachTree;
 
 	Dataset dataset;
 	
 	public GbmDataset(Dataset dataset) {
 		this.dataset = dataset;
-		this.trainingPredictions = new double[getNumberOfTrainingExamples()];
-		this.trainingPseudoResponses = new double[getNumberOfTrainingExamples()];
-		this.testPredictions = new double[getNumberOfTestExamples()];
-		this.testPseudoResponses = new double[getNumberOfTestExamples()];
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		
+		this.trainingPredictions = new double[numberOfTrainingExamples];
+		this.trainingPseudoResponses = new double[numberOfTrainingExamples];
+		this.testPredictions = new double[numberOfTestExamples];
+		this.testPseudoResponses = new double[numberOfTestExamples];
+		this.avgTrainingLearningRates = new SumCountAverage[numberOfTrainingExamples];
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
+			avgTrainingLearningRates[i] = new SumCountAverage();
+		}
+		this.avgTestLearningRates = new SumCountAverage[numberOfTestExamples];
+		for (int i = 0; i < numberOfTestExamples; i++) {
+			avgTestLearningRates[i] = new SumCountAverage();
+		}
+		avgLearningRatesForEachTree = new ArrayList<SumCountAverage>();
+		avgExamplesInNodeForEachTree = new ArrayList<SumCountAverage>();
 	}
 	//-------------------------------Boosting Helper Methods-----------------------------
 	public void initializePredictions(double initialValue) {
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			trainingPredictions[i] = initialValue;
 		}
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			testPredictions[i] = initialValue;
 		}
 	}
 	
 	public void updatePredictionsWithLearnedValueFromNewTree(RegressionTree tree) {
+		SumCountAverage averageLRForThisTree = new SumCountAverage();
 		Attribute[][] trainingInstances = dataset.getTrainingInstances();
 		Attribute[][] testInstances = dataset.getTestInstances();
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
-			// Learning rate will be accounted for in getLearnedValue;
-			trainingPredictions[i] += tree.getLearnedValue(trainingInstances[i]);
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
+			LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(trainingInstances[i]);
+			trainingPredictions[i] += pair.learningRate * pair.terminalValue;
+			avgTrainingLearningRates[i].addData(pair.learningRate);
+			averageLRForThisTree.addData(pair.learningRate);
 		}
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
-			testPredictions[i] += tree.getLearnedValue(testInstances[i]);
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		for (int i = 0; i < numberOfTestExamples; i++) {
+			LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(testInstances[i]);
+			testPredictions[i] += pair.learningRate * pair.terminalValue;
+			avgTestLearningRates[i].addData(pair.learningRate);
+			averageLRForThisTree.addData(pair.learningRate);
 		}
+		avgLearningRatesForEachTree.add(averageLRForThisTree);
+		avgExamplesInNodeForEachTree.add(tree.getAverageNumberOfExamplesInNode());
 	}
 
 	public void updatePseudoResponses() {
 		Attribute[] trainingResponses = dataset.getTrainingResponses();
 		Attribute[] testResponses = dataset.getTestResponses();
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			trainingPseudoResponses[i] = (trainingResponses[i].getNumericValue() - trainingPredictions[i]);
 		}
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			testPseudoResponses[i] = (testResponses[i].getNumericValue() - testPredictions[i]);
 		}
 	}
@@ -80,41 +118,21 @@ public class GbmDataset {
 	
 	public double calcMeanTrainingPseudoResponse() {
 		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			meanY += trainingPseudoResponses[i];
 		}
-		meanY = meanY / getNumberOfTrainingExamples();
+		meanY = meanY / numberOfTrainingExamples;
 		return meanY;
 	}
 	
 	public double calcMeanTrainingPseudoResponse(boolean[] inSample) {
 		double meanY = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			if (inSample[i]) {
 				meanY += trainingPseudoResponses[i];
-				count++;
-			}
-		}
-		meanY = meanY / count;
-		return meanY;
-	}
-	
-	public double calcMeanTestPseudoResponse() {
-		double meanY = 0.0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
-			meanY += testPseudoResponses[i];
-		}
-		meanY = meanY / getNumberOfTrainingExamples();
-		return meanY;
-	}
-	
-	public double calcMeanTestPseudoResponse(boolean[] inSample) {
-		double meanY = 0.0;
-		int count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
-			if (inSample[i]) {
-				meanY += testPseudoResponses[i];
 				count++;
 			}
 		}
@@ -125,11 +143,12 @@ public class GbmDataset {
 	public double calcTrainingRMSE(ResultFunction function) {
 		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			double tmp = (function.getLearnedValue(getTrainingInstances()[i])- responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= getNumberOfTrainingExamples();
+		rmse /= numberOfTrainingExamples;
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
@@ -137,11 +156,12 @@ public class GbmDataset {
 	public double calcTrainingRMSE() {
 		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= getNumberOfTrainingExamples();
+		rmse /= numberOfTrainingExamples;
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
@@ -150,7 +170,8 @@ public class GbmDataset {
 		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
 		double count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			if (inSample[i]) {
 				double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
@@ -169,7 +190,8 @@ public class GbmDataset {
 		Attribute[] responses = dataset.getTrainingResponses();
 		double rmse = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTrainingExamples(); i++) {
+		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
 			if (!inSample[i]) {
 				double tmp = (trainingPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
@@ -184,11 +206,12 @@ public class GbmDataset {
 	public double calcTestRMSE() {
 		Attribute[] responses = dataset.getTestResponses();
 		double rmse = 0.0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			double tmp = (testPredictions[i] - responses[i].getNumericValue());
 			rmse += tmp * tmp;
 		}
-		rmse /= getNumberOfTestExamples();
+		rmse /= numberOfTestExamples;
 		rmse = Math.sqrt(rmse);
 		return rmse;
 	}
@@ -197,7 +220,8 @@ public class GbmDataset {
 		Attribute[] responses = dataset.getTestResponses();
 		double rmse = 0.0;
 		double count = 0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			if (inSample[i]) {
 				double tmp = (testPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
@@ -214,9 +238,10 @@ public class GbmDataset {
 			return calcTestRMSE(inSample);
 		}
 		Attribute[] responses = dataset.getTestResponses();
+		int numberOfTestExamples = dataset.getNumberOfTestExamples();
 		double rmse = 0.0;
 		int count = 0;
-		for (int i = 0; i < getNumberOfTestExamples(); i++) {
+		for (int i = 0; i < numberOfTestExamples; i++) {
 			if (!inSample[i]) {
 				double tmp = (testPredictions[i] - responses[i].getNumericValue());
 				rmse += tmp * tmp;
@@ -279,5 +304,59 @@ public class GbmDataset {
 
 	public Map<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {
 		return dataset.getCategoricalPredictorIndexMap();
+	}
+	
+	public int[] getShuffledIndicies() {
+		return dataset.getShuffledIndicies();
+	}
+	
+	public String getPerExamplePrintOut(double[] trainingPredictionsAtOptimalNumberOfTrees, double[] testPredictionsAtOptimalNumberOfTrees) {
+		StringBuffer printOut = new StringBuffer();
+		SumCountAverage avgOverallLearningRate = new SumCountAverage();
+		int numberOfTrainingExamples = getNumberOfTrainingExamples();
+		int numberOfTestExamples = getNumberOfTestExamples();
+		int[] shuffledIndicies = getShuffledIndicies();
+		
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
+			avgOverallLearningRate.addData(avgTrainingLearningRates[i].getMean());
+			
+		}
+		
+		for (int i = 0; i < numberOfTestExamples; i++) {
+			avgOverallLearningRate.addData(avgTestLearningRates[i].getMean());
+		}
+		Attribute[] trainingResponses = dataset.getTrainingResponses();
+		Attribute[] testResponses = dataset.getTestResponses();
+		printOut.append("Training Data [OriginalFileLineNum\tTargetResponse\tPredictionAtOptimalNOT\tResidual\tAvgLearningRate(All Trees)]\n");
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
+			printOut.append(String.format("%d\t"
+					+ "%.5f\t"
+					+ "%.5f\t"
+					+ "%.5f\t"
+					+ "%.8f\n",
+					shuffledIndicies[i], 
+					trainingResponses[i].getNumericValue(),
+					trainingPredictionsAtOptimalNumberOfTrees[i],
+					trainingPredictionsAtOptimalNumberOfTrees[i] - trainingResponses[i].getNumericValue(),
+					avgTrainingLearningRates[i].getMean()
+				));
+		}
+		
+		printOut.append("Test Data [OriginalFileLineNum\tTargetResponse\tPredictionAtOptimalNOT\tResidual\tAvgLearningRate(All Trees)]\n");
+		for (int i = 0; i < numberOfTestExamples; i++) {
+			printOut.append(String.format("%d\t"
+					+ "%.5f\t"
+					+ "%.5f\t"
+					+ "%.5f\t"
+					+ "%.8f\n",
+					shuffledIndicies[i], 
+					testResponses[i].getNumericValue(),
+					testPredictionsAtOptimalNumberOfTrees[i],
+					testPredictionsAtOptimalNumberOfTrees[i] - testResponses[i].getNumericValue(),
+					avgTestLearningRates[i].getMean()
+				));		}
+		
+		return String.format("Learning Rate Avg of Per Example Averages: %.8f\nLearning Rate Std Dev of Per Example Averages: %.8f\n", 
+				avgOverallLearningRate.getMean(), avgOverallLearningRate.getRootMeanSquaredError()) + printOut.toString();
 	}
 }

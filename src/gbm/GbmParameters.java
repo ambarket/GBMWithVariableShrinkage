@@ -198,13 +198,13 @@ public class GbmParameters {
 		} else {
 			return String.format(
 					learningRatePolicy.name() + "\t" 
-					+ "0\t" 
+					+ "%.4f\t"
 					+ "%.4f\t"
 					+ "%d\t"
 					+ "%.4f\t"
 					+ "%d\t"
 					+ "%d\t",
-					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+					maxLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
 		}
 	}
 	

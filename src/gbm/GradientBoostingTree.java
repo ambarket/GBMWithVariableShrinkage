@@ -16,14 +16,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import dataset.Dataset;
 import regressionTree.RegressionTree;
 import utilities.DoubleCompare;
 import utilities.Logger;
-import utilities.RandomSample;
-import utilities.StopWatch;
 //import gbt.ranker.RegressionTree.TerminalType;
 import utilities.Logger.LEVELS;
+import utilities.RandomSample;
+import utilities.StopWatch;
+import dataset.Dataset;
 
 public class GradientBoostingTree {
 	public static ExecutorService executor = Executors.newCachedThreadPool();
@@ -41,8 +41,8 @@ public class GradientBoostingTree {
 		
 		// Initialize predictions of all instances to the initial function value.
 		gbmDataset.initializePredictions(meanTrainingResponse);
-		
-		int treeSampleSize = (int)(parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples());
+		int numberOfTrainingExamples = gbmDataset.getNumberOfTrainingExamples();
+		int treeSampleSize = (int)(parameters.bagFraction * numberOfTrainingExamples);
 		if (parameters.minExamplesInNode * 2 > treeSampleSize) {
 			Logger.println(Logger.LEVELS.INFO, "parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples() "
 					+ "must be >= minExamplesInNode * 2 in order to grow a tree "
@@ -58,8 +58,8 @@ public class GradientBoostingTree {
 			gbmDataset.updatePseudoResponses();
 			
 			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(gbmDataset.getNumberOfTrainingExamples());
-			boolean[] inSample = new boolean[gbmDataset.getNumberOfTrainingExamples()];
+			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(numberOfTrainingExamples);
+			boolean[] inSample = new boolean[numberOfTrainingExamples];
 			for (int i = 0; i < treeSampleSize; i++ ) {
 				inSample[shuffledIndices[i]] = true;
 			}
@@ -99,8 +99,8 @@ public class GradientBoostingTree {
 		
 		// Initialize predictions of all instances to the initial function value.
 		gbmDataset.initializePredictions(meanTrainingResponse);
-		
-		int treeSampleSize = (int)(parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples());
+		int numberOfTrainingExamples = gbmDataset.getNumberOfTrainingExamples();
+		int treeSampleSize = (int)(parameters.bagFraction * numberOfTrainingExamples);
 		if (parameters.minExamplesInNode * 2 > treeSampleSize) {
 			Logger.println(Logger.LEVELS.INFO, "parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples() "
 					+ "must be >= minExamplesInNode * 2 in order to grow a tree "
@@ -116,8 +116,8 @@ public class GradientBoostingTree {
 			gbmDataset.updatePseudoResponses();
 			
 			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(gbmDataset.getNumberOfTrainingExamples());
-			boolean[] inSample = new boolean[gbmDataset.getNumberOfTrainingExamples()];
+			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(numberOfTrainingExamples);
+			boolean[] inSample = new boolean[numberOfTrainingExamples];
 			for (int i = 0; i < treeSampleSize; i++ ) {
 				inSample[shuffledIndices[i]] = true;
 			}
@@ -169,7 +169,7 @@ public class GradientBoostingTree {
 		for (int i = 0; i < numOfFolds+1; i++) {
 			double meanResponse =  training.calcMeanTrainingResponse(trainingInEachFold[i]);
 			steppers[i] = new CrossValidationStepper(parameters, 
-					new DummyResultFunction(parameters, meanResponse, training.getPredictorNames()),
+					new ResultFunction(parameters, meanResponse, training.getPredictorNames()),
 					new GbmDataset(training),
 					trainingInEachFold[i],
 					(numOfFolds-1)*foldSize, 

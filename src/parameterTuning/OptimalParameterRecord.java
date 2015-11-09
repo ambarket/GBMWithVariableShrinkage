@@ -4,7 +4,6 @@ import gbm.GbmParameters;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -27,7 +26,12 @@ public class OptimalParameterRecord {
 	public double allDataTrainingError;
 	public double cvTestError;
 	public double allDataTestError;
+	public double cvEnsembleTrainingError;
+	public double cvEnsembleTestError;
 	public double avgNumberOfSplits;
+	public double stdDevNumberOfSplits;
+	public double avgLearningRate;
+	public double stdDevLearningRate;
 	
 	
 	public void inferTimeInSecondsFromPartialRun(int numberOfTreesInPartialRun, double timeInSeconds) {
@@ -150,24 +154,36 @@ public class OptimalParameterRecord {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
 			BufferedWriter constant = new BufferedWriter(new PrintWriter(new File( paramTuneDir + "Constant_" + fileNamePrefix + "Parameters.txt")));
 			BufferedWriter variable = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "Variable_" + fileNamePrefix + "Parameters.txt")));
-			bw.append("TimeInSeconds\tAllDataTest\tCvValidation\tOptimalNumberOfTrees\t" + GbmParameters.getTabSeparatedHeader() + "\n");
+			bw.append("TimeInSeconds\t"
+					+ "AllDataTest\t"
+					+ "CvEnsembleTest\t"
+					+ "CvValidation\t"
+					+ "OptimalNumberOfTrees\t"
+					+ "AvgNumberOfSplits\t"
+					+ "StdDevNumberOfSplits\t"
+					+ "AvgLearningRate\t"
+					+ "LearningRateStdDev\t" 
+					+ GbmParameters.getTabSeparatedHeader() 
+					+ "\n");
 			while (!sortedEnsembles.isEmpty()) {
 				OptimalParameterRecord record = sortedEnsembles.poll();
 				
-				bw.append(String.format("%.4f\t%.4f\t%.4f\t%d\t", 
-						record.timeInSeconds, record.allDataTestError, record.cvValidationError, 
-						record.optimalNumberOfTrees) 
-						+ record.parameters.getTabSeparatedPrintOut() + "\n");
+				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%.8f\t%.8f\t", 
+						record.timeInSeconds, 
+						record.allDataTestError, 
+						record.cvEnsembleTestError, 
+						record.cvValidationError, 
+						record.optimalNumberOfTrees, 
+						record.avgNumberOfSplits, 
+						record.stdDevNumberOfSplits, 
+						record.avgLearningRate, 
+						record.stdDevLearningRate)
+						+ record.parameters.getTabSeparatedPrintOut() + "\n";
+				bw.append(recordString);
 				if (record.parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
-					constant.append(String.format("%.4f\t%.4f\t%.4f\t%d\t", 
-							record.timeInSeconds, record.allDataTestError, record.cvValidationError, 
-							record.optimalNumberOfTrees) 
-							+ record.parameters.getTabSeparatedPrintOut() + "\n");
+					constant.append(recordString);
 				} else {
-					variable.append(String.format("%.4f\t%.4f\t%.4f\t%d\t", 
-							record.timeInSeconds, record.allDataTestError, record.cvValidationError, 
-							record.optimalNumberOfTrees) 
-							+ record.parameters.getTabSeparatedPrintOut() + "\n");
+					variable.append(recordString);
 				}
 			}
 			constant.flush();
@@ -191,17 +207,22 @@ public class OptimalParameterRecord {
 				String[] columns = text.split("\t");
 				OptimalParameterRecord record = new OptimalParameterRecord();
 				record.timeInSeconds = Double.parseDouble(columns[0].trim());
-				record.cvValidationError = Double.parseDouble(columns[1].trim());
-				record.allDataTestError = Double.parseDouble(columns[2].trim());
-				record.optimalNumberOfTrees = Integer.parseInt(columns[3].trim());
+				record.allDataTestError = Double.parseDouble(columns[1].trim());
+				record.cvEnsembleTestError = Double.parseDouble(columns[2].trim());
+				record.cvValidationError = Double.parseDouble(columns[3].trim());
+				record.optimalNumberOfTrees = Integer.parseInt(columns[4].trim());
+				record.avgNumberOfSplits = Double.parseDouble(columns[5].trim());
+				record.stdDevNumberOfSplits = Double.parseDouble(columns[6].trim());
+				record.avgLearningRate = Double.parseDouble(columns[7].trim());
+				record.stdDevLearningRate = Double.parseDouble(columns[8].trim());
 				record.parameters = new GbmParameters(
-						Double.parseDouble(columns[5].trim()), // MinLR
-						Double.parseDouble(columns[6].trim()), // MaxLR
-						Integer.parseInt(columns[7].trim()), // NOS
-						Double.parseDouble(columns[8].trim()), //BF
-						Integer.parseInt(columns[9].trim()), //MEIN
-						Integer.parseInt(columns[10].trim()), //NOT
-						LearningRatePolicy.valueOf(columns[4].trim()), // LearningRatePolicy
+						Double.parseDouble(columns[10].trim()), // MinLR
+						Double.parseDouble(columns[11].trim()), // MaxLR
+						Integer.parseInt(columns[12].trim()), // NOS
+						Double.parseDouble(columns[13].trim()), //BF
+						Integer.parseInt(columns[14].trim()), //MEIN
+						Integer.parseInt(columns[15].trim()), //NOT
+						LearningRatePolicy.valueOf(columns[9].trim()), // LearningRatePolicy
 						SplitsPolicy.CONSTANT);
 				records.add(record);
 			}
@@ -235,6 +256,23 @@ public class OptimalParameterRecord {
 			record.allDataTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.allDataTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			try {
+				record.cvEnsembleTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.cvEnsembleTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.avgNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.stdDevNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.avgLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.stdDevLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			} catch(Exception e) {
+				System.out.println("Failed to read avgNumberOfSplits, cvEnsembleErrors, avgLearningRate, or stdDevLearningRate. "
+						+ "This must be an old run data file, setting these to -1 and moving on");
+				record.cvEnsembleTrainingError = -1;
+				record.cvEnsembleTestError = -1;
+				record.stdDevNumberOfSplits = -1;
+				record.avgNumberOfSplits = -1;
+				record.avgLearningRate = -1;
+				record.stdDevLearningRate = -1;
+			}
 			record.parameters = parameters;
 			br.close();
 		} catch (IOException e) {

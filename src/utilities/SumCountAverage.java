@@ -25,6 +25,21 @@ public class SumCountAverage {
 		return mean;
 	}
 	
+	public double getSquaredError() {
+		if (meanOutOfDate) {
+			mean = sum / count;
+		}
+		return sumOfSquares - (mean * sum);
+	}
+	
+	public double getMeanSquaredError() {
+		return getSquaredError() / count;
+	}
+	
+	public double getRootMeanSquaredError() {
+		return Math.sqrt(getMeanSquaredError());
+	}
+	
 	public void addData(double data) {
 		sum += data;
 		sumOfSquares += data * data;

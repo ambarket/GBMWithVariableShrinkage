@@ -92,7 +92,7 @@ public class ParameterTuningTest2 {
 						CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE);
 						if (ensemble != null) {
 							try {
-								ensemble.saveDataToFileOld("", lrbfsDirectory);
+								ensemble.saveRunDataToFile(lrbfsDirectory);
 							} catch (IOException e) {
 								e.printStackTrace();
 							}

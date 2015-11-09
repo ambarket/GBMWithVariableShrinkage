@@ -21,7 +21,16 @@ public class MathematicaLearningCurveCreator {
 		ArrayList<Double> avgCvTestErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> allDataTrainingErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> allDataTestErrorByIteration = new ArrayList<Double>();
-
+		ArrayList<Double> cvEnsembleTrainingErrorByIteration = new ArrayList<Double>();
+		ArrayList<Double> cvEnsembleTestErrorByIteration = new ArrayList<Double>();
+		
+		/* TODO
+		ArrayList<Double> exampleInNodeStdDevByIteration = new ArrayList<Double>();
+		ArrayList<Double> learningRateMeanByIteration = new ArrayList<Double>();
+		ArrayList<Double> learningRateStdDevByIteration = new ArrayList<Double>();
+		ArrayList<Double> numberOfSplitsByIteration = new ArrayList<Double>();
+		*/
+		
 		// Read through all the files cooresponding to these parameters and average the data.
 		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--runData.txt";
 
@@ -44,6 +53,8 @@ public class MathematicaLearningCurveCreator {
 						Double.parseDouble(components[3].trim()),
 						Double.parseDouble(components[4].trim()),
 						Double.parseDouble(components[5].trim()),
+						Double.parseDouble(components[6].trim()),
+						Double.parseDouble(components[7].trim()),
 				};
 				for (double error : tmpErrors) {
 					if (DoubleCompare.greaterThan(error, maxRMSE)) {
@@ -55,6 +66,8 @@ public class MathematicaLearningCurveCreator {
 				avgCvTestErrorByIteration.add(tmpErrors[2]);
 				allDataTrainingErrorByIteration.add(tmpErrors[3]);
 				allDataTestErrorByIteration.add(tmpErrors[4]);
+				cvEnsembleTrainingErrorByIteration.add(tmpErrors[5]);
+				cvEnsembleTestErrorByIteration.add(tmpErrors[6]);
 			}
 			br.close();
 		} catch (IOException e) {
@@ -83,10 +96,12 @@ public class MathematicaLearningCurveCreator {
 			mathematica.write("avgCvTestError := " + MathematicaListCreator.convertToMathematicaList(avgCvTestErrorByIteration) + "\n");
 			mathematica.write("allDataTrainingError := " + MathematicaListCreator.convertToMathematicaList(allDataTrainingErrorByIteration) + "\n");
 			mathematica.write("allDataTestError := " + MathematicaListCreator.convertToMathematicaList(allDataTestErrorByIteration) + "\n");
+			mathematica.write("cvEnsembleTrainingError := " + MathematicaListCreator.convertToMathematicaList(cvEnsembleTrainingErrorByIteration) + "\n");
+			mathematica.write("cvEnsembleTestError := " + MathematicaListCreator.convertToMathematicaList(cvEnsembleTestErrorByIteration) + "\n");
 			mathematica.write("optimalNumberOfTrees := {{" + record.optimalNumberOfTrees + ", 0}, {" + record.optimalNumberOfTrees + ", " + maxRMSE + "}}\n");
-			mathematica.write("learningCurve := ListLinePlot[{avgCvTrainingError,avgCvValidationError,avgCvTestError, allDataTrainingError, allDataTestError, optimalNumberOfTrees}"
-					+ ", PlotLegends -> {\"avgCvTrainingError\", \"avgCvValidationError\", \"avgCvTestError\", \"allDataTrainingError\", \"allDataTestError\", \"optimalNumberOfTrees\"}"
-					+ ", PlotStyle -> {{Magenta, Dashed}, {Cyan, Dashed}, {Red, Dashed}, Blue, Orange, {Green, Thin}}"
+			mathematica.write("learningCurve := ListLinePlot[{avgCvTrainingError,avgCvValidationError,avgCvTestError, allDataTrainingError, allDataTestError, cvEnsembleTrainingError, cvEnsembleTestError, optimalNumberOfTrees}"
+					+ ", PlotLegends -> {\"avgCvTrainingError\", \"avgCvValidationError\", \"avgCvTestError\", \"allDataTrainingError\", \"allDataTestError\", \"cvEnsembleTrainingError\", \"cvEnsembleTestError\", \"optimalNumberOfTrees\"}"
+					+ ", PlotStyle -> {{Magenta, Dashed}, {Cyan, Dashed}, {Red, Dashed}, Blue, Orange, Pink, Brown, {Green, Thin}}"
 					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ "] \nlearningCurve\n\n");

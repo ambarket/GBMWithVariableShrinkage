@@ -5,6 +5,7 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
 import utilities.DoubleCompare;
+import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
 
@@ -123,6 +124,25 @@ public class TreeNode {
 				throw new IllegalStateException("Unrecognized prodictor type in TreeNode.getLearnedValue");
 		}
 		return whichChild;
+	}
+	
+	public SumCountAverage sumNumberOfExamplesInTerminalNodes(SumCountAverage sca) {
+		if (this.leftChild == null) {
+			sca.addData(this.leftTerminalNode.instanceCount);
+		} else {
+			this.leftChild.sumNumberOfExamplesInTerminalNodes(sca);
+		}
+		if (this.rightChild == null) {
+			sca.addData(this.rightTerminalNode.instanceCount);
+		}  else {
+			this.rightChild.sumNumberOfExamplesInTerminalNodes(sca);
+		}
+		if (this.missingChild == null) {
+			sca.addData(this.missingTerminalNode.instanceCount);
+		} else {
+			this.missingChild.sumNumberOfExamplesInTerminalNodes(sca);
+		}
+		return sca;
 	}
 					
 	public TerminalNode getLearnedTerminalNode(Attribute[] instance) {

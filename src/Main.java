@@ -14,15 +14,17 @@ public class Main {
 	}
 	
 	public static void runParamTuning3() {
-		ParameterTuningTest3.runCrimeCommunities();
-		ParameterTuningTest3.runPowerPlant();
-		ParameterTuningTest3.runNASA();
 		ParameterTuningTest3.runBikeSharing();
+		ParameterTuningTest3.runCrimeCommunities();
+		
+		ParameterTuningTest3.runNASA();
+		ParameterTuningTest3.runPowerPlant();
 	}
 	
 	public static void processParamTuning3() {
-		ParameterTuningTest3.processNASA();
 		ParameterTuningTest3.processBikeSharing();
+		//ParameterTuningTest3.processNASA();
+		
 	}
 	
 	

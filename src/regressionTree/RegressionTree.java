@@ -22,6 +22,7 @@ import java.util.Queue;
 import regressionTree.OptimalSplitFinder.TreeNodeAndInParentPair;
 import utilities.Logger;
 import utilities.MersenneTwisterFast;
+import utilities.SumCountAverage;
 import dataset.Attribute;
 public class RegressionTree {
 	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE};
@@ -38,14 +39,14 @@ public class RegressionTree {
 	private double learningRateToExampleCountRatio;
 	public TreeNode root;
 	
-	public double actualNumberOfSplits = 0; // Will be set after growing
+	public int actualNumberOfSplits = 0; // Will be set after growing
 	
 	public RegressionTree(GbmParameters parameters, int sampleSize) {
 		setMinObsInNode(parameters.minExamplesInNode);
 		setMaxNumberOfSplits(parameters.maxNumberOfSplits);
 		setMaxLearningRate(parameters.maxLearningRate);
 		if (parameters.learningRatePolicy != LearningRatePolicy.REVISED_VARIABLE) {
-			this.minLearningRate = -1; // Wont ever be used
+			this.minLearningRate = parameters.maxLearningRate; // Wont ever be used
 		} else {
 			setMinLearningRate(parameters.minLearningRate); 
 		}
@@ -55,6 +56,7 @@ public class RegressionTree {
 		
 		// No need to recalculate this everytime since its constant for this regression tree
 		this.learningRateToExampleCountRatio = (maxLearningRate - minLearningRate) / (sampleSize - minExamplesInNode);
+	
 		root = null;
 	}
 	
@@ -98,18 +100,36 @@ public class RegressionTree {
 		this.maxNumberOfSplits = maxNumberOfSplits;
 	}
 	
-	public double getLearnedValue(Attribute[] instance_x) {
+	public LearningRateTerminalValuePair getLearningRateTerminalValuePair(Attribute[] instance_x) {
 		if (root == null) {
 			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
 		}
 		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
+		double learningRate = 0.0;
 		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
-			return maxLearningRate * leaf.terminalValue;
+			learningRate = maxLearningRate;
 		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return  (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate) * leaf.terminalValue;
+			learningRate = (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate);
 		} else {
-			return Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize) * leaf.terminalValue;
+			learningRate = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
+		} 
+		return new LearningRateTerminalValuePair(learningRate, leaf.terminalValue);
+	}
+	
+	public double getLearnedValueWithLearningRateApplied(Attribute[] instance_x) {
+		if (root == null) {
+			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
 		}
+		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
+		double learningRate = 0.0;
+		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			learningRate = maxLearningRate;
+		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			learningRate = (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate);
+		} else {
+			learningRate = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
+		} 
+		return learningRate * leaf.terminalValue;
 	}
 	
 	public RegressionTree build(GbmDataset dataset, boolean[] inSample) {
@@ -129,13 +149,14 @@ public class RegressionTree {
 	
 	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<TreeNodeAndInParentPair> leaves = new LinkedList<TreeNodeAndInParentPair>();
-		int[] rootTrainingDataToChildMap = new int[inSample.length];
+		int numOfExamples = dataset.getNumberOfTrainingExamples();
+		int[] trainingDataToChildMap = new int[numOfExamples];
 		int count = 0;
 		for (int i = 0; i < inSample.length; i++) {
-			rootTrainingDataToChildMap[i] = (inSample[i]) ? 1 : 0;
-			count += rootTrainingDataToChildMap[i];
+			trainingDataToChildMap[i] = (inSample[i]) ? 1 : 0;
+			count += trainingDataToChildMap[i];
 		}
-		TreeNodeAndInParentPair rootSplit = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, rootTrainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
+		TreeNodeAndInParentPair rootSplit = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
@@ -150,8 +171,7 @@ public class RegressionTree {
 			case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
 			case INCREASING: throw new UnsupportedOperationException();
 		}
-		int numOfExamples = dataset.getNumberOfTrainingExamples();
-		int[] trainingDataToChildMap = new int[numOfExamples];
+
 		while (actualNumberOfSplits < maxSplits) {
 			while(!leaves.isEmpty()) {
 				TreeNodeAndInParentPair parent = leaves.poll();
@@ -201,6 +221,15 @@ public class RegressionTree {
 			actualNumberOfSplits++;
 		}
 		return rootSplit.node;
+	}
+	
+	/**
+	 * Average should always just be number of examples / number of terminal nodes.
+	 * But this will also allow us to get the standard deviation which may be interesting.
+	 * @return
+	 */
+	public SumCountAverage getAverageNumberOfExamplesInNode() {
+		return root.sumNumberOfExamplesInTerminalNodes(new SumCountAverage());
 	}
 	
 	public void print_nodes() throws IOException {
