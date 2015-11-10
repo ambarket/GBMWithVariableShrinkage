@@ -201,7 +201,7 @@ public class GbmParameters {
 						minLearningRate, maxLearningRate, maxNumberOfSplits, splitsPolicy.name(), bagFraction, minExamplesInNode);
 			} else {
 				return String.format("Constant/%.6fLR/%dSplits-%s/%.2fBF/%dMEIN/", 
-						minLearningRate, maxLearningRate, maxNumberOfSplits, splitsPolicy.name(), bagFraction, minExamplesInNode);
+						maxLearningRate, maxNumberOfSplits, splitsPolicy.name(), bagFraction, minExamplesInNode);
 			}
 		}
 	}
