@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
 
+import parameterTuning.OptimalParameterRecord.RunFileType;
 import parameterTuning.plotting.PairwiseOptimalParameterRecordPlots;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
@@ -92,7 +93,7 @@ public class ParameterTuningTest2 {
 						CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, trainingDataset, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE);
 						if (ensemble != null) {
 							try {
-								ensemble.saveRunDataToFile(lrbfsDirectory);
+								ensemble.saveRunDataToFile(lrbfsDirectory, RunFileType.ParamTuning2);
 							} catch (IOException e) {
 								e.printStackTrace();
 							}

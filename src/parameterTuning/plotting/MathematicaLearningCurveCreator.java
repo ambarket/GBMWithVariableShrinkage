@@ -12,10 +12,11 @@ import java.util.ArrayList;
 
 import dataset.DatasetParameters;
 import parameterTuning.OptimalParameterRecord;
+import parameterTuning.OptimalParameterRecord.RunFileType;
 import utilities.DoubleCompare;
 
 public class MathematicaLearningCurveCreator {
-	public static void createLearningCurveForParameters(DatasetParameters datasetParams, String runDataFullDirectory, GbmParameters parameters) {
+	public static void createLearningCurveForParameters(DatasetParameters datasetParams, String runDataFullDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
 		double maxRMSE = Double.MIN_VALUE;
 		ArrayList<Double> avgCvTrainingErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> avgCvValidationErrorByIteration = new ArrayList<Double>();
@@ -33,13 +34,13 @@ public class MathematicaLearningCurveCreator {
 		*/
 		
 		// Read through all the files cooresponding to these parameters and average the data.
-		String runDataFilePath = runDataFullDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--runData.txt";
 
-		OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataFullDirectory, parameters);
+		OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataFullDirectory, parameters, expectedRunFileType);
 		if (record == null) {
-			System.out.println("Couldn't create learning curve for " + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix() + " because runData not found.");
+			System.out.println("Couldn't create learning curve for " + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType) + " because runData not found.");
 			return;
 		}
+		String runDataFilePath = runDataFullDirectory + parameters.getRunDataSubDirectory(record.runFileType) + parameters.getFileNamePrefix(record.runFileType)  + "--runData.txt";
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 			// skip summary info, relative influences, and header
@@ -75,9 +76,9 @@ public class MathematicaLearningCurveCreator {
 			e.printStackTrace();
 		}
 
-		String mathematicFileName = runDataFullDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--learningCurve.txt";
+		String mathematicFileName = runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--learningCurve.txt";
 		mathematicFileName = mathematicFileName.replace("\\", "/");
-		String imageFileNameNoExtension = (runDataFullDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()).replace("\\", "/");
+		String imageFileNameNoExtension = (runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)).replace("\\", "/");
 		StringBuffer saveToFile = new StringBuffer();
 		StringBuffer latexCode = new StringBuffer();
 		

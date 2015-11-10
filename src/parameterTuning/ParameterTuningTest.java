@@ -19,6 +19,7 @@ import parameterTuning.plotting.MathematicaLearningCurveCreator;
 import parameterTuning.plotting.PairwiseOptimalParameterRecordPlots;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
+import sun.net.www.protocol.http.HttpURLConnection.TunnelState;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import dataset.Dataset;
@@ -75,7 +76,7 @@ public class ParameterTuningTest {
 									timer.start();
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
-											dataset.parameters.minimalName, parameters.getFileNamePrefix(), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									//timer.start();
 									//System.gc();
 									//System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
@@ -106,7 +107,7 @@ public class ParameterTuningTest {
 									timer.start();
 									averageRunDataForParameters(parameters, paramTuningDirectory);
 									System.out.println(String.format("[%s] Averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
 							}
 						}
@@ -140,16 +141,16 @@ public class ParameterTuningTest {
 												learningRatePolicy, splitPolicy);
 									timer.start();
 
-									OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataDirectory, parameters);
+									OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
 									if (record != null) {
 										sortedByCvValidationError.add(record);
 										sortedByAllDataTestError.add(record);
 										sortedByTimeInSeconds.add(record);
 										System.out.println(String.format("[%s] Created optimalParameterRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									} else {
 										System.out.println(String.format("[%s] Failed to create optimalParameterRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									}
 								}
 							}
@@ -179,9 +180,9 @@ public class ParameterTuningTest {
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
-									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters);
+									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters, tuningParameters.runFileType);
 									System.out.println(String.format("[%s] Created learning curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
 							}
 						}
@@ -195,25 +196,25 @@ public class ParameterTuningTest {
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
 	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
-		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(), runNumber);
+		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		new File(runDataDir).mkdirs();
-		if (!SimpleHostLock.checkAndClaimHostLock(runDataDir + parameters.getFileNamePrefix() + "--hostLock.txt")) {
+		if (!SimpleHostLock.checkAndClaimHostLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
-		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
+		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
 		}
 		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
 		if (ensemble != null) {
 			try {
-				ensemble.saveRunDataToFile(runDataDir);
+				ensemble.saveRunDataToFile(runDataDir, tuningParameters.runFileType);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
 			return "Finished %s on run number %d. (%d out of %d)";
 		} else {
-			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
 			return "Failed to build %s on run number %d due to impossible parameters. (%d out of %d)";
 		}
 	}
@@ -250,7 +251,7 @@ public class ParameterTuningTest {
 		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 			
 			// Get the summary info at the top of the file.
-			OptimalParameterRecord summaryInfo = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters);
+			OptimalParameterRecord summaryInfo = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters, tuningParameters.runFileType);
 			if (summaryInfo == null) {
 				// Run data file wasn't found. Continue to next iteration.
 				continue;
@@ -276,10 +277,10 @@ public class ParameterTuningTest {
 				timeInSeconds += summaryInfo.timeInSeconds;
 			}
 			// Changed things in the middle of ParamTuning3
-			if (runFileType == RunFileType.ParamTuning3_OLD) {
+			if (runFileType == RunFileType.ParamTuning3) {
 				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
 			}
-			if (runFileType == RunFileType.ParamTuning3_NEW) {
+			if (runFileType == RunFileType.ParamTuning4) {
 				cvEnsembleTrainingError += summaryInfo.cvEnsembleTrainingError;
 				cvEnsembleTestError += summaryInfo.cvEnsembleTestError;
 				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
@@ -290,7 +291,7 @@ public class ParameterTuningTest {
 
 			try {
 				// ALready know it exists based on successful creation of OptimalParameterRecord
-				String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt";
+				String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber) + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--runData.txt";
 				String line = null;
 				BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 				
@@ -307,7 +308,7 @@ public class ParameterTuningTest {
 						avgCvTestErrorByIteration.add(Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.add(Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.add(Double.parseDouble(components[5].trim()));
-						if (runFileType == RunFileType.ParamTuning3_NEW) {
+						if (runFileType == RunFileType.ParamTuning4) {
 							cvEnsembleTrainingErrorByIteration.add(Double.parseDouble(components[6].trim()));
 							cvEnsembleTestErrorByIteration.add(Double.parseDouble(components[7].trim()));
 							examplesInNodeMeanByIteration.add(Double.parseDouble(components[8].trim()));
@@ -324,7 +325,7 @@ public class ParameterTuningTest {
 						avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) + Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) + Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) + Double.parseDouble(components[5].trim()));
-						if (runFileType == RunFileType.ParamTuning3_NEW) {
+						if (runFileType == RunFileType.ParamTuning4) {
 							cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
 							cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
 							examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
@@ -375,7 +376,7 @@ public class ParameterTuningTest {
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsFound);
-				if (runFileType == RunFileType.ParamTuning3_NEW) {
+				if (runFileType == RunFileType.ParamTuning4) {
 					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsFound);
 					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsFound);
 					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsFound);
@@ -394,7 +395,7 @@ public class ParameterTuningTest {
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
-				if (runFileType == RunFileType.ParamTuning3_NEW) {
+				if (runFileType == RunFileType.ParamTuning4) {
 					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
 					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
 					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsWithThisTree);
@@ -408,9 +409,9 @@ public class ParameterTuningTest {
 		
 		// Save them to a new file to be processed later.
 		try {
-			String averageRunDataDirectory = paramTuneDir + "Averages/" + parameters.getRunDataSubDirectory();
+			String averageRunDataDirectory = paramTuneDir + "Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 			new File(averageRunDataDirectory).mkdirs();
-			BufferedWriter bw = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix() + "--runData.txt"));
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--runData.txt"));
 
 			bw.write(String.format("Time In Seconds: %f \n"
 					+ "Step Size: %d \n"
@@ -463,7 +464,7 @@ public class ParameterTuningTest {
 					+ "LearningRateStdDev\t"
 					+ "ActualNumberOfSplits\n");
 			
-			if (runFileType == RunFileType.ParamTuning3_NEW) {
+			if (runFileType == RunFileType.ParamTuning4) {
 				for (int i = 0; i < numberOfTreesFound; i++) {
 					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
 							i+1,

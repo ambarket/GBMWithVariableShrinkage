@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
+import parameterTuning.OptimalParameterRecord.RunFileType;
 import parameterTuning.plotting.MathematicaListCreator;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
@@ -289,9 +290,9 @@ public class CrossValidatedResultFunctionEnsemble {
 		+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees, "---------All Data Function Relative Influences-----------\n");
 	}
 	
-	public void saveRunDataToFile(String directory) throws IOException {
+	public void saveRunDataToFile(String directory, RunFileType runFileType) throws IOException {
 		new File(directory).mkdirs();
-		String normalFileName = directory + parameters.getFileNamePrefix() + "--runData.txt";
+		String normalFileName = directory + parameters.getFileNamePrefix(runFileType) + "--runData.txt";
 		BufferedWriter normal = new BufferedWriter(new PrintWriter(new File(normalFileName)));
 		
 		normal.write(getSummary());

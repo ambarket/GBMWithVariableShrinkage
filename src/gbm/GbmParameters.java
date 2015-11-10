@@ -1,5 +1,6 @@
 package gbm;
 
+import parameterTuning.OptimalParameterRecord.RunFileType;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.Logger;
@@ -144,33 +145,64 @@ public class GbmParameters {
 				maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
 	}
 	
-	public String getFileNamePrefix() {
-		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format(learningRatePolicy.name() 
-					+ "_MinLR-%.4f" 
-					+ "_MaxLR-%.4f" 
-					+ "_SPLITS-%d"
-					+ "_BF-%.4f"
-					+ "_MEIN-%d"
-					+ "_TREES-%d",
-					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+	public String getFileNamePrefix(RunFileType runFileType) {
+		if (runFileType != RunFileType.ParamTuning4) {
+			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+				return String.format(learningRatePolicy.name() 
+						+ "_MinLR-%.4f" 
+						+ "_MaxLR-%.4f" 
+						+ "_SPLITS-%d"
+						+ "_BF-%.4f"
+						+ "_MEIN-%d"
+						+ "_TREES-%d",
+						minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+			} else {
+				return String.format(learningRatePolicy.name() 
+						+ "_LR-%.4f" 
+						+ "_SPLITS-%d"
+						+ "_BF-%.4f"
+						+ "_MEIN-%d"
+						+ "_TREES-%d",
+						maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+			}
 		} else {
-			return String.format(learningRatePolicy.name() 
-					+ "_LR-%.4f" 
-					+ "_SPLITS-%d"
-					+ "_BF-%.4f"
-					+ "_MEIN-%d"
-					+ "_TREES-%d",
-					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+				return String.format(learningRatePolicy.name() 
+						+ "_MinLR-%.6f" 
+						+ "_MaxLR-%.6f" 
+						+ "_SPLITS-%d"
+						+ "_BF-%.2f"
+						+ "_MEIN-%d"
+						+ "_TREES-%d",
+						minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+			} else {
+				return String.format(learningRatePolicy.name() 
+						+ "_LR-%.6f" 
+						+ "_SPLITS-%d"
+						+ "_BF-%.2f"
+						+ "_MEIN-%d"
+						+ "_TREES-%d",
+						maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+			}
 		}
 	}
 	
-	public String getRunDataSubDirectory() {
-		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("RevisedVariable/%.5fMinLR/%.5fMaxLR/%dSplits/", 
-					minLearningRate, maxLearningRate, maxNumberOfSplits);
+	public String getRunDataSubDirectory(RunFileType runFileType) {
+		if (runFileType != RunFileType.ParamTuning4) {
+			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+				return String.format("RevisedVariable/%.5fMinLR/%.5fMaxLR/%dSplits/", 
+						minLearningRate, maxLearningRate, maxNumberOfSplits);
+			} else {
+				return String.format("Constant/%.5fLR/%dSplits/", maxLearningRate, maxNumberOfSplits);
+			}
 		} else {
-			return String.format("Constant/%.5fLR/%dSplits/", maxLearningRate, maxNumberOfSplits);
+			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+				return String.format("RevisedVariable/%.6fMinLR/%.6fMaxLR/%dSplits-%s/%.2fBF/%dMEIN/", 
+						minLearningRate, maxLearningRate, maxNumberOfSplits, splitsPolicy.name(), bagFraction, minExamplesInNode);
+			} else {
+				return String.format("Constant/%.6fLR/%dSplits-%s/%.2fBF/%dMEIN/", 
+						minLearningRate, maxLearningRate, maxNumberOfSplits, splitsPolicy.name(), bagFraction, minExamplesInNode);
+			}
 		}
 	}
 	
@@ -182,66 +214,54 @@ public class GbmParameters {
 					+ "MaxNumberOfSplits\t"
 					+ "BagFraction\t"
 					+ "MinExamplesInNode\t"
-					+ "NumberOfTrees\t";
+					+ "NumberOfTrees";
 	}
 	public String getTabSeparatedPrintOut() {
-		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format(
-					learningRatePolicy.name() + "\t" 
-					+ "%.4f\t" 
-					+ "%.4f\t"
-					+ "%d\t"
-					+ "%.4f\t"
-					+ "%d\t"
-					+ "%d\t",
-					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
-		} else {
-			return String.format(
-					learningRatePolicy.name() + "\t" 
-					+ "%.4f\t"
-					+ "%.4f\t"
-					+ "%d\t"
-					+ "%.4f\t"
-					+ "%d\t"
-					+ "%d\t",
-					maxLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
-		}
+		return String.format(
+				learningRatePolicy.name() + "\t" 
+				+ "%.6f\t" 
+				+ "%.6f\t"
+				+ "%d\t"
+				+ "%.2f\t"
+				+ "%d\t"
+				+ "%d\t",
+				minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
 	}
 	
 	public String getLearningCurveLatexCaption() {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
 			return String.format("Revised Variable - "
-					+ " MinLR: %.4f" 
-					+ " MaxLR: %.4f" 
-					+ " SPLITS: %d"
-					+ " BF: %.4f"
-					+ " MEIN: %d",
+					+ " MinLR: %.6f" 
+					+ " MaxLR: %.6f" 
+					+ " MaxSplits: %d"
+					+ " BagFraction: %.2f"
+					+ " MinEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
 			return String.format("Constant - " 
-					+ " LR: %.4f" 
+					+ " LR: %.6f" 
 					+ " MaxSplits: %d"
-					+ " BF: %.4f"
-					+ " MEIN: %d",
+					+ " BagFraction: %.2f"
+					+ " MinEIN: %d",
 					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		}
 	}
 	
 	public String getLearningCurveLatexFigureReference() {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format(learningRatePolicy.name() 
-					+ "MinLR%.4f" 
-					+ "MaxLR%.4f" 
-					+ "SPLITS%d"
-					+ "BF%.4f"
-					+ "MEIN%d",
+			return String.format("RevisedVariable"
+					+ " MinLR%.6f" 
+					+ " MaxLR%.6f" 
+					+ " MaxSplits%d"
+					+ " BagFraction%.2f"
+					+ " MinEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format(learningRatePolicy.name() 
-					+ "LR%.4f" 
-					+ "MaxSplits%d"
-					+ "BF%.4f"
-					+ "MEIN%d",
+			return String.format("Constant - " 
+					+ " LR%.6f" 
+					+ " MaxSplits%d"
+					+ " BagFraction%.2f"
+					+ " MinEIN%d",
 					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		}
 	}

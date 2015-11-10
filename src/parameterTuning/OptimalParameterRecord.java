@@ -18,7 +18,7 @@ import utilities.DoubleCompare;
 
 public class OptimalParameterRecord {
 	// An unfortunate consequence of continuously wanting to add more data.
-	public enum RunFileType {Original, ParamTuning2, ParamTuning3_OLD, ParamTuning3_NEW};
+	public enum RunFileType {Original, ParamTuning2, ParamTuning3, ParamTuning4};
 	public GbmParameters parameters;
 	public double timeInSeconds;
 	public int stepSize;
@@ -240,9 +240,8 @@ public class OptimalParameterRecord {
 		return records;
 	}
 	
-	
-	public static OptimalParameterRecord readOptimalParameterRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters) {
-		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--runData.txt";
+	public static OptimalParameterRecord readOptimalParameterRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
+		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--runData.txt";
 		OptimalParameterRecord record = new OptimalParameterRecord();
 		
 		if (!new File(runDataFilePath).exists()) {
@@ -278,13 +277,13 @@ public class OptimalParameterRecord {
 			if (line.contains("CV Relative Influences") && record.runFileType == null) {
 				record.runFileType = RunFileType.ParamTuning2;
 			} else if (line.contains("All Data Avg Number Of Splits")) {
-				record.runFileType = RunFileType.ParamTuning3_OLD;
+				record.runFileType = RunFileType.ParamTuning3;
 				record.avgNumberOfSplits = Double.parseDouble(line.split(": ")[1].trim());
 			} else if (line.contains("CV Ensemble")) {
-				record.runFileType = RunFileType.ParamTuning3_NEW;
+				record.runFileType = RunFileType.ParamTuning4;
 				record.cvEnsembleTrainingError = Double.parseDouble(line.split(": ")[1].trim());
 			}
-			if (record.runFileType == RunFileType.ParamTuning3_NEW) {
+			if (record.runFileType == RunFileType.ParamTuning4) {
 				record.cvEnsembleTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.avgNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.stdDevNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
