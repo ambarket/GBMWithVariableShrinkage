@@ -55,7 +55,10 @@ public class RegressionTree {
 		this.splitsPolicy = parameters.splitsPolicy;
 		
 		// No need to recalculate this everytime since its constant for this regression tree
-		this.learningRateToExampleCountRatio = (maxLearningRate - minLearningRate) / (sampleSize - minExamplesInNode);
+		// Note considering full range from sampleSize down to 0 because of missing value branches don't
+		//	obey the minExampleInNode rule and can have any number of values in them.
+		//	W/O missing values it should be (maxLearningRate - minLearningRate) / (sampleSize - minExamplesInNode);
+		this.learningRateToExampleCountRatio = (maxLearningRate - minLearningRate) / (sampleSize);
 	
 		root = null;
 	}
@@ -125,7 +128,7 @@ public class RegressionTree {
 		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
 			learningRate = maxLearningRate;
 		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			learningRate = (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate);
+			learningRate = ((leaf.instanceCount * learningRateToExampleCountRatio) + minLearningRate);
 		} else {
 			learningRate = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
 		} 

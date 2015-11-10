@@ -1,4 +1,7 @@
 package utilities;
+
+import dataset.Attribute;
+
 /**
  * Source: http://introcs.cs.princeton.edu/java/22library/Matrix.java.html
  *
@@ -30,6 +33,13 @@ public class Matrix {
 		double[] retval = new double[vector.length];
 		for (int i = 0; i < vector.length; i++) {
 			retval[i] = scalar * vector[i];
+		}
+		return retval;
+	}
+	public static double[] multiplyScalar(double scalar, Attribute[] vector) {
+		double[] retval = new double[vector.length];
+		for (int i = 0; i < vector.length; i++) {
+			retval[i] = scalar * vector[i].getNumericValue();
 		}
 		return retval;
 	}

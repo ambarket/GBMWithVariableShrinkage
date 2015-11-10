@@ -17,8 +17,12 @@ import utilities.DoubleCompare;
 
 
 public class OptimalParameterRecord {
+	// An unfortunate consequence of continuously wanting to add more data.
+	public enum RunFileType {Original, ParamTuning2, ParamTuning3_OLD, ParamTuning3_NEW};
 	public GbmParameters parameters;
 	public double timeInSeconds;
+	public int stepSize;
+	public int numberOfFolds;
 	public int totalNumberOfTrees;
 	public int optimalNumberOfTrees;
 	public double cvValidationError;
@@ -32,6 +36,8 @@ public class OptimalParameterRecord {
 	public double stdDevNumberOfSplits;
 	public double avgLearningRate;
 	public double stdDevLearningRate;
+	
+	public RunFileType runFileType; 
 	
 	
 	public void inferTimeInSecondsFromPartialRun(int numberOfTreesInPartialRun, double timeInSeconds) {
@@ -240,15 +246,25 @@ public class OptimalParameterRecord {
 		OptimalParameterRecord record = new OptimalParameterRecord();
 		
 		if (!new File(runDataFilePath).exists()) {
-			System.out.println(String.format("Couldn't find " + runDataFilePath));
+			System.out.println("Couldn't find " + runDataFilePath);
 			return null;
 		}
 		
+		String line = null;
+		record.runFileType = null;
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(runDataFilePath)));
-			record.timeInSeconds = Double.parseDouble(br.readLine().split(": ")[1].trim());
-			br.readLine(); // Skip Step Size
-			br.readLine(); // Skip number of Folds
+			line = br.readLine();
+			// Added time in seconds after the original parameter tuning test.
+			if (line.contains("Step Size")) {
+				record.runFileType = RunFileType.Original;
+				record.stepSize = Integer.parseInt(line.split(": ")[1].trim());
+			} else {
+				record.timeInSeconds = Double.parseDouble(line.split(": ")[1].trim());
+				record.stepSize = Integer.parseInt(br.readLine().split(": ")[1].trim());
+			}
+			// Always have been the same
+			record.numberOfFolds = Integer.parseInt(br.readLine().split(": ")[1].trim());
 			record.totalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
 			record.optimalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
 			record.cvValidationError = Double.parseDouble(br.readLine().split(": ")[1].trim());
@@ -256,23 +272,25 @@ public class OptimalParameterRecord {
 			record.allDataTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.allDataTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
-			try {
-				record.cvEnsembleTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			
+			// Changed multiple times
+			line = br.readLine();
+			if (line.contains("CV Relative Influences") && record.runFileType == null) {
+				record.runFileType = RunFileType.ParamTuning2;
+			} else if (line.contains("All Data Avg Number Of Splits")) {
+				record.runFileType = RunFileType.ParamTuning3_OLD;
+				record.avgNumberOfSplits = Double.parseDouble(line.split(": ")[1].trim());
+			} else if (line.contains("CV Ensemble")) {
+				record.runFileType = RunFileType.ParamTuning3_NEW;
+				record.cvEnsembleTrainingError = Double.parseDouble(line.split(": ")[1].trim());
+			}
+			if (record.runFileType == RunFileType.ParamTuning3_NEW) {
 				record.cvEnsembleTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.avgNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.stdDevNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.avgLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.stdDevLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
-			} catch(Exception e) {
-				System.out.println("Failed to read avgNumberOfSplits, cvEnsembleErrors, avgLearningRate, or stdDevLearningRate. "
-						+ "This must be an old run data file, setting these to -1 and moving on");
-				record.cvEnsembleTrainingError = -1;
-				record.cvEnsembleTestError = -1;
-				record.stdDevNumberOfSplits = -1;
-				record.avgNumberOfSplits = -1;
-				record.avgLearningRate = -1;
-				record.stdDevLearningRate = -1;
-			}
+			} 
 			record.parameters = parameters;
 			br.close();
 		} catch (IOException e) {

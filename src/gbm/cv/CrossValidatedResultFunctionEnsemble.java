@@ -316,7 +316,7 @@ public class CrossValidatedResultFunctionEnsemble {
 				+ "ExamplesInNodeStdDev\t"
 				+ "LearningRateMean\t"
 				+ "LearningRateStdDev\t"
-				+ "NumberOfSplitsMean\n");
+				+ "ActualNumberOfSplits\n");
 		for (int i = 0; i < totalNumberOfTrees; i++) {
 			retval.append(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
 					i+1,

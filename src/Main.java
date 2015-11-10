@@ -23,8 +23,9 @@ public class Main {
 	
 	public static void processParamTuning3() {
 		ParameterTuningTest3.processBikeSharing();
-		//ParameterTuningTest3.processNASA();
-		
+		ParameterTuningTest3.processNASA();
+		ParameterTuningTest3.processPowerPlant();
+		ParameterTuningTest3.processCrimeCommunities();
 	}
 	
 	

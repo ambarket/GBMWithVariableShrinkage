@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 
+import parameterTuning.OptimalParameterRecord.RunFileType;
 import parameterTuning.plotting.MathematicaLearningCurveCreator;
 import parameterTuning.plotting.PairwiseOptimalParameterRecordPlots;
 import regressionTree.RegressionTree.LearningRatePolicy;
@@ -78,6 +79,22 @@ public class ParameterTuningTest3 {
 		readSortAndSaveOptimalParameterRecordsFromRunData(bikeSharingParamTune + "Averages/");
 		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("BikeSharing", bikeSharingParamTune + "Averages/");
 		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("BikeSharing", bikeSharingParamTune + "Averages/", records);
+	}
+	
+	public static void processPowerPlant() {
+		averageAllRunData(powerPlantParamTune);
+		generateMathematicaLearningCurvesForAllRunData("PowerPlant", powerPlantParamTune + "Averages/");
+		readSortAndSaveOptimalParameterRecordsFromRunData(powerPlantParamTune + "Averages/");
+		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("PowerPlant", powerPlantParamTune + "Averages/");
+		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("PowerPlant", powerPlantParamTune + "Averages/", records);
+	}
+	
+	public static void processCrimeCommunities() {
+		averageAllRunData(crimeCommunitiesParamTune);
+		generateMathematicaLearningCurvesForAllRunData("CrimeCommunities", crimeCommunitiesParamTune + "Averages/");
+		readSortAndSaveOptimalParameterRecordsFromRunData(crimeCommunitiesParamTune + "Averages/");
+		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("CrimeCommunities", crimeCommunitiesParamTune + "Averages/");
+		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("CrimeCommunities", crimeCommunitiesParamTune + "Averages/", records);
 	}
 	
 	public static void runPowerPlant() {
@@ -262,8 +279,8 @@ public class ParameterTuningTest3 {
 				cvTestError = 0, cvValidationError = 0, cvTrainingError = 0, 
 				allDataTrainingError = 0, allDataTestError = 0,
 				cvEnsembleTrainingError = 0, cvEnsembleTestError = 0,
-				allDataAvgNumberOfSplits = 0, allDataStdDevNumberOfSplits = 0,
-				learningRateMean = 0, learningRateStdDev = 0;
+				avgNumberOfSplits = 0, stdDevNumberOfSplits = 0,
+				avgLearningRate = 0, stdDevLearningRate = 0;
 		int optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
 		ArrayList<Double> avgCvTrainingErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> avgCvValidationErrorByIteration = new ArrayList<Double>();
@@ -284,49 +301,59 @@ public class ParameterTuningTest3 {
 		
 		int numberOfTreesFound = 0;
 		int numberOfRunsFound = 0;
+		RunFileType runFileType = null;
 		// Read through all the files cooresponding to these parameters and average the data.
 		for (int runNumber = 0; runNumber < ranges.NUMBER_OF_RUNS; runNumber++) {
 			
-			String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt";
-			if (!new File(runDataFilePath).exists()) {
-				System.out.println(String.format("Couldn't find Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt");
+			// Get the summary info at the top of the file.
+			OptimalParameterRecord summaryInfo = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters);
+			if (summaryInfo == null) {
+				// Run data file wasn't found. Continue to next iteration.
 				continue;
 			} else {
 				numberOfRunsFound++;
 			}
+			
+			// Assume the runFileType of the first run. They could be mixed and basically want to revert to the most basic form.
+			runFileType = (runFileType == null) ? summaryInfo.runFileType : runFileType; 
+
+			// We have these attributes for all versions of the run files.
+			stepSize += summaryInfo.stepSize;
+			numberOfFolds += summaryInfo.numberOfFolds;
+			totalNumberOfTrees += summaryInfo.totalNumberOfTrees;
+			optimalNumberOfTrees += summaryInfo.optimalNumberOfTrees;
+			cvValidationError += summaryInfo.cvValidationError;
+			cvTrainingError += summaryInfo.cvTrainingError;
+			allDataTrainingError += summaryInfo.allDataTrainingError;
+			cvTestError += summaryInfo.cvTestError;
+			allDataTestError += summaryInfo.allDataTestError;
+			// Don't have timeInSeconds for the original runFiles
+			if (runFileType != RunFileType.Original) {
+				timeInSeconds += summaryInfo.timeInSeconds;
+			}
+			// Changed things in the middle of ParamTuning3
+			if (runFileType == RunFileType.ParamTuning3_OLD) {
+				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
+			}
+			if (runFileType == RunFileType.ParamTuning3_NEW) {
+				cvEnsembleTrainingError += summaryInfo.cvEnsembleTrainingError;
+				cvEnsembleTestError += summaryInfo.cvEnsembleTestError;
+				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
+				stdDevNumberOfSplits += summaryInfo.stdDevNumberOfSplits;
+				avgLearningRate += summaryInfo.avgLearningRate;
+				stdDevLearningRate += summaryInfo.stdDevLearningRate;
+			}
+
 			try {
+				// ALready know it exists based on successful creation of OptimalParameterRecord
+				String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(), runNumber) + parameters.getFileNamePrefix() + "--runData.txt";
+				String line = null;
 				BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 				
-				timeInSeconds += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				stepSize += Integer.parseInt(br.readLine().split(": ")[1].trim());
-				numberOfFolds += Integer.parseInt(br.readLine().split(": ")[1].trim());
-				int tmp = Integer.parseInt(br.readLine().split(": ")[1].trim());
-				totalNumberOfTrees += tmp;
-				totalNumberOfTreesByRunNumber.add(tmp);
-				optimalNumberOfTrees += Integer.parseInt(br.readLine().split(": ")[1].trim());
-				cvValidationError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				cvTrainingError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				allDataTrainingError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				cvTestError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				allDataTestError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				try {
-					cvEnsembleTrainingError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-					cvEnsembleTestError += Double.parseDouble(br.readLine().split(": ")[1].trim());
-					allDataAvgNumberOfSplits += Double.parseDouble(br.readLine().split(": ")[1].trim());
-					allDataStdDevNumberOfSplits += Double.parseDouble(br.readLine().split(": ")[1].trim());
-					learningRateMean += Double.parseDouble(br.readLine().split(": ")[1].trim());
-					learningRateStdDev += Double.parseDouble(br.readLine().split(": ")[1].trim());
-				} catch (Exception e) {
-					System.out.println("Failed to read avgNumberOfSplits, cvEnsembleErrors, avgLearningRate, or stdDevLearningRate. "
-							+ "This must be an old run data file, ingnoring b/c nothing to average.");
-				}
-				
-				String line = null;
-			
 				// TODO: Average those too.
-				// skip per example data, relative influences, and header
+				// skip summary info, per example data, relative influences, and header
 				while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError"));
-				// read in error data 
+				// read in per tree information
 				int index = 0;
 				while ((line = br.readLine()) != null) {
 					String[] components = line.split("\t");
@@ -336,13 +363,15 @@ public class ParameterTuningTest3 {
 						avgCvTestErrorByIteration.add(Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.add(Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.add(Double.parseDouble(components[5].trim()));
-						cvEnsembleTrainingErrorByIteration.add(Double.parseDouble(components[6].trim()));
-						cvEnsembleTestErrorByIteration.add(Double.parseDouble(components[7].trim()));
-						examplesInNodeMeanByIteration.add(Double.parseDouble(components[8].trim()));
-						examplesInNodeStdDevByIteration.add(Double.parseDouble(components[9].trim()));
-						learningRateMeanByIteration.add(Double.parseDouble(components[10].trim()));
-						learningRateStdDevByIteration.add(Double.parseDouble(components[11].trim()));
-						actualNumberOfSplitsByIteration.add(Integer.parseInt(components[12].trim()));
+						if (runFileType == RunFileType.ParamTuning3_NEW) {
+							cvEnsembleTrainingErrorByIteration.add(Double.parseDouble(components[6].trim()));
+							cvEnsembleTestErrorByIteration.add(Double.parseDouble(components[7].trim()));
+							examplesInNodeMeanByIteration.add(Double.parseDouble(components[8].trim()));
+							examplesInNodeStdDevByIteration.add(Double.parseDouble(components[9].trim()));
+							learningRateMeanByIteration.add(Double.parseDouble(components[10].trim()));
+							learningRateStdDevByIteration.add(Double.parseDouble(components[11].trim()));
+							actualNumberOfSplitsByIteration.add(Integer.parseInt(components[12].trim()));
+						}
 						numberOfTreesFound++;
 						index++;
 					} else {
@@ -351,13 +380,15 @@ public class ParameterTuningTest3 {
 						avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) + Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) + Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) + Double.parseDouble(components[5].trim()));
-						cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
-						cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
-						examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
-						examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
-						learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
-						learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
-						actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Integer.parseInt(components[12].trim()));
+						if (runFileType == RunFileType.ParamTuning3_NEW) {
+							cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
+							cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
+							examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
+							examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
+							learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
+							learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
+							actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Integer.parseInt(components[12].trim()));
+						}
 						index++;
 					}
 				}
@@ -371,7 +402,7 @@ public class ParameterTuningTest3 {
 			return;
 			
 		}
-		// Compute the averages
+		// Compute the averages. Don't need to worry about runFileTypes b/c/ they will just be 0 if they aren't present.
 		timeInSeconds /= numberOfRunsFound;
 		stepSize  /= numberOfRunsFound;
 		numberOfFolds  /= numberOfRunsFound;
@@ -384,10 +415,10 @@ public class ParameterTuningTest3 {
 		allDataTestError  /= numberOfRunsFound;
 		cvEnsembleTrainingError /= numberOfRunsFound;
 		cvEnsembleTestError /= numberOfRunsFound;
-		allDataAvgNumberOfSplits  /= numberOfRunsFound;
-		allDataStdDevNumberOfSplits /= numberOfRunsFound;
-		learningRateMean /= numberOfRunsFound;
-		learningRateStdDev /= numberOfRunsFound;
+		avgNumberOfSplits  /= numberOfRunsFound;
+		stdDevNumberOfSplits /= numberOfRunsFound;
+		avgLearningRate /= numberOfRunsFound;
+		stdDevLearningRate /= numberOfRunsFound;
 		
 		int minNumberOfTreesAllRunsHave = Integer.MAX_VALUE;
 		for (int i : totalNumberOfTreesByRunNumber) {
@@ -400,13 +431,15 @@ public class ParameterTuningTest3 {
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsFound);
-				cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsFound);
-				cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsFound);
-				examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsFound);
-				examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsFound);
-				learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsFound);
-				learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsFound);
-				actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsFound);
+				if (runFileType == RunFileType.ParamTuning3_NEW) {
+					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsFound);
+					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsFound);
+					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsFound);
+					examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsFound);
+					learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsFound);
+					learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsFound);
+					actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsFound);
+				}
 			} else {
 				int numberOfRunsWithThisTree = 0;
 				for (int i : totalNumberOfTreesByRunNumber) {
@@ -417,13 +450,15 @@ public class ParameterTuningTest3 {
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
-				cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
-				cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
-				examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsWithThisTree);
-				examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsWithThisTree);
-				learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsWithThisTree);
-				learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsWithThisTree);
-				actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsWithThisTree);
+				if (runFileType == RunFileType.ParamTuning3_NEW) {
+					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
+					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
+					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsWithThisTree);
+					examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsWithThisTree);
+					learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsWithThisTree);
+					learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsWithThisTree);
+					actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsWithThisTree);
+				}
 			}
 		}
 		
@@ -463,10 +498,10 @@ public class ParameterTuningTest3 {
 			allDataTestError,
 			cvEnsembleTrainingError,
 			cvEnsembleTestError,
-			allDataAvgNumberOfSplits,
-			allDataStdDevNumberOfSplits,
-			learningRateMean,
-			learningRateStdDev,
+			avgNumberOfSplits,
+			stdDevNumberOfSplits,
+			avgLearningRate,
+			stdDevLearningRate,
 			numberOfRunsFound,
 			numberOfTreesFound));
 
@@ -482,22 +517,44 @@ public class ParameterTuningTest3 {
 					+ "ExamplesInNodeStdDev\t"
 					+ "LearningRateMean\t"
 					+ "LearningRateStdDev\t"
-					+ "NumberOfSplitsMean\n");
-			for (int i = 0; i < numberOfTreesFound; i++) {
-				bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
-						i+1,
-						avgCvTrainingErrorByIteration.get(i),
-						avgCvValidationErrorByIteration.get(i),
-						avgCvTestErrorByIteration.get(i),
-						allDataTrainingErrorByIteration.get(i),
-						allDataTestErrorByIteration.get(i),
-						cvEnsembleTrainingErrorByIteration.get(i),
-						cvEnsembleTestErrorByIteration.get(i),
-						examplesInNodeMeanByIteration.get(i),
-						examplesInNodeStdDevByIteration.get(i),
-						learningRateMeanByIteration.get(i),
-						learningRateStdDevByIteration.get(i),
-						actualNumberOfSplitsByIteration.get(i)));
+					+ "ActualNumberOfSplits\n");
+			
+			if (runFileType == RunFileType.ParamTuning3_NEW) {
+				for (int i = 0; i < numberOfTreesFound; i++) {
+					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
+							i+1,
+							avgCvTrainingErrorByIteration.get(i),
+							avgCvValidationErrorByIteration.get(i),
+							avgCvTestErrorByIteration.get(i),
+							allDataTrainingErrorByIteration.get(i),
+							allDataTestErrorByIteration.get(i),
+							cvEnsembleTrainingErrorByIteration.get(i),
+							cvEnsembleTestErrorByIteration.get(i),
+							examplesInNodeMeanByIteration.get(i),
+							examplesInNodeStdDevByIteration.get(i),
+							learningRateMeanByIteration.get(i),
+							learningRateStdDevByIteration.get(i),
+							actualNumberOfSplitsByIteration.get(i)));
+				}
+			} else {
+				// THis is an old run data file, still want to print out 0's so that methods that process this data can assume
+				//	something is present.
+				for (int i = 0; i < numberOfTreesFound; i++) {
+					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
+							i+1,
+							avgCvTrainingErrorByIteration.get(i),
+							avgCvValidationErrorByIteration.get(i),
+							avgCvTestErrorByIteration.get(i),
+							allDataTrainingErrorByIteration.get(i),
+							allDataTestErrorByIteration.get(i),
+							0.0,
+							0.0,
+							0.0,
+							0.0,
+							0.0,
+							0.0,
+							0));
+				}
 			}
 			
 			bw.flush();
