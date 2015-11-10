@@ -1,4 +1,5 @@
-import parameterTuning.ParameterTuningTest3;
+import parameterTuning.ParameterTuningParameters;
+import parameterTuning.ParameterTuningTest;
 
 
 public class Main {
@@ -14,18 +15,11 @@ public class Main {
 	}
 	
 	public static void runParamTuning3() {
-		ParameterTuningTest3.runBikeSharing();
-		ParameterTuningTest3.runCrimeCommunities();
-		
-		ParameterTuningTest3.runNASA();
-		ParameterTuningTest3.runPowerPlant();
+		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest3());
 	}
 	
 	public static void processParamTuning3() {
-		ParameterTuningTest3.processBikeSharing();
-		ParameterTuningTest3.processNASA();
-		ParameterTuningTest3.processPowerPlant();
-		ParameterTuningTest3.processCrimeCommunities();
+		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest3());
 	}
 	
 	

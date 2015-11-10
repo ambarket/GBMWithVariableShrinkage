@@ -26,7 +26,7 @@ public class GbmParameters {
 		setBagFraction(bagFraction);
 		setMaxLearningRate(maxLearningRate);
 		setNumOfTrees(numOfTrees);
-		setMinObsInNode(minExamplesInNode);
+		setMinExamplesInNode(minExamplesInNode);
 		setmaxNumberOfSplits(maxNumberOfSplits);
 		this.learningRatePolicy = learningRatePolicy;
 		this.splitsPolicy = splitsPolicy;
@@ -35,10 +35,10 @@ public class GbmParameters {
 	// Backwards compatability with old data that didnt have minimum learning rate
 	public GbmParameters(double maxLearningRate, int maxNumberOfSplits, double bagFraction, int minExamplesInNode, int numOfTrees, LearningRatePolicy learningRatePolicy, SplitsPolicy splitsPolicy) {
 		setBagFraction(bagFraction);
-		minLearningRate = -1;	
+		minLearningRate = maxLearningRate;	
 		setMaxLearningRate(maxLearningRate);
 		setNumOfTrees(numOfTrees);
-		setMinObsInNode(minExamplesInNode);
+		setMinExamplesInNode(minExamplesInNode);
 		setmaxNumberOfSplits(maxNumberOfSplits);
 		this.learningRatePolicy = learningRatePolicy;
 		this.splitsPolicy = splitsPolicy;
@@ -54,7 +54,7 @@ public class GbmParameters {
 	
 	private void setMaxLearningRate(double maxLearningRate) {
 		if (maxLearningRate <= 0) {
-			Logger.println(Logger.LEVELS.DEBUG, "Learning rate must be >= 0");
+			Logger.println(Logger.LEVELS.DEBUG, "Max Learning rate must be > 0");
 			System.exit(0);
 		}
 		this.maxLearningRate = maxLearningRate;
@@ -62,7 +62,7 @@ public class GbmParameters {
 	
 	private void setMinLearningRate(double minLearningRate) {
 		if (minLearningRate <= 0) {
-			Logger.println(Logger.LEVELS.DEBUG, "Learning rate must be >= 0");
+			Logger.println(Logger.LEVELS.DEBUG, "Min Learning rate must be > 0");
 			System.exit(0);
 		}
 		this.minLearningRate = minLearningRate;
@@ -84,9 +84,9 @@ public class GbmParameters {
 		this.maxNumberOfSplits = maxNumberOfSplits;
 	}
 	
-	private void setMinObsInNode(int minExamplesInNode) {
+	private void setMinExamplesInNode(int minExamplesInNode) {
 		if (minExamplesInNode < 1) {
-			Logger.println(Logger.LEVELS.DEBUG, "MinObsInNode must be >= 1");
+			Logger.println(Logger.LEVELS.DEBUG, "minExamplesInNode must be >= 1");
 			System.exit(0);
 		}
 	

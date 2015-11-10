@@ -15,6 +15,7 @@ import gbm.GbmParameters;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.security.Policy.Parameters;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -28,79 +29,37 @@ public class RegressionTree {
 	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE};
 	public enum SplitsPolicy {CONSTANT, INCREASING, RANDOM};
 	// class members
-	private int minExamplesInNode;
-	private int maxNumberOfSplits;
-	private double maxLearningRate;
-	private double minLearningRate;
-	private int sampleSize;
-	private LearningRatePolicy learningRatePolicy;
-	private SplitsPolicy splitsPolicy;
+
 	
+	private GbmParameters parameters;
+	private int sampleSize;
 	private double learningRateToExampleCountRatio;
+	
 	public TreeNode root;
 	
 	public int actualNumberOfSplits = 0; // Will be set after growing
+	public int actualMaxNumberOfSplits = 0;
 	
 	public RegressionTree(GbmParameters parameters, int sampleSize) {
-		setMinObsInNode(parameters.minExamplesInNode);
-		setMaxNumberOfSplits(parameters.maxNumberOfSplits);
-		setMaxLearningRate(parameters.maxLearningRate);
-		if (parameters.learningRatePolicy != LearningRatePolicy.REVISED_VARIABLE) {
-			this.minLearningRate = parameters.maxLearningRate; // Wont ever be used
-		} else {
-			setMinLearningRate(parameters.minLearningRate); 
-		}
+		this.parameters = parameters;
 		setSampleSize(sampleSize);
-		this.learningRatePolicy = parameters.learningRatePolicy;
-		this.splitsPolicy = parameters.splitsPolicy;
 		
 		// No need to recalculate this everytime since its constant for this regression tree
 		// Note considering full range from sampleSize down to 0 because of missing value branches don't
 		//	obey the minExampleInNode rule and can have any number of values in them.
 		//	W/O missing values it should be (maxLearningRate - minLearningRate) / (sampleSize - minExamplesInNode);
-		this.learningRateToExampleCountRatio = (maxLearningRate - minLearningRate) / (sampleSize);
+		this.learningRateToExampleCountRatio = (parameters.maxLearningRate - parameters.minLearningRate) / (sampleSize);
 	
 		root = null;
 	}
 	
 	private void setSampleSize(int sampleSize) {
-		if (sampleSize < minExamplesInNode) {
-			Logger.println(Logger.LEVELS.INFO, "sampleSize must be > minExamplesInNode, but was " + sampleSize + " and minExamplesInNode was " + minExamplesInNode);
+		if (sampleSize < parameters.minExamplesInNode) {
+			Logger.println(Logger.LEVELS.INFO, "sampleSize must be > minExamplesInNode, "
+					+ "but was " + sampleSize + " and minExamplesInNode was " + parameters.minExamplesInNode);
 			System.exit(0);
 		}
 		this.sampleSize = sampleSize;
-	}
-	
-	private void setMaxLearningRate(double maxLearningRate) {
-		if (maxLearningRate <= 0) {
-			Logger.println(Logger.LEVELS.INFO, "Learning rate must be > 0");
-			System.exit(0);
-		}
-		this.maxLearningRate = maxLearningRate;
-	}
-	
-	private void setMinLearningRate(double minLearningRate) {
-		if (minLearningRate <= 0) {
-			Logger.println(Logger.LEVELS.INFO, "Learning rate must be > 0");
-			System.exit(0);
-		}
-		this.minLearningRate = minLearningRate;
-	}
-	
-	public void setMinObsInNode(int minExamplesInNode) {
-		if (minExamplesInNode < 1) {
-			Logger.println(Logger.LEVELS.INFO, "The min obs in node value must be >= 1");
-			System.exit(0);
-		}
-		this.minExamplesInNode = minExamplesInNode;
-	}
-	
-	public void setMaxNumberOfSplits(int maxNumberOfSplits) {
-		if (maxNumberOfSplits < 1) {
-			Logger.println(Logger.LEVELS.INFO, "The maxNumberOfSplits must be >= 1");
-			System.exit(0);
-		}
-		this.maxNumberOfSplits = maxNumberOfSplits;
 	}
 	
 	public LearningRateTerminalValuePair getLearningRateTerminalValuePair(Attribute[] instance_x) {
@@ -109,12 +68,12 @@ public class RegressionTree {
 		}
 		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
 		double learningRate = 0.0;
-		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
-			learningRate = maxLearningRate;
-		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			learningRate = (((leaf.instanceCount - minExamplesInNode) * learningRateToExampleCountRatio) + minLearningRate);
+		if (parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			learningRate = parameters.maxLearningRate;
+		} else if (parameters.learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			learningRate = ((leaf.instanceCount * learningRateToExampleCountRatio) + parameters.minLearningRate);
 		} else {
-			learningRate = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
+			learningRate = Math.min(0.5, parameters.maxLearningRate * leaf.instanceCount / sampleSize);
 		} 
 		return new LearningRateTerminalValuePair(learningRate, leaf.terminalValue);
 	}
@@ -125,17 +84,17 @@ public class RegressionTree {
 		}
 		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
 		double learningRate = 0.0;
-		if (learningRatePolicy == LearningRatePolicy.CONSTANT) {
-			learningRate = maxLearningRate;
-		} else if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			learningRate = ((leaf.instanceCount * learningRateToExampleCountRatio) + minLearningRate);
+		if (parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			learningRate = parameters.maxLearningRate;
+		} else if (parameters.learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			learningRate = ((leaf.instanceCount * learningRateToExampleCountRatio) + parameters.minLearningRate);
 		} else {
-			learningRate = Math.min(0.5, maxLearningRate * leaf.instanceCount / sampleSize);
+			learningRate = Math.min(0.5, parameters.maxLearningRate * leaf.instanceCount / sampleSize);
 		} 
 		return learningRate * leaf.terminalValue;
 	}
 	
-	public RegressionTree build(GbmDataset dataset, boolean[] inSample) {
+	public RegressionTree build(GbmDataset dataset, boolean[] inSample, int treeNumber) {
 		// Calculate error before splitting
 		double mean = dataset.calcMeanTrainingPseudoResponse(inSample);
 		double squaredError = 0.0;
@@ -143,14 +102,14 @@ public class RegressionTree {
 			squaredError += (pseudoResponse - mean) * (pseudoResponse - mean);
 		}
 		// build the regression tree
-		root = buildTree_MaxNumberOfSplits(dataset, inSample, mean, squaredError);
+		root = buildTree_MaxNumberOfSplits(dataset, inSample, treeNumber, mean, squaredError);
 		if (root == null) {
 			throw new IllegalStateException("buildTree_MaxNumberOfSplits returned a null root node.");
 		}
 		return this;
 	}
 	
-	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, double meanResponseInParent, double squaredErrorBeforeSplit) {
+	private TreeNode buildTree_MaxNumberOfSplits(GbmDataset dataset, boolean[] inSample, int treeNumber, double meanResponseInParent, double squaredErrorBeforeSplit) {
 		Queue<TreeNodeAndInParentPair> leaves = new LinkedList<TreeNodeAndInParentPair>();
 		int numOfExamples = dataset.getNumberOfTrainingExamples();
 		int[] trainingDataToChildMap = new int[numOfExamples];
@@ -159,7 +118,7 @@ public class RegressionTree {
 			trainingDataToChildMap[i] = (inSample[i]) ? 1 : 0;
 			count += trainingDataToChildMap[i];
 		}
-		TreeNodeAndInParentPair rootSplit = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
+		TreeNodeAndInParentPair rootSplit = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, parameters.minExamplesInNode, meanResponseInParent, squaredErrorBeforeSplit);
 		if (rootSplit == null) {
 			TreeNode unSplitRoot = new TreeNode(meanResponseInParent, squaredErrorBeforeSplit, count);
 			return unSplitRoot;
@@ -168,14 +127,13 @@ public class RegressionTree {
 
 		actualNumberOfSplits = 1;
 		PriorityQueue<PossibleChild> possibleChildren = new PriorityQueue<PossibleChild>();
-		int maxSplits = 0;
-		switch(splitsPolicy) {
-			case CONSTANT: maxSplits = maxNumberOfSplits; break;
-			case RANDOM: maxSplits = 1 + (new MersenneTwisterFast().nextInt(maxNumberOfSplits)); /*System.out.println(maxSplits)*/;break;
-			case INCREASING: throw new UnsupportedOperationException();
+		switch(parameters.splitsPolicy) {
+			case CONSTANT: actualMaxNumberOfSplits = parameters.maxNumberOfSplits; break;
+			case RANDOM: actualMaxNumberOfSplits = 1 + (new MersenneTwisterFast().nextInt(parameters.maxNumberOfSplits)); break;
+			case INCREASING: actualMaxNumberOfSplits = (int)Math.ceil(treeNumber / (double)parameters.numOfTrees * parameters.maxNumberOfSplits);
 		}
 
-		while (actualNumberOfSplits < maxSplits) {
+		while (actualNumberOfSplits < actualMaxNumberOfSplits) {
 			while(!leaves.isEmpty()) {
 				TreeNodeAndInParentPair parent = leaves.poll();
 				// map training data to the correct child
@@ -189,14 +147,14 @@ public class RegressionTree {
 					}
 				}
 				TreeNodeAndInParentPair left = null, right = null, missing = null;
-				if (parent.node.leftChild == null && minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
-					left = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
+				if (parent.node.leftChild == null && parameters.minExamplesInNode * 2 <= parent.node.leftTerminalNode.instanceCount) {
+					left = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 1, parameters.minExamplesInNode, parent.node.leftTerminalNode.terminalValue, parent.node.leftTerminalNode.squaredError);
 				}
-				if (parent.node.rightChild == null && minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
-					right = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 2, minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
+				if (parent.node.rightChild == null && parameters.minExamplesInNode * 2 <= parent.node.rightTerminalNode.instanceCount) {
+					right = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 2, parameters.minExamplesInNode, parent.node.rightTerminalNode.terminalValue, parent.node.rightTerminalNode.squaredError);
 				}
-				if (parent.node.missingChild == null && minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
-					missing = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 3, minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
+				if (parent.node.missingChild == null && parameters.minExamplesInNode * 2 <= parent.node.missingTerminalNode.instanceCount) {
+					missing = OptimalSplitFinder.getOptimalSplitSingleThread(dataset, trainingDataToChildMap, 3, parameters.minExamplesInNode, parent.node.missingTerminalNode.terminalValue, parent.node.missingTerminalNode.squaredError);
 				}
 				if (left != null) {
 					possibleChildren.add(new PossibleChild(parent, left, 1, left.node.getSquaredErrorImprovement()));

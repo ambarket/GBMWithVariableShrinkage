@@ -66,7 +66,7 @@ public class GradientBoostingTree {
 			
 			// Fit a regression tree to predict the current pseudo responses on the training data.
 			
-			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample);
+			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample, iterationNum+1);
 			
 			// Update our predictions for each training and validation instance using the new tree.
 			gbmDataset.updatePredictionsWithLearnedValueFromNewTree(tree);
@@ -124,7 +124,7 @@ public class GradientBoostingTree {
 			
 			// Fit a regression tree to predict the current pseudo responses on the training data.
 			
-			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample);
+			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample, iterationNum+1);
 			
 			// Update our predictions for each training and validation instance using the new tree.
 			gbmDataset.updatePredictionsWithLearnedValueFromNewTree(tree);

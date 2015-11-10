@@ -57,7 +57,7 @@ public class CrossValidationStepper implements Callable<Void> {
 			}
 			//treeBuildingTimer.start();
 			// Fit a regression tree to predict the current pseudo responses on the training data.
-			RegressionTree tree = (new RegressionTree(parameters, sampleSize)).build(dataset, inCurrentSample);
+			RegressionTree tree = (new RegressionTree(parameters, sampleSize)).build(dataset, inCurrentSample, function.trees.size()+1);
 			//double treeBuildTime = treeBuildingTimer.getElapsedSeconds();
 			//avgTreeBuildTime.addData(treeBuildTime);
 			

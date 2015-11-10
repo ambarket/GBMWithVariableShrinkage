@@ -42,27 +42,30 @@ public class Dataset {
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
 	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
 
+	public DatasetParameters parameters;
 	//--------------------------------------Object Construction-----------------------------------------------------------
-	public Dataset(String filePath, boolean attributeTypeHeader, boolean attributeNameHeader, int responseVariableColumn, double trainingSampleFraction) {
+	public Dataset(DatasetParameters parameters, double trainingSampleFraction) {
 		StopWatch timer = (new StopWatch()).start();
-		if (!attributeTypeHeader) {
+		if (!parameters.attributeTypeHeader) {
 			throw new UnsupportedOperationException("Support for dataset files without an explicit attribute type header is not yet implemented");
 		}
-		if (responseVariableColumn < 0) {
+		if (parameters.responseVariableColumn < 0) {
 			throw new IllegalArgumentException("responseVariableColumn must be specificed");
 		}
 		
+		this.parameters = parameters;
+		
 		// Read dataset file as strings
-		RawFile file = new RawFile(filePath, attributeTypeHeader, attributeNameHeader);
+		RawFile file = new RawFile(parameters.fileDirectory + parameters.fileName, parameters.attributeTypeHeader, parameters.attributeNameHeader);
 		this.trainingSampleFraction = trainingSampleFraction;
 		this.numberOfTrainingExamples = (int) (file.numberOfRecords * trainingSampleFraction);
 		this.numberOfTestExamples = file.numberOfRecords - numberOfTrainingExamples;
 		this.numberOfPredictors = file.numberOfAttributes - 1;
 		
 		// Extract, validate, and store the dataset information in Attribute.Type, Attribute, and Response objects
-		extractAndStoreAttributeTypes(file, responseVariableColumn);
-		extractAndStoreAttributeNames(file, responseVariableColumn);
-		extractAndStoreExamples(file, responseVariableColumn, trainingSampleFraction);
+		extractAndStoreAttributeTypes(file, parameters.responseVariableColumn);
+		extractAndStoreAttributeNames(file, parameters.responseVariableColumn);
+		extractAndStoreExamples(file, parameters.responseVariableColumn, trainingSampleFraction);
 		
 		// Pre-process trainingData to improve speed of split calculation
 		buildCategoricalPredictorIndexMap();

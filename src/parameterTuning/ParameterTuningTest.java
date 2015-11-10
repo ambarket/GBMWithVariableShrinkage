@@ -22,119 +22,60 @@ import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import dataset.Dataset;
+import dataset.DatasetParameters;
 
 
-public class ParameterTuningTest3 {
-	public static final String powerPlantParamTune = System.getProperty("user.dir") + "/data/paramTuning3/powerPlantParameterTuning/";
-	public static final String nasaParamTune = System.getProperty("user.dir") + "/data/paramTuning3/nasaParameterTuning/";
-	public static final String bikeSharingParamTune = System.getProperty("user.dir") + "/data/paramTuning3/bikeSharingParameterTuning/";
-	public static final String crimeCommunitiesParamTune = System.getProperty("user.dir") + "/data/paramTuning3/crimeCommunitiesParameterTuning/";
+public class ParameterTuningTest {
+	private ParameterTuningParameters tuningParameters = ParameterTuningParameters.getRangesForTest3();
 	
-	public static final String bikeSharingFiles = System.getProperty("user.dir") + "/data/BikeSharing/";
-	public static final String powerPlantFiles = System.getProperty("user.dir") + "/data/PowerPlant/";
-	public static final String nasaFiles = System.getProperty("user.dir") + "/data/NASAAirFoild/";
-	public static final String crimeFiles = System.getProperty("user.dir") + "/data/CrimeCommunities/";
+	private ParameterTuningTest(){}
 	
-	public static final ParameterTuningParameterRanges ranges = ParameterTuningParameterRanges.getRangesForTest3();
-	
-	public static void runCrimeCommunities() {
+	public static void runOnAllDatasets(ParameterTuningParameters parameters) {
+		ParameterTuningTest test = new ParameterTuningTest();
+		test.tuningParameters = parameters;
+		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
-			Dataset trainingDataset2 = new Dataset(crimeFiles + "communitiesOnlyPredictive.txt", true, true, 122, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters("Crime Communities", trainingDataset2, crimeCommunitiesParamTune, i);
+		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
+			for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+				Dataset dataset = new Dataset(datasetParams, test.tuningParameters.TRAINING_SAMPLE_FRACTION);
+				test.tryDifferentParameters(dataset, runNumber);
+			}
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
 	
-	public static void runNASA() {
-		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
-			Dataset trainingDataset2 = new Dataset(nasaFiles + "data.txt", true, true, 5, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters("NASA", trainingDataset2, nasaParamTune, i);
+	public static void processAllDatasets(ParameterTuningParameters parameters) {
+		ParameterTuningTest test = new ParameterTuningTest();
+		test.tuningParameters = parameters;
+		
+		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
+
+			test.averageAllRunData(datasetParams);
+			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
+			test.readSortAndSaveOptimalParameterRecordsFromAverageRunData(datasetParams, "/Averages/");
+			ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords(datasetParams.minimalName, test.tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/Averages/");
+			PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots(datasetParams.minimalName, test.tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/Averages/", records);
 		}
-		GradientBoostingTree.executor.shutdownNow();
-	}
-	
-	public static void processNASA() {
-		averageAllRunData(nasaParamTune);
-		generateMathematicaLearningCurvesForAllRunData("NASA Air Foil", nasaParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(nasaParamTune + "Averages/");
-		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("NASA Air Foil", nasaParamTune + "Averages/");
-		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("NASA Air Foil", nasaParamTune + "Averages/", records);
-	}
-	
-	
-	public static void runBikeSharing() {
-		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
-			Dataset trainingDataset = new Dataset(bikeSharingFiles + "bikeSharing.txt", true, true, 11, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters("Bike Sharing", trainingDataset, bikeSharingParamTune, i);
-		}
-		GradientBoostingTree.executor.shutdownNow();
-	}
-	
-	public static void processBikeSharing() {
-		averageAllRunData(bikeSharingParamTune);
-		generateMathematicaLearningCurvesForAllRunData("Bike Sharing", bikeSharingParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(bikeSharingParamTune + "Averages/");
-		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("BikeSharing", bikeSharingParamTune + "Averages/");
-		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("BikeSharing", bikeSharingParamTune + "Averages/", records);
-	}
-	
-	public static void processPowerPlant() {
-		averageAllRunData(powerPlantParamTune);
-		generateMathematicaLearningCurvesForAllRunData("PowerPlant", powerPlantParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(powerPlantParamTune + "Averages/");
-		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("PowerPlant", powerPlantParamTune + "Averages/");
-		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("PowerPlant", powerPlantParamTune + "Averages/", records);
-	}
-	
-	public static void processCrimeCommunities() {
-		averageAllRunData(crimeCommunitiesParamTune);
-		generateMathematicaLearningCurvesForAllRunData("CrimeCommunities", crimeCommunitiesParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(crimeCommunitiesParamTune + "Averages/");
-		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("CrimeCommunities", crimeCommunitiesParamTune + "Averages/");
-		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("CrimeCommunities", crimeCommunitiesParamTune + "Averages/", records);
-	}
-	
-	public static void runPowerPlant() {
-		
-		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (int i = 0; i < ranges.NUMBER_OF_RUNS; i++) {
-			Dataset trainingDataset3 = new Dataset(powerPlantFiles + "Folds5x2_pp.txt", true, true, 4, ranges.TRAINING_SAMPLE_FRACTION);
-			tryDifferentParameters("Power Plant", trainingDataset3, powerPlantParamTune, i);
-		}
-		
-		GradientBoostingTree.executor.shutdownNow();
-		
-		/*
-		averageAllRunData(powerPlantParamTune);
-		generateMathematicaLearningCurvesForAllRunData(powerPlantParamTune + "Averages/");
-		readSortAndSaveOptimalParameterRecordsFromRunData(powerPlantParamTune + "Averages/");
-		ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords("PowerPlant", powerPlantParamTune + "Averages/");
-		PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots("PowerPlant", powerPlantParamTune + "Averages/", records);
-		*/
-		
 	}
 
-	public static void tryDifferentParameters(String datasetName, Dataset dataset, String paramTuneDir, int runNumber) {
+	public void tryDifferentParameters(Dataset dataset, int runNumber) {
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.maxLearningRates : ranges.constantLearningRates) {
-					for (int numberOfSplits : ranges.maxNumberOfSplts) {
-						for (double bagFraction : ranges.bagFractions) {
-							for (int minExamplesInNode : ranges.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : ranges.splitPolicies) {
+		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
+			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
+				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
+					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
+						for (double bagFraction : tuningParameters.bagFractions) {
+							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
+								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
 									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, ranges.NUMBER_OF_TREES, 
+												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
-									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, paramTuneDir, runNumber);
-									System.out.println(String.format(resultMessage + "\n This " + datasetName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
-											parameters.getFileNamePrefix(), runNumber, ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
+									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
+											dataset.parameters.minimalName, parameters.getFileNamePrefix(), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									//timer.start();
 									//System.gc();
 									//System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
@@ -147,24 +88,25 @@ public class ParameterTuningTest3 {
 		}
 	}
 	
-	public static void averageAllRunData(String paramTuneDir) {
+	public void averageAllRunData(DatasetParameters datasetParams) {
+		String paramTuningDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/";
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.maxLearningRates : ranges.constantLearningRates) {
-					for (int numberOfSplits : ranges.maxNumberOfSplts) {
-						for (double bagFraction : ranges.bagFractions) {
-							for (int minExamplesInNode : ranges.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : ranges.splitPolicies) {
+		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
+			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
+				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
+					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
+						for (double bagFraction : tuningParameters.bagFractions) {
+							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
+								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
 									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, ranges.NUMBER_OF_TREES, 
+												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
-									averageRunDataForParameters(parameters, paramTuneDir);
-									System.out.println(String.format("Averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									averageRunDataForParameters(parameters, paramTuningDirectory);
+									System.out.println(String.format("[%s] Averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+											datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
 							}
 						}
@@ -176,24 +118,25 @@ public class ParameterTuningTest3 {
 	
 	/**
 	 * 
-	 * @param runDataDirectory Should wither be .../run0/ or .../Averages/
+	 * @param runDataSubDirectory Should wither be run0/ or Averages/
 	 */
-	public static void readSortAndSaveOptimalParameterRecordsFromRunData(String runDataDirectory) {
+	public void readSortAndSaveOptimalParameterRecordsFromAverageRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
+		String runDataDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + runDataSubDirectory;
 		PriorityQueue<OptimalParameterRecord> sortedByCvValidationError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.CvValidationErrorComparator());
 		PriorityQueue<OptimalParameterRecord> sortedByAllDataTestError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.AllDataTestErrorComparator());
 		PriorityQueue<OptimalParameterRecord> sortedByTimeInSeconds = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.TimeInSecondsComparator());
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.maxLearningRates : ranges.constantLearningRates) {
-					for (int numberOfSplits : ranges.maxNumberOfSplts) {
-						for (double bagFraction : ranges.bagFractions) {
-							for (int minExamplesInNode : ranges.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : ranges.splitPolicies) {
+		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
+			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
+				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
+					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
+						for (double bagFraction : tuningParameters.bagFractions) {
+							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
+								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
 									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, ranges.NUMBER_OF_TREES, 
+												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
 
@@ -202,11 +145,11 @@ public class ParameterTuningTest3 {
 										sortedByCvValidationError.add(record);
 										sortedByAllDataTestError.add(record);
 										sortedByTimeInSeconds.add(record);
-										System.out.println(String.format("Created optimalParameterRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										System.out.println(String.format("[%s] Created optimalParameterRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									} else {
-										System.out.println(String.format("Failed to create optimalParameterRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										System.out.println(String.format("[%s] Failed to create optimalParameterRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									}
 								}
 							}
@@ -220,24 +163,25 @@ public class ParameterTuningTest3 {
 		OptimalParameterRecord.saveOptimalParameterRecords(runDataDirectory, "SortedByTimeInSeconds", sortedByTimeInSeconds);
 	}
 	
-	public static void generateMathematicaLearningCurvesForAllRunData(String datasetName, String runDataDirectory) {
+	public void generateMathematicaLearningCurvesForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
+		String runDataDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + runDataSubDirectory;
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : ranges.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? ranges.maxLearningRates : ranges.constantLearningRates) {
-					for (int numberOfSplits : ranges.maxNumberOfSplts) {
-						for (double bagFraction : ranges.bagFractions) {
-							for (int minExamplesInNode : ranges.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : ranges.splitPolicies) {
+		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
+			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
+				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
+					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
+						for (double bagFraction : tuningParameters.bagFractions) {
+							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
+								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
 									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, ranges.NUMBER_OF_TREES, 
+												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
-									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetName, runDataDirectory, parameters);
-									System.out.println(String.format("Created learning curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											parameters.getFileNamePrefix(), ++done, ranges.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters);
+									System.out.println(String.format("[%s] Created learning curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+											datasetParams.minimalName, parameters.getFileNamePrefix(), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
 							}
 						}
@@ -250,8 +194,8 @@ public class ParameterTuningTest3 {
 	
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
-	private static String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, String paramTuneDir, int runNumber) {
-		String runDataDir = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(), runNumber);
+	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
+		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(), runNumber);
 		new File(runDataDir).mkdirs();
 		if (!SimpleHostLock.checkAndClaimHostLock(runDataDir + parameters.getFileNamePrefix() + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
@@ -259,7 +203,7 @@ public class ParameterTuningTest3 {
 		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
 		}
-		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, ranges.CV_NUMBER_OF_FOLDS, ranges.CV_STEP_SIZE);
+		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
 		if (ensemble != null) {
 			try {
 				ensemble.saveRunDataToFile(runDataDir);
@@ -274,7 +218,7 @@ public class ParameterTuningTest3 {
 		}
 	}
 	
-	private static void averageRunDataForParameters(GbmParameters parameters, String paramTuneDir) {
+	private void averageRunDataForParameters(GbmParameters parameters, String paramTuneDir) {
 		double timeInSeconds = 0, 
 				cvTestError = 0, cvValidationError = 0, cvTrainingError = 0, 
 				allDataTrainingError = 0, allDataTestError = 0,
@@ -303,7 +247,7 @@ public class ParameterTuningTest3 {
 		int numberOfRunsFound = 0;
 		RunFileType runFileType = null;
 		// Read through all the files cooresponding to these parameters and average the data.
-		for (int runNumber = 0; runNumber < ranges.NUMBER_OF_RUNS; runNumber++) {
+		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 			
 			// Get the summary info at the top of the file.
 			OptimalParameterRecord summaryInfo = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters);
