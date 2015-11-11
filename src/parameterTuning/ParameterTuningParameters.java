@@ -21,7 +21,7 @@ public class ParameterTuningParameters {
 	public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
 			
 	public int NUMBER_OF_TREES, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE, NUMBER_OF_RUNS;
-	public double TRAINING_SAMPLE_FRACTION;
+	public static double TRAINING_SAMPLE_FRACTION = 0.8;
 	public double[] constantLearningRates;
 	public double[] minLearningRates;
 	public double[] maxLearningRates;
@@ -49,7 +49,6 @@ public class ParameterTuningParameters {
 			test3Parameters.NUMBER_OF_TREES = 150000;
 			test3Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test3Parameters.CV_STEP_SIZE = 5000;
-			test3Parameters.TRAINING_SAMPLE_FRACTION = 0.8;
 			
 			test3Parameters.constantLearningRates = new double[] {1, 0.7, 0.4, 0.1, 0.01, 0.001, 0.0001};
 			test3Parameters.minLearningRates = new double[] {0.01, 0.001, 0.0001};
@@ -80,7 +79,6 @@ public class ParameterTuningParameters {
 			test4Parameters.NUMBER_OF_TREES = 150000;
 			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test4Parameters.CV_STEP_SIZE = 5000;
-			test4Parameters.TRAINING_SAMPLE_FRACTION = 0.8;
 			
 			test4Parameters.constantLearningRates = new double[] {0.1, 0.01, 0.001, 0.0001};
 			test4Parameters.minLearningRates = new double[] {0.01, 0.001, 0.0001};
