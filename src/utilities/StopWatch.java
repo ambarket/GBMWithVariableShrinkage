@@ -1,10 +1,16 @@
 package utilities;
 public class StopWatch {
+
     double startTime, endTime;
 	
 	public StopWatch start() {
 		startTime = System.nanoTime();
 		return this;
+	}
+	
+	public double getElapsedHours() {
+		endTime = System.nanoTime();
+		return (endTime - startTime) / 60000000000.0 / 24;
 	}
 	
 	public double getElapsedMinutes() {
@@ -31,4 +37,51 @@ public class StopWatch {
 		endTime = System.nanoTime();
 		return (endTime - startTime);
 	}
+	
+	public String generateMessageWithTime(String message) {
+		Unit bestUnit = determineMostAppropriateUnit();
+		return String.format(message + ": %.4f %s", getTimeInUnit(bestUnit), bestUnit.name());
+	}
+	
+	public void printMessageWithTime(String message) {
+		System.out.println(generateMessageWithTime(message));
+	}
+	
+	public Unit determineMostAppropriateUnit() {
+		endTime = System.nanoTime();
+		int tmp = (int)Math.ceil(Math.log10(endTime - startTime));
+		if (tmp <= 3) {
+			return Unit.nanoseconds;
+		}
+		if (tmp <= 6) {
+			return Unit.milliseconds;
+		}
+		if (tmp <= 11) {
+			return Unit.seconds;
+		}
+		if (tmp <= 14) {
+			return Unit.minutes;
+		}
+		return Unit.hours;
+	}
+	
+	public double getTimeInUnit(Unit unit) {
+		switch (unit) {
+			case nanoseconds:
+				return getElapsedNanoSeconds();
+			case microseconds:
+				return getElapsedMicroSeconds();
+			case milliseconds:
+				return getElapsedMilliSeconds();
+			case seconds:
+				return getElapsedSeconds();
+			case minutes:
+				return getElapsedMinutes();
+			case hours:
+				return getElapsedHours();
+		}
+		throw new IllegalArgumentException();
+	}
+	
+	private enum Unit {nanoseconds, microseconds, milliseconds, seconds, minutes, hours}
 }
