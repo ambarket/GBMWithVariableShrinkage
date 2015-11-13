@@ -47,7 +47,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest3() {
 		if (test3Parameters == null) {
 			test3Parameters = new ParameterTuningParameters();
-			test3Parameters.NUMBER_OF_RUNS = 2; 
+			test3Parameters.NUMBER_OF_RUNS = 10; 
 			test3Parameters.NUMBER_OF_TREES = 150000;
 			test3Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test3Parameters.CV_STEP_SIZE = 5000;
@@ -77,7 +77,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest4() {
 		if (test4Parameters == null) {
 			test4Parameters = new ParameterTuningParameters();
-			test4Parameters.NUMBER_OF_RUNS = 10;
+			test4Parameters.NUMBER_OF_RUNS = 2;
 			test4Parameters.NUMBER_OF_TREES = 150000;
 			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test4Parameters.CV_STEP_SIZE = 5000;
