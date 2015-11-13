@@ -198,8 +198,7 @@ public class ParameterTuningTest {
 	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
 		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
-
-		new File(runDataDir).mkdirs();
+		
 		new File(locksDir).mkdirs();
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
