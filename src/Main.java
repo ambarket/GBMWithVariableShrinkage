@@ -17,6 +17,12 @@ public class Main {
 			case "processParamTuning4":
 				processParamTuning4();
 				break;
+			case "runParamTuning5":
+				runParamTuning5();
+				break;
+			case "processParamTuning5":
+				processParamTuning5();
+				break;
 		}
 	}
 	
@@ -34,6 +40,14 @@ public class Main {
 	
 	public static void processParamTuning4() {
 		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest4());
+	}
+	
+	public static void runParamTuning5() {
+		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest5());
+	}
+	
+	public static void processParamTuning5() {
+		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest5());
 	}
 	
 	
