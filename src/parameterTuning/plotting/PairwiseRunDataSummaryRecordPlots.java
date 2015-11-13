@@ -4,47 +4,50 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-import parameterTuning.OptimalParameterRecord;
+import parameterTuning.RunDataSummaryRecord;
+import parameterTuning.RunDataSummaryRecordFilter;
+import parameterTuning.RunDataSummaryRecord.FilterableProperty;
 import regressionTree.RegressionTree.LearningRatePolicy;
 
 
-public class PairwiseOptimalParameterRecordPlots {
-	public static void generatePairwiseOptimalParameterRecordPlots(String datasetName, String paramTuneDir, ArrayList<OptimalParameterRecord> records) {
-		ListEntryGetter.setMinsAndMaxes(records);
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.NOT_CVE_ListEntryGetter());
+public class PairwiseRunDataSummaryRecordPlots {
+	public static void generatePairwiseRunDataSummaryRecordPlots(String datasetName, String paramTuneDir) {
+		ArrayList<RunDataSummaryRecord> records = RunDataSummaryRecord.readRunDataSummaryRecords(datasetName, paramTuneDir);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.NOT_CVE_ListEntryGetter(), null);
 		
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_TIME_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_TIME_ListEntryGetter());
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_TIME_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_TIME_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_TIME_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_TIME_ListEntryGetter(), null);
 		
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_NOT_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_NOT_ListEntryGetter());
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_NOT_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_NOT_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_NOT_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_NOT_ListEntryGetter(), null);
 		
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_CVE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_CVE_ListEntryGetter());
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_CVE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_CVE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_CVE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_CVE_ListEntryGetter(), null);
 		
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_ADTE_ListEntryGetter());
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_ADTE_ListEntryGetter());
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.LR_ADTE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.BF_ADTE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.SPLITS_ADTE_ListEntryGetter(), null);
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MEIN_ADTE_ListEntryGetter(), null);
 		
 		
-		plotStuffFromOptimalParameterRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MaxLR_MinLR_ADTE_ListEntryGetter());
+		plotStuffFromRunDataSummaryRecords(datasetName, paramTuneDir, records, new ListEntryGetter.MaxLR_MinLR_ADTE_ListEntryGetter(), null);
 	}
 	
-	public static void plotStuffFromOptimalParameterRecords(String datasetName, String paramTuningDir, ArrayList<OptimalParameterRecord> records, ListEntryGetter entryGetter) {
+	public static void plotStuffFromRunDataSummaryRecords(String datasetName, String paramTuningDir, ArrayList<RunDataSummaryRecord> records, ListEntryGetter entryGetter, RunDataSummaryRecordFilter filter) {
+		ListEntryGetter.setMinsAndMaxes(records);
 		StringBuffer constantBuffer = new StringBuffer();
 		StringBuffer variableBuffer = new StringBuffer();
 		constantBuffer.append(entryGetter.getMathematicaVeriableName(datasetName, "ConstantLR") + " := {");
 		variableBuffer.append(entryGetter.getMathematicaVeriableName(datasetName, "VariableLR") + " := {");
 		boolean firstConstantWritten = false, firstVariableWritten = false;
 		for (int i = 0; i < records.size(); i++) {
-			OptimalParameterRecord record = records.get(i);
+			RunDataSummaryRecord record = records.get(i);
 			String entry = entryGetter.getEntry(record);
 			if (record.parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
 				if (firstConstantWritten) {

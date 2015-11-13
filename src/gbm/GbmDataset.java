@@ -349,7 +349,7 @@ public class GbmDataset {
 					+ "%.5f\t"
 					+ "%.5f\t"
 					+ "%.8f\n",
-					shuffledIndicies[i], 
+					shuffledIndicies[i + numberOfTrainingExamples], 
 					testResponses[i].getNumericValue(),
 					testPredictionsAtOptimalNumberOfTrees[i],
 					testPredictionsAtOptimalNumberOfTrees[i] - testResponses[i].getNumericValue(),

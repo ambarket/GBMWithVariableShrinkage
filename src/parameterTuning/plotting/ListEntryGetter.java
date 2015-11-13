@@ -1,7 +1,7 @@
 package parameterTuning.plotting;
 import java.util.ArrayList;
 
-import parameterTuning.OptimalParameterRecord;
+import parameterTuning.RunDataSummaryRecord;
 import utilities.DoubleCompare;
 
 
@@ -50,9 +50,9 @@ import utilities.DoubleCompare;
 			return getPlotTitle(datasetName, prefix);
 		}
 		
-		public abstract String getEntry(OptimalParameterRecord record);
+		public abstract String getEntry(RunDataSummaryRecord record);
 		
-		public static void setMinsAndMaxes(ArrayList<OptimalParameterRecord> records) {
+		public static void setMinsAndMaxes(ArrayList<RunDataSummaryRecord> records) {
 			double maxCVE  = 0.0, minCVE  = Double.MAX_VALUE, 
 					   maxADTE = 0.0, minADTE = Double.MAX_VALUE,
 					   maxTIME = 0.0, minTIME = Double.MAX_VALUE,
@@ -63,7 +63,7 @@ import utilities.DoubleCompare;
 			    maxNOS = 0, minNOS  = Integer.MAX_VALUE,
 			    maxMEIN = 0, minMEIN = Integer.MAX_VALUE;
 				for (int i = 0; i < records.size(); i++) {
-					OptimalParameterRecord record = records.get(i);
+					RunDataSummaryRecord record = records.get(i);
 					if (DoubleCompare.lessThan(record.allDataTestError, minADTE)) {
 						minADTE = record.allDataTestError;
 					}
@@ -151,7 +151,7 @@ import utilities.DoubleCompare;
 			public String getZLabel() {
 				return "AllDataTestError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(
 						record.parameters.maxLearningRate, 
 						record.parameters.minLearningRate, 
@@ -196,7 +196,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(
 						record.parameters.maxLearningRate, 
 						record.parameters.numOfTrees, 
@@ -246,7 +246,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.optimalNumberOfTrees, record.cvValidationError);
 			}
 			@Override
@@ -295,7 +295,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "OptimalNumberOfTrees";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.optimalNumberOfTrees);
 			}
 			@Override
@@ -342,7 +342,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.cvValidationError);
 			}
 			@Override
@@ -389,7 +389,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "AllDataTestError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.allDataTestError);
 			}
 			@Override
@@ -436,7 +436,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "TimeinSeconds";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.bagFraction, record.timeInSeconds);
 			}
 			@Override
@@ -484,7 +484,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "OptimalNumberOfTrees";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.optimalNumberOfTrees);
 			}
 			@Override
@@ -531,7 +531,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "AllDataTestError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.allDataTestError);
 			}
 			@Override
@@ -578,7 +578,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.cvValidationError);
 			}
 			@Override
@@ -625,7 +625,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "TimeinSeconds";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxNumberOfSplits, record.timeInSeconds);
 			}
 			@Override
@@ -673,7 +673,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "OptimalNumberOfTrees";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.optimalNumberOfTrees);
 			}
 			@Override
@@ -720,7 +720,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "AllDataTestError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.allDataTestError);
 			}
 			@Override
@@ -767,7 +767,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.cvValidationError);
 			}
 			@Override
@@ -814,7 +814,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "TimeinSeconds";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.maxLearningRate, record.timeInSeconds);
 			}
 			@Override
@@ -862,7 +862,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "OptimalNumberOfTrees";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.optimalNumberOfTrees);
 			}
 			@Override
@@ -910,7 +910,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "AllDataTestError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.allDataTestError);
 			}
 			@Override
@@ -957,7 +957,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "CVError";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.cvValidationError);
 			}
 			@Override
@@ -1004,7 +1004,7 @@ import utilities.DoubleCompare;
 			public String getYLabel() {
 				return "TimeinSeconds";
 			}
-			public String getEntry(OptimalParameterRecord record) {
+			public String getEntry(RunDataSummaryRecord record) {
 				return MathematicaListCreator.convertNObjectsIntoNDimensionalListEntry(record.parameters.minExamplesInNode, record.timeInSeconds);
 			}
 			@Override

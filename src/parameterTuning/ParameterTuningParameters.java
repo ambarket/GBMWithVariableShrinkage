@@ -1,6 +1,6 @@
 package parameterTuning;
 
-import parameterTuning.OptimalParameterRecord.RunFileType;
+import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import dataset.DatasetParameters;
@@ -33,12 +33,14 @@ public class ParameterTuningParameters {
 	public SplitsPolicy[] splitPolicies;
 	public int totalNumberOfTests;
 	public DatasetParameters[] datasets;
-	public String parameterTuningDirectory;
+	public String runDataOutputDirectory;
+	public String runDataProcessingDirectory;
 	public String locksDirectory;
 	public RunFileType runFileType;
 	
 	private static ParameterTuningParameters test3Parameters;
 	private static ParameterTuningParameters test4Parameters;
+	private static ParameterTuningParameters test5Parameters;
 	
 	private ParameterTuningParameters() {
 		
@@ -66,7 +68,7 @@ public class ParameterTuningParameters {
 					((test3Parameters.minLearningRates.length * test3Parameters.maxLearningRates.length) + (test3Parameters.constantLearningRates.length))
 					 * test3Parameters.maxNumberOfSplts.length * test3Parameters.bagFractions.length * test3Parameters.minExamplesInNode.length;
 			
-			test3Parameters.parameterTuningDirectory = (System.getProperty("user.dir") + "/parameterTuning/3/");
+			test3Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/3/");
 			
 			test3Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingHourlyParameters, crimeCommunitiesParameters, bikeSharingDayParameters};
 			test3Parameters.runFileType = RunFileType.ParamTuning3;
@@ -77,7 +79,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest4() {
 		if (test4Parameters == null) {
 			test4Parameters = new ParameterTuningParameters();
-			test4Parameters.NUMBER_OF_RUNS = 2;
+			test4Parameters.NUMBER_OF_RUNS = 10;
 			test4Parameters.NUMBER_OF_TREES = 150000;
 			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test4Parameters.CV_STEP_SIZE = 5000;
@@ -96,43 +98,45 @@ public class ParameterTuningParameters {
 					((test4Parameters.minLearningRates.length * test4Parameters.maxLearningRates.length) + (test4Parameters.constantLearningRates.length))
 					 * test4Parameters.maxNumberOfSplts.length * test4Parameters.bagFractions.length * test4Parameters.minExamplesInNode.length;
 			
-			test4Parameters.parameterTuningDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
+			test4Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
+			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
+			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 		}
 		return test4Parameters;
 	}
 	
 	public static ParameterTuningParameters getRangesForTest5() {
-		if (test4Parameters == null) {
-			test4Parameters = new ParameterTuningParameters();
-			test4Parameters.NUMBER_OF_RUNS = 1;
-			test4Parameters.NUMBER_OF_TREES = 150000;
-			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
-			test4Parameters.CV_STEP_SIZE = 5000;
+		if (test5Parameters == null) {
+			test5Parameters = new ParameterTuningParameters();
+			test5Parameters.NUMBER_OF_RUNS = 1;
+			test5Parameters.NUMBER_OF_TREES = 150000;
+			test5Parameters.CV_NUMBER_OF_FOLDS = 4;
+			test5Parameters.CV_STEP_SIZE = 5000;
 			
-			test4Parameters.constantLearningRates = new double[] {0.01};
-			test4Parameters.minLearningRates = new double[] {0.01};
-			test4Parameters.maxLearningRates = new double[] {0.4};
-			test4Parameters.maxNumberOfSplts = new int[] {1};
+			test5Parameters.constantLearningRates = new double[] {0.01};
+			test5Parameters.minLearningRates = new double[] {0.01};
+			test5Parameters.maxLearningRates = new double[] {0.4};
+			test5Parameters.maxNumberOfSplts = new int[] {1};
 
-			test4Parameters.bagFractions = new double[] {0.75};
-			test4Parameters.minExamplesInNode = new int[] {1};	
-			test4Parameters.learningRatePolicies = new LearningRatePolicy[] {LearningRatePolicy.REVISED_VARIABLE, LearningRatePolicy.CONSTANT};
-			test4Parameters.splitPolicies = new SplitsPolicy[] {SplitsPolicy.CONSTANT};
+			test5Parameters.bagFractions = new double[] {0.75};
+			test5Parameters.minExamplesInNode = new int[] {1};	
+			test5Parameters.learningRatePolicies = new LearningRatePolicy[] {LearningRatePolicy.REVISED_VARIABLE, LearningRatePolicy.CONSTANT};
+			test5Parameters.splitPolicies = new SplitsPolicy[] {SplitsPolicy.CONSTANT};
 			
-			test4Parameters.totalNumberOfTests = 
+			test5Parameters.totalNumberOfTests = 
 					((test4Parameters.minLearningRates.length * test4Parameters.maxLearningRates.length) + (test4Parameters.constantLearningRates.length))
 					 * test4Parameters.maxNumberOfSplts.length * test4Parameters.bagFractions.length * test4Parameters.minExamplesInNode.length;
 			
-			test4Parameters.parameterTuningDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
-			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
+			test5Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {bikeSharingHourlyParameters};
-			test4Parameters.runFileType = RunFileType.ParamTuning4;
+			test5Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
+			
+			test5Parameters.datasets = new DatasetParameters[] {bikeSharingHourlyParameters};
+			test5Parameters.runFileType = RunFileType.ParamTuning4;
 		}
-		return test4Parameters;
+		return test5Parameters;
 	}
 }

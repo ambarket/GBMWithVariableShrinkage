@@ -1,6 +1,6 @@
 package gbm;
 
-import parameterTuning.OptimalParameterRecord.RunFileType;
+import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.Logger;

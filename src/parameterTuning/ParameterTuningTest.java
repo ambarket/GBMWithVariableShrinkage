@@ -6,22 +6,26 @@ import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.concurrent.Executors;
 
-import parameterTuning.OptimalParameterRecord.RunFileType;
+import parameterTuning.RunDataSummaryRecord.RunFileType;
 import parameterTuning.plotting.MathematicaLearningCurveCreator;
-import parameterTuning.plotting.PairwiseOptimalParameterRecordPlots;
+import parameterTuning.plotting.PairwiseRunDataSummaryRecordPlots;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
-import sun.net.www.protocol.http.HttpURLConnection.TunnelState;
+import utilities.DoubleCompare;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
+import utilities.SumCountAverage;
 import dataset.Dataset;
 import dataset.DatasetParameters;
 
@@ -53,9 +57,8 @@ public class ParameterTuningTest {
 
 			test.averageAllRunData(datasetParams);
 			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
-			test.readSortAndSaveOptimalParameterRecordsFromAverageRunData(datasetParams, "/Averages/");
-			ArrayList<OptimalParameterRecord> records = OptimalParameterRecord.readOptimalParameterRecords(datasetParams.minimalName, test.tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/Averages/");
-			PairwiseOptimalParameterRecordPlots.generatePairwiseOptimalParameterRecordPlots(datasetParams.minimalName, test.tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/Averages/", records);
+			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
+			PairwiseRunDataSummaryRecordPlots.generatePairwiseRunDataSummaryRecordPlots(datasetParams.minimalName, test.tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Averages/");
 		}
 	}
 
@@ -90,7 +93,7 @@ public class ParameterTuningTest {
 	}
 	
 	public void averageAllRunData(DatasetParameters datasetParams) {
-		String paramTuningDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + "/";
+		String paramTuningDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/";
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
@@ -105,9 +108,19 @@ public class ParameterTuningTest {
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
+									String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
+									new File(locksDir).mkdirs();
+									if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
+										System.out.println(String.format("[%s] Already averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										continue;
+									}
+									
 									averageRunDataForParameters(parameters, paramTuningDirectory);
-									System.out.println(String.format("[%s] Averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+									SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
+									System.out.println(String.format("[%s] Successfully averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									
 								}
 							}
 						}
@@ -121,11 +134,18 @@ public class ParameterTuningTest {
 	 * 
 	 * @param runDataSubDirectory Should wither be run0/ or Averages/
 	 */
-	public void readSortAndSaveOptimalParameterRecordsFromAverageRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
-		String runDataDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + runDataSubDirectory;
-		PriorityQueue<OptimalParameterRecord> sortedByCvValidationError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.CvValidationErrorComparator());
-		PriorityQueue<OptimalParameterRecord> sortedByAllDataTestError = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.AllDataTestErrorComparator());
-		PriorityQueue<OptimalParameterRecord> sortedByTimeInSeconds = new PriorityQueue<OptimalParameterRecord>(new OptimalParameterRecord.TimeInSecondsComparator());
+	public void readSortAndSaveRunDataSummaryRecordsFromAverageRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/RunDataSummaryRecords/";
+		new File(locksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryLock.txt")) {
+			System.out.println(String.format("[%s] Already Created RunDataSummaryRecord for %s", datasetParams.minimalName));
+			return;
+		}
+		
+		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
+		PriorityQueue<RunDataSummaryRecord> sortedByCvValidationError = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.CvValidationErrorComparator());
+		PriorityQueue<RunDataSummaryRecord> sortedByAllDataTestError = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.AllDataTestErrorComparator());
+		PriorityQueue<RunDataSummaryRecord> sortedByTimeInSeconds = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.TimeInSecondsComparator());
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
@@ -141,15 +161,15 @@ public class ParameterTuningTest {
 												learningRatePolicy, splitPolicy);
 									timer.start();
 
-									OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
+									RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
 									if (record != null) {
 										sortedByCvValidationError.add(record);
 										sortedByAllDataTestError.add(record);
 										sortedByTimeInSeconds.add(record);
-										System.out.println(String.format("[%s] Created optimalParameterRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+										System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									} else {
-										System.out.println(String.format("[%s] Failed to create optimalParameterRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+										System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 									}
 								}
@@ -159,13 +179,14 @@ public class ParameterTuningTest {
 				}
 			}
 		}
-		OptimalParameterRecord.saveOptimalParameterRecords(runDataDirectory, "SortedByCvValidationError", sortedByCvValidationError);
-		OptimalParameterRecord.saveOptimalParameterRecords(runDataDirectory, "SortedByAllDataTestError", sortedByAllDataTestError);
-		OptimalParameterRecord.saveOptimalParameterRecords(runDataDirectory, "SortedByTimeInSeconds", sortedByTimeInSeconds);
+		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByCvValidationError", sortedByCvValidationError);
+		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByAllDataTestError", sortedByAllDataTestError);
+		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByTimeInSeconds", sortedByTimeInSeconds);
+		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryLock.txt");
 	}
 	
 	public void generateMathematicaLearningCurvesForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
-		String runDataDirectory = tuningParameters.parameterTuningDirectory + datasetParams.minimalName + runDataSubDirectory;
+		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
@@ -180,8 +201,16 @@ public class ParameterTuningTest {
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 									timer.start();
+									String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
+									new File(locksDir).mkdirs();
+									if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--errorCurveLock.txt")) {
+										System.out.println(String.format("[%s] Already Created error curve runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										continue;
+									}
 									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters, tuningParameters.runFileType);
-									System.out.println(String.format("[%s] Created learning curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+									SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--errorCurveLock.txt");
+									System.out.println(String.format("[%s] Created error curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 								}
 							}
@@ -196,7 +225,7 @@ public class ParameterTuningTest {
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
 	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
-		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
+		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -221,6 +250,33 @@ public class ParameterTuningTest {
 		}
 	}
 	
+	/* Not sure how much sense this makes...*/
+	private static class PerExampleRunDataEntry {
+		public int originalFileLineNum;
+		public double targetResponse;
+		public SumCountAverage predictionAtOptimalNOTAsTrainingData = new SumCountAverage();
+		public SumCountAverage predictionAtOptimalNOTAsTestData = new SumCountAverage();
+		public SumCountAverage residualAsTrainingData = new SumCountAverage();
+		public SumCountAverage residualAsTestData = new SumCountAverage();
+		public SumCountAverage avgLearningRateAsTrainingData = new SumCountAverage();
+		public SumCountAverage avgLearningRateAsTestData = new SumCountAverage();
+		
+		public PerExampleRunDataEntry(int originalFileLineNum, double targetResponse) {
+			this.originalFileLineNum = originalFileLineNum;
+			this.targetResponse = targetResponse;
+		}
+	}
+	
+	
+	private static class MapEntryDescendingSumCountAverageComparator implements Comparator<Map.Entry<String,SumCountAverage>> {
+
+		@Override
+		public int compare(Entry<String, SumCountAverage> arg0, Entry<String, SumCountAverage> arg1) {
+			return DoubleCompare.compare(arg1.getValue().getMean(), arg0.getValue().getMean());
+		}
+		
+	}
+	
 	private void averageRunDataForParameters(GbmParameters parameters, String paramTuneDir) {
 		double timeInSeconds = 0, 
 				cvTestError = 0, cvValidationError = 0, cvTrainingError = 0, 
@@ -229,6 +285,11 @@ public class ParameterTuningTest {
 				avgNumberOfSplits = 0, stdDevNumberOfSplits = 0,
 				avgLearningRate = 0, stdDevLearningRate = 0;
 		int optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
+		
+		HashMap<String, SumCountAverage> cvEnsembleReltiveInfluences = new HashMap<>();
+		HashMap<String, SumCountAverage> allDataFunctionReltiveInfluences = new HashMap<>();
+		HashMap<Integer, PerExampleRunDataEntry> perExampleRunData = new HashMap<>();
+		
 		ArrayList<Double> avgCvTrainingErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> avgCvValidationErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> avgCvTestErrorByIteration = new ArrayList<Double>();
@@ -253,7 +314,7 @@ public class ParameterTuningTest {
 		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 			
 			// Get the summary info at the top of the file.
-			OptimalParameterRecord summaryInfo = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters, tuningParameters.runFileType);
+			RunDataSummaryRecord summaryInfo = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters, tuningParameters.runFileType);
 			if (summaryInfo == null) {
 				// Run data file wasn't found. Continue to next iteration.
 				continue;
@@ -292,15 +353,69 @@ public class ParameterTuningTest {
 			}
 
 			try {
-				// ALready know it exists based on successful creation of OptimalParameterRecord
+				// Already know it exists based on successful creation of RunDataSummaryRecord
 				String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber) + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--runData.txt";
 				String line = null;
 				BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 				
-				// TODO: Average those too.
-				// skip summary info, per example data, relative influences, and header
-				while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError"));
-				// read in per tree information
+				if (runFileType != RunFileType.ParamTuning4) {
+					// Skip straight to per tree info because per example/relative influence data isn't available.
+					while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError"));
+				} else {
+					// skip summary info because we already read it in as RunDataSummaryRecord above.
+					while (!(line = br.readLine()).startsWith("Training Data [OriginalFileLineNum"));
+					
+					// Average training data info
+					while (!(line = br.readLine()).startsWith("Test Data [OriginalFileLineNum")) {
+						String[] components = line.split("\t");
+						int originalFileLineNumber = Integer.parseInt(components[0]);
+						PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
+						
+						if (entry == null) {
+							entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
+							perExampleRunData.put(originalFileLineNumber, entry);
+						}
+						entry.predictionAtOptimalNOTAsTrainingData.addData(Double.parseDouble(components[2]));
+						entry.residualAsTrainingData.addData(Double.parseDouble(components[3]));
+						entry.avgLearningRateAsTrainingData.addData(Double.parseDouble(components[4]));
+					}
+					// Average test data info
+					while (!(line = br.readLine()).startsWith("---------CV Ensemble Relative Influences")) {
+						String[] components = line.split("\t");
+						int originalFileLineNumber = Integer.parseInt(components[0]);
+						PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
+						
+						if (entry == null) {
+							entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
+							perExampleRunData.put(originalFileLineNumber, entry);
+						}
+						entry.predictionAtOptimalNOTAsTestData.addData(Double.parseDouble(components[2]));
+						entry.residualAsTestData.addData(Double.parseDouble(components[3]));
+						entry.avgLearningRateAsTestData.addData(Double.parseDouble(components[4]));
+					}
+					// Average CV Ensemble Relative Influences
+					while (!(line = br.readLine()).startsWith("---------All Data Function Relative Influences")) {
+						String[] components = line.split(": ");
+						SumCountAverage avg = cvEnsembleReltiveInfluences.get(components[0]);
+						if (avg == null) {
+							avg = new SumCountAverage();
+							cvEnsembleReltiveInfluences.put(components[0], avg);
+						}
+						avg.addData(Double.parseDouble(components[1]));
+					}
+					// Average All Data Function Relative Influences
+					while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError")) {
+						String[] components = line.split(": ");
+						SumCountAverage avg = allDataFunctionReltiveInfluences.get(components[0]);
+						if (avg == null) {
+							avg = new SumCountAverage();
+							allDataFunctionReltiveInfluences.put(components[0], avg);
+						}
+						avg.addData(Double.parseDouble(components[1]));
+					}
+				}
+
+				// Avg Per Tree RunData
 				int index = 0;
 				while ((line = br.readLine()) != null) {
 					String[] components = line.split("\t");
@@ -414,6 +529,8 @@ public class ParameterTuningTest {
 			String averageRunDataDirectory = paramTuneDir + "Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 			new File(averageRunDataDirectory).mkdirs();
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--runData.txt"));
+			BufferedWriter perExampleRunDataWriter = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagePerExampleRunData.txt"));
+			BufferedWriter relativeInfluencesWriter = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averageRelativeInfluences.txt"));
 
 			bw.write(String.format("Time In Seconds: %f \n"
 					+ "Step Size: %d \n"
@@ -506,6 +623,50 @@ public class ParameterTuningTest {
 			
 			bw.flush();
 			bw.close();
+			
+			perExampleRunDataWriter.write("OriginalFileLineNum\t"
+					+ "TargetResponse\t"
+					+ "AsTrainingData_Count"
+					+ "AsTrainingData_PredictionAtOptimalNOT\t"
+					+ "AsTrainingData_Residual\t"
+					+ "AsTrainingData_AvgLearningRate\t"
+					+ "AsTestData_Count"
+					+ "AsTestData_PredictionAtOptimalNOT\t"
+					+ "AsTestData_Residual\t"
+					+ "AsTestData_AvgLearningRate\n");
+			for (int i = 0; i < perExampleRunData.size(); i++) {
+				PerExampleRunDataEntry entry = perExampleRunData.get(i);
+				perExampleRunDataWriter.write(String.format("%d\t%f\t%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n",
+						entry.originalFileLineNum,
+						entry.targetResponse,
+						entry.predictionAtOptimalNOTAsTrainingData.getCount(),
+						entry.predictionAtOptimalNOTAsTrainingData.getMean(),
+						entry.residualAsTrainingData.getMean(),
+						entry.avgLearningRateAsTrainingData.getMean(),
+						entry.predictionAtOptimalNOTAsTestData.getCount(),
+						entry.predictionAtOptimalNOTAsTestData.getMean(),
+						entry.residualAsTestData.getMean(),
+						entry.avgLearningRateAsTestData.getMean()));
+			}
+			perExampleRunDataWriter.flush();
+			perExampleRunDataWriter.close();
+			
+			relativeInfluencesWriter.write("---------CV Ensemble Relative Influences-----------\n");
+			ArrayList<Map.Entry<String,SumCountAverage>> sortedCvRelativeInfluences = new ArrayList<>(cvEnsembleReltiveInfluences.entrySet());
+			sortedCvRelativeInfluences.sort(new MapEntryDescendingSumCountAverageComparator());
+			for (Map.Entry<String, SumCountAverage> relativeInfluence : sortedCvRelativeInfluences) {
+				relativeInfluencesWriter.write(relativeInfluence.getKey() + ": " + relativeInfluence.getValue().getMean() + "\n");
+			}
+			
+			relativeInfluencesWriter.write("\n---------All Data Function Relative Influences-----------\n");
+			ArrayList<Map.Entry<String,SumCountAverage>> sortedAllDataRelativeInfluences = new ArrayList<>(allDataFunctionReltiveInfluences.entrySet());
+			sortedAllDataRelativeInfluences.sort(new MapEntryDescendingSumCountAverageComparator());
+			for (Map.Entry<String, SumCountAverage> relativeInfluence : sortedAllDataRelativeInfluences) {
+				relativeInfluencesWriter.write(relativeInfluence.getKey() + ": " + relativeInfluence.getValue().getMean() + "\n");
+			}
+			relativeInfluencesWriter.flush();
+			relativeInfluencesWriter.close();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
-import parameterTuning.OptimalParameterRecord.RunFileType;
+import parameterTuning.RunDataSummaryRecord.RunFileType;
 import parameterTuning.plotting.MathematicaListCreator;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
@@ -298,42 +298,45 @@ public class CrossValidatedResultFunctionEnsemble {
 		normal.write(getSummary());
 		normal.write(allDataGbmDataset.getPerExamplePrintOut(trainingPredictionsAtOptimalNumberOfTrees, testPredictionsAtOptimalNumberOfTrees));
 		normal.write(getRelativeInfluencesSummary());
-		normal.write(getPerTreeInformation());
+		printPerTreeInformation(normal);
 		normal.flush();
 		normal.close();
 	}
 	
-	public String getPerTreeInformation() {
-		StringBuffer retval = new StringBuffer();
-		retval.append("TreeNumber\t"
-				+ "AvgCvTrainingError\t"
-				+ "AvgCvValidationError\t"
-				+ "AvgCvTestError\t"
-				+ "AllDataTrainingError\t"
-				+ "AllDataTestError\t"
-				+ "CvEnsembleTrainingError\t"
-				+ "CvEnsembleTestError\t"
-				+ "ExamplesInNodeMean\t"
-				+ "ExamplesInNodeStdDev\t"
-				+ "LearningRateMean\t"
-				+ "LearningRateStdDev\t"
-				+ "ActualNumberOfSplits\n");
-		for (int i = 0; i < totalNumberOfTrees; i++) {
-			retval.append(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
-					i+1,
-					avgCvTrainingErrors[i],
-					avgCvValidationErrors[i],
-					avgCvTestErrors[i],
-					allDataFunction.trainingError.get(i),
-					allDataFunction.testError.get(i),
-					cvEnsembleTrainingErrors[i],
-					cvEnsembleTestErrors[i],
-					allDataGbmDataset.avgExamplesInNodeForEachTree.get(i).getMean(),
-					allDataGbmDataset.avgExamplesInNodeForEachTree.get(i).getRootMeanSquaredError(),
-					allDataGbmDataset.avgLearningRatesForEachTree.get(i).getMean(),
-					allDataGbmDataset.avgLearningRatesForEachTree.get(i).getRootMeanSquaredError(),
-					allDataFunction.trees.get(i).actualNumberOfSplits));
+	public void printPerTreeInformation(BufferedWriter bw) {
+		try {
+			bw.write("TreeNumber\t"
+					+ "AvgCvTrainingError\t"
+					+ "AvgCvValidationError\t"
+					+ "AvgCvTestError\t"
+					+ "AllDataTrainingError\t"
+					+ "AllDataTestError\t"
+					+ "CvEnsembleTrainingError\t"
+					+ "CvEnsembleTestError\t"
+					+ "ExamplesInNodeMean\t"
+					+ "ExamplesInNodeStdDev\t"
+					+ "LearningRateMean\t"
+					+ "LearningRateStdDev\t"
+					+ "ActualNumberOfSplits\n");
+			for (int i = 0; i < totalNumberOfTrees; i++) {
+				bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
+						i+1,
+						avgCvTrainingErrors[i],
+						avgCvValidationErrors[i],
+						avgCvTestErrors[i],
+						allDataFunction.trainingError.get(i),
+						allDataFunction.testError.get(i),
+						cvEnsembleTrainingErrors[i],
+						cvEnsembleTestErrors[i],
+						allDataGbmDataset.avgExamplesInNodeForEachTree.get(i).getMean(),
+						allDataGbmDataset.avgExamplesInNodeForEachTree.get(i).getRootMeanSquaredError(),
+						allDataGbmDataset.avgLearningRatesForEachTree.get(i).getMean(),
+						allDataGbmDataset.avgLearningRatesForEachTree.get(i).getRootMeanSquaredError(),
+						allDataFunction.trees.get(i).actualNumberOfSplits));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
 		}
-		return retval.toString();
 	}
 }

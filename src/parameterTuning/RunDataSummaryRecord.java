@@ -16,9 +16,10 @@ import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.DoubleCompare;
 
 
-public class OptimalParameterRecord {
+public class RunDataSummaryRecord {
 	// An unfortunate consequence of continuously wanting to add more data.
 	public enum RunFileType {Original, ParamTuning2, ParamTuning3, ParamTuning4};
+	public enum FilterableProperty {BagFraction, MinExamplesInNode, MinLearningRate, MaxLearningRate, MaxNumberOfSplits, LearningRatePolicy}
 	public GbmParameters parameters;
 	public double timeInSeconds;
 	public int stepSize;
@@ -44,49 +45,49 @@ public class OptimalParameterRecord {
 		this.timeInSeconds = (timeInSeconds / numberOfTreesInPartialRun) * totalNumberOfTrees;
 	}
 
-	public static class CvValidationErrorComparator implements Comparator<OptimalParameterRecord> {
+	public static class CvValidationErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
-		public int compare(OptimalParameterRecord o1, OptimalParameterRecord o2) {
+		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
 			return DoubleCompare.compare(o1.cvValidationError, o2.cvValidationError);
 		}
 	}
 	
-	public static class CvTestErrorComparator implements Comparator<OptimalParameterRecord> {
+	public static class CvTestErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
-		public int compare(OptimalParameterRecord o1, OptimalParameterRecord o2) {
+		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
 			return DoubleCompare.compare(o1.cvTestError, o2.cvTestError);
 		}
 	}
 	
-	public static class TimeInSecondsComparator implements Comparator<OptimalParameterRecord> {
+	public static class TimeInSecondsComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
-		public int compare(OptimalParameterRecord o1, OptimalParameterRecord o2) {
+		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
 			return DoubleCompare.compare(o1.timeInSeconds, o2.timeInSeconds);
 		}
 	}
 	
-	public static class AllDataTestErrorComparator implements Comparator<OptimalParameterRecord> {
+	public static class AllDataTestErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
-		public int compare(OptimalParameterRecord o1, OptimalParameterRecord o2) {
+		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
 			return DoubleCompare.compare(o1.allDataTestError, o2.allDataTestError);
 		}
 	}
 	
-	public static class AllDataTrainingErrorComparator implements Comparator<OptimalParameterRecord> {
+	public static class AllDataTrainingErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
-		public int compare(OptimalParameterRecord o1, OptimalParameterRecord o2) {
+		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
 			return DoubleCompare.compare(o1.allDataTrainingError, o2.allDataTrainingError);
 		}
 	}
 	
-	public static void saveOptimalParameterRecordsOldFormat(String paramTuneDir, String fileNamePrefix, PriorityQueue<OptimalParameterRecord> sortedEnsembles) {
+	public static void saveRunDataSummaryRecordsOldFormat(String paramTuneDir, String fileNamePrefix, PriorityQueue<RunDataSummaryRecord> sortedEnsembles) {
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
 			BufferedWriter constant = new BufferedWriter(new PrintWriter(new File( paramTuneDir + "Constant_" + fileNamePrefix + "Parameters.txt")));
 			BufferedWriter variable = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "Variable_" + fileNamePrefix + "Parameters.txt")));
 			bw.append("TimeInSeconds\tCvValidation\tCvTest\tAllDataTraining\tAllDataTest\tTotalNumberOfTreesTrained\tOptimalNumberOfTrees\t" + GbmParameters.getOldTabSeparatedHeader() + "\n");
 			while (!sortedEnsembles.isEmpty()) {
-				OptimalParameterRecord record = sortedEnsembles.poll();
+				RunDataSummaryRecord record = sortedEnsembles.poll();
 				
 				bw.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
 						record.timeInSeconds, record.cvValidationError, 
@@ -121,15 +122,15 @@ public class OptimalParameterRecord {
 		}
 	}
 	
-	public static ArrayList<OptimalParameterRecord> readOptimalParameterRecordsOldFormat(String datasetName, String paramTuneDir) {
-		ArrayList<OptimalParameterRecord> records = new ArrayList<>();
+	public static ArrayList<RunDataSummaryRecord> readRunDataSummaryRecordsOldFormat(String datasetName, String paramTuneDir) {
+		ArrayList<RunDataSummaryRecord> records = new ArrayList<>();
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(paramTuneDir + "All_SortedByCvValidationErrorParameters.txt")));
 			br.readLine(); // discard header
 			String text;
 			while ((text = br.readLine()) != null) {
 				String[] columns = text.split("\t");
-				OptimalParameterRecord record = new OptimalParameterRecord();
+				RunDataSummaryRecord record = new RunDataSummaryRecord();
 				record.timeInSeconds = Double.parseDouble(columns[0].trim());
 				record.cvValidationError = Double.parseDouble(columns[1].trim());
 				record.cvTestError = Double.parseDouble(columns[2].trim());
@@ -155,7 +156,7 @@ public class OptimalParameterRecord {
 		return records;
 	}
 	
-	public static void saveOptimalParameterRecords(String paramTuneDir, String fileNamePrefix, PriorityQueue<OptimalParameterRecord> sortedEnsembles) {
+	public static void saveRunDataSummaryRecords(String paramTuneDir, String fileNamePrefix, PriorityQueue<RunDataSummaryRecord> sortedEnsembles) {
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
 			BufferedWriter constant = new BufferedWriter(new PrintWriter(new File( paramTuneDir + "Constant_" + fileNamePrefix + "Parameters.txt")));
@@ -172,7 +173,7 @@ public class OptimalParameterRecord {
 					+ GbmParameters.getTabSeparatedHeader() 
 					+ "\n");
 			while (!sortedEnsembles.isEmpty()) {
-				OptimalParameterRecord record = sortedEnsembles.poll();
+				RunDataSummaryRecord record = sortedEnsembles.poll();
 				
 				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%.8f\t%.8f\t", 
 						record.timeInSeconds, 
@@ -203,15 +204,15 @@ public class OptimalParameterRecord {
 		}
 	}
 	
-	public static ArrayList<OptimalParameterRecord> readOptimalParameterRecords(String datasetName, String paramTuneDir) {
-		ArrayList<OptimalParameterRecord> records = new ArrayList<>();
+	public static ArrayList<RunDataSummaryRecord> readRunDataSummaryRecords(String datasetName, String paramTuneDir) {
+		ArrayList<RunDataSummaryRecord> records = new ArrayList<>();
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(paramTuneDir + "All_SortedByCvValidationErrorParameters.txt")));
 			br.readLine(); // discard header
 			String text;
 			while ((text = br.readLine()) != null) {
 				String[] columns = text.split("\t");
-				OptimalParameterRecord record = new OptimalParameterRecord();
+				RunDataSummaryRecord record = new RunDataSummaryRecord();
 				record.timeInSeconds = Double.parseDouble(columns[0].trim());
 				record.allDataTestError = Double.parseDouble(columns[1].trim());
 				record.cvEnsembleTestError = Double.parseDouble(columns[2].trim());
@@ -240,9 +241,9 @@ public class OptimalParameterRecord {
 		return records;
 	}
 	
-	public static OptimalParameterRecord readOptimalParameterRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
+	public static RunDataSummaryRecord readRunDataSummaryRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
 		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--runData.txt";
-		OptimalParameterRecord record = new OptimalParameterRecord();
+		RunDataSummaryRecord record = new RunDataSummaryRecord();
 		
 		if (!new File(runDataFilePath).exists()) {
 			System.out.println("Couldn't find " + runDataFilePath);

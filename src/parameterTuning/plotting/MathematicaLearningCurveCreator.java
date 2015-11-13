@@ -11,8 +11,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import dataset.DatasetParameters;
-import parameterTuning.OptimalParameterRecord;
-import parameterTuning.OptimalParameterRecord.RunFileType;
+import parameterTuning.RunDataSummaryRecord;
+import parameterTuning.RunDataSummaryRecord.RunFileType;
 import utilities.DoubleCompare;
 
 public class MathematicaLearningCurveCreator {
@@ -35,7 +35,7 @@ public class MathematicaLearningCurveCreator {
 		
 		// Read through all the files cooresponding to these parameters and average the data.
 
-		OptimalParameterRecord record = OptimalParameterRecord.readOptimalParameterRecordFromRunDataFile(runDataFullDirectory, parameters, expectedRunFileType);
+		RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataFullDirectory, parameters, expectedRunFileType);
 		if (record == null) {
 			System.out.println("Couldn't create learning curve for " + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType) + " because runData not found.");
 			return;
