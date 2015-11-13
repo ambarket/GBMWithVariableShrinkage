@@ -197,11 +197,14 @@ public class ParameterTuningTest {
 	
 	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
 		String runDataDir = tuningParameters.parameterTuningDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
+		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
+
 		new File(runDataDir).mkdirs();
-		if (!SimpleHostLock.checkAndClaimHostLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
+		new File(locksDir).mkdirs();
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
-		if (SimpleHostLock.checkDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt")) {
+		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
 		}
 		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
@@ -211,10 +214,10 @@ public class ParameterTuningTest {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
 			return "Finished %s on run number %d. (%d out of %d)";
 		} else {
-			SimpleHostLock.writeDoneLock(runDataDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
 			return "Failed to build %s on run number %d due to impossible parameters. (%d out of %d)";
 		}
 	}

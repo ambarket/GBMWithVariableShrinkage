@@ -33,6 +33,7 @@ public class ParameterTuningParameters {
 	public int totalNumberOfTests;
 	public DatasetParameters[] datasets;
 	public String parameterTuningDirectory;
+	public String locksDirectory;
 	public RunFileType runFileType;
 	
 	private static ParameterTuningParameters test3Parameters;
@@ -95,6 +96,7 @@ public class ParameterTuningParameters {
 					 * test4Parameters.maxNumberOfSplts.length * test4Parameters.bagFractions.length * test4Parameters.minExamplesInNode.length;
 			
 			test4Parameters.parameterTuningDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
+			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
 			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
