@@ -27,7 +27,7 @@ import dataset.Dataset;
 
 public class GradientBoostingTree {
 	public static ExecutorService executor = Executors.newCachedThreadPool();
-
+	//public static ExecutorService executor = Executors.newFixedThreadPool(3);
 	/*
 	 *  fit a regression function using the Gradient Boosting Tree method.
 	 *  On success, return function; otherwise, return null. 

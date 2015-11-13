@@ -79,7 +79,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest4() {
 		if (test4Parameters == null) {
 			test4Parameters = new ParameterTuningParameters();
-			test4Parameters.NUMBER_OF_RUNS = 10;
+			test4Parameters.NUMBER_OF_RUNS = 1;
 			test4Parameters.NUMBER_OF_TREES = 150000;
 			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test4Parameters.CV_STEP_SIZE = 5000;
@@ -102,7 +102,7 @@ public class ParameterTuningParameters {
 			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
+			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 		}
 		return test4Parameters;
