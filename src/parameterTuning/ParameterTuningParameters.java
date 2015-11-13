@@ -99,7 +99,7 @@ public class ParameterTuningParameters {
 			test4Parameters.parameterTuningDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters};
+			test4Parameters.datasets = new DatasetParameters[] {powerPlantParameters, bikeSharingDayParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 		}
 		return test4Parameters;
