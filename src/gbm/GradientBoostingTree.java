@@ -193,7 +193,7 @@ public class GradientBoostingTree {
 		Queue<Future<Void>> futures = new LinkedList<Future<Void>>();
 		int remainingStepsPastMinimum = 3; // Keep going to collect more error data for graphs.
 		StopWatch timer = new StopWatch().start();
-		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0 && ensembleTimer.getElapsedSeconds() < 3600) {
+		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0 && ensembleTimer.getElapsedSeconds() < 5400) {
 			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds+1; i++) {
 				futures.add(executor.submit(steppers[i]));
@@ -226,6 +226,13 @@ public class GradientBoostingTree {
 				remainingStepsPastMinimum--;
 				Logger.println(LEVELS.INFO, "Reached minimum after " + lastTreeIndex + " iterations");
 			}
+			// If we have less than a gig left, need to just print out what we got
+			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
+			if (memoryPossiblyAvailableInGigs < 1.0) {
+				System.out.println("Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
+				break;
+			}
+			
 			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds. Cv Error: " + avgValidError);
 		}
 		
