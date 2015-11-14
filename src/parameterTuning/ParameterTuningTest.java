@@ -88,9 +88,9 @@ public class ParameterTuningTest {
 	
 	public void averageAllRunData(DatasetParameters datasetParams) {
 		String paramTuningDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/";
-		int done = 0;
-		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		Queue<Map.Entry<GbmParameters, Future<String>>> futureQueue = new LinkedList<Map.Entry<GbmParameters, Future<String>>>();
+		int submissionNumber = 0;
+		StopWatch globalTimer = new StopWatch().start() ;
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
 			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
 				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
@@ -102,18 +102,16 @@ public class ParameterTuningTest {
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
-									timer.start();
-									
-									futureQueue.add(new SimpleEntry<GbmParameters, Future<String>>(parameters, GradientBoostingTree.executor.submit(new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters))));
+		
+									futureQueue.add(GradientBoostingTree.executor.submit(
+											new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 									
 									if (futureQueue.size() >= 50) {
 										System.out.println("Reached 50 threads, waiting for some to finish");
 										while (futureQueue.size() > 20) {
 											try {
-												Map.Entry<GbmParameters, Future<String>> result = futureQueue.poll();
-												
-												System.out.println(String.format("[%s] " + result.getValue().get() + " for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-														datasetParams.minimalName, result.getKey().getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+												futureQueue.poll().get();
+
 											} catch (InterruptedException e) {
 												e.printStackTrace();
 											} catch (ExecutionException e) {
@@ -128,20 +126,17 @@ public class ParameterTuningTest {
 				}
 			}
 		}
+		System.out.println("Submitted the last of them, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
-				Map.Entry<GbmParameters, Future<String>> result = futureQueue.poll();
-				
-				System.out.println(String.format("[%s] " + result.getValue().get() + " for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-						datasetParams.minimalName, result.getKey().getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				futureQueue.poll().get();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (ExecutionException e) {
 				e.printStackTrace();
 			}
-			
-
 		}
+		System.out.println("Finished averaging all run data.");
 	}
 	
 	/**

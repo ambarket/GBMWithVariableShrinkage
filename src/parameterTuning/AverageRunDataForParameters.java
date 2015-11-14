@@ -15,34 +15,42 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
-import dataset.DatasetParameters;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import utilities.DoubleCompare;
 import utilities.SimpleHostLock;
+import utilities.StopWatch;
 import utilities.SumCountAverage;
+import dataset.DatasetParameters;
 
 /**
  * ONLY works for multithreading on a single host. Locking isn't set up to support multiple hosts working on this.
  * @author ambar_000
  *
  */
-public class AverageRunDataForParameters implements Callable<String>{
+public class AverageRunDataForParameters implements Callable<Void>{
 	DatasetParameters datasetParams;
 	GbmParameters parameters;
 	String paramTuneDir;
 	ParameterTuningParameters tuningParameters;
-	public AverageRunDataForParameters(DatasetParameters datasetParams, GbmParameters parameters, String paramTuneDir, ParameterTuningParameters tuningParameters) {
+	int submissionNumber;
+	StopWatch globalTimer;
+	public AverageRunDataForParameters(DatasetParameters datasetParams, GbmParameters parameters, String paramTuneDir, ParameterTuningParameters tuningParameters, int submissionNumber, StopWatch globalTimer) {
 		this.datasetParams = datasetParams;
 		this.parameters = parameters;
 		this.paramTuneDir = paramTuneDir;
 		this.tuningParameters = tuningParameters;
+		this.submissionNumber = submissionNumber;
+		this.globalTimer = globalTimer;
 	}
 
-	public String call() {
+	public Void call() {
+		StopWatch timer = new StopWatch().start();
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
-			return "Already averaged runData";	
+			System.out.println(String.format("[%s] Already averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			return null;
 		}
 		
 		double timeInSeconds = 0, 
@@ -229,7 +237,9 @@ public class AverageRunDataForParameters implements Callable<String>{
 		} // End runNumber Loop
 		if (numberOfRunsFound == 0) {
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
-			return "No run data was found.";	
+			System.out.println(String.format("[%s] No run data was found for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			return null;
 		}
 		// Compute the averages. Don't need to worry about runFileTypes b/c/ they will just be 0 if they aren't present.
 		timeInSeconds /= numberOfRunsFound;
@@ -445,7 +455,10 @@ public class AverageRunDataForParameters implements Callable<String>{
 			e.printStackTrace();
 		}
 		SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
-		return "Successfully averaged run data.";	
+		
+		System.out.println(String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+		return null;
 	}
 
 	private static class PerExampleRunDataEntry {
