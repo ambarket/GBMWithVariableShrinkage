@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.PriorityQueue;
 
 import regressionTree.RegressionTree.LearningRatePolicy;
@@ -24,8 +25,8 @@ public class RunDataSummaryRecord {
 	public double timeInSeconds;
 	public int stepSize;
 	public int numberOfFolds;
-	public int totalNumberOfTrees;
-	public int optimalNumberOfTrees;
+	public double totalNumberOfTrees;
+	public double optimalNumberOfTrees;
 	public double cvValidationError;
 	public double cvTrainingError;
 	public double allDataTrainingError;
@@ -80,82 +81,12 @@ public class RunDataSummaryRecord {
 		}
 	}
 	
-	public static void saveRunDataSummaryRecordsOldFormat(String paramTuneDir, String fileNamePrefix, PriorityQueue<RunDataSummaryRecord> sortedEnsembles) {
-		try {
-			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
-			BufferedWriter constant = new BufferedWriter(new PrintWriter(new File( paramTuneDir + "Constant_" + fileNamePrefix + "Parameters.txt")));
-			BufferedWriter variable = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "Variable_" + fileNamePrefix + "Parameters.txt")));
-			bw.append("TimeInSeconds\tCvValidation\tCvTest\tAllDataTraining\tAllDataTest\tTotalNumberOfTreesTrained\tOptimalNumberOfTrees\t" + GbmParameters.getOldTabSeparatedHeader() + "\n");
-			while (!sortedEnsembles.isEmpty()) {
-				RunDataSummaryRecord record = sortedEnsembles.poll();
-				
-				bw.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
-						record.timeInSeconds, record.cvValidationError, 
-						record.cvTestError, record.allDataTrainingError, 
-						record.allDataTestError,
-						record.totalNumberOfTrees, record.optimalNumberOfTrees) 
-						+ record.parameters.getOldTabSeparatedPrintOut() + "\n");
-				if (record.parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
-					constant.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
-							record.timeInSeconds, record.cvValidationError, 
-							record.cvTestError, record.allDataTrainingError, 
-							record.allDataTestError,
-							record.totalNumberOfTrees, record.optimalNumberOfTrees) 
-							+ record.parameters.getOldTabSeparatedPrintOut() + "\n");
-				} else {
-					variable.append(String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%d\t", 
-							record.timeInSeconds, record.cvValidationError, 
-							record.cvTestError, record.allDataTrainingError, 
-							record.allDataTestError,
-							record.totalNumberOfTrees, record.optimalNumberOfTrees) 
-							+ record.parameters.getOldTabSeparatedPrintOut() + "\n");
-				}
-			}
-			constant.flush();
-			constant.close();
-			variable.flush();
-			variable.close();
-			bw.flush();
-			bw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public static void saveRunDataSummaryRecords(String paramTuneDir, String fileNamePrefix, List<RunDataSummaryRecord> list) {
+		PriorityQueue<RunDataSummaryRecord> queue = new PriorityQueue<>(new AllDataTestErrorComparator());
+		queue.addAll(list);
+		saveRunDataSummaryRecords(paramTuneDir, fileNamePrefix, queue);
 	}
-	
-	public static ArrayList<RunDataSummaryRecord> readRunDataSummaryRecordsOldFormat(String datasetName, String paramTuneDir) {
-		ArrayList<RunDataSummaryRecord> records = new ArrayList<>();
-		try {
-			BufferedReader br = new BufferedReader(new FileReader(new File(paramTuneDir + "All_SortedByCvValidationErrorParameters.txt")));
-			br.readLine(); // discard header
-			String text;
-			while ((text = br.readLine()) != null) {
-				String[] columns = text.split("\t");
-				RunDataSummaryRecord record = new RunDataSummaryRecord();
-				record.timeInSeconds = Double.parseDouble(columns[0].trim());
-				record.cvValidationError = Double.parseDouble(columns[1].trim());
-				record.cvTestError = Double.parseDouble(columns[2].trim());
-				record.allDataTrainingError = Double.parseDouble(columns[3].trim());
-				record.allDataTestError = Double.parseDouble(columns[4].trim());
-				record.totalNumberOfTrees = Integer.parseInt(columns[5].trim());
-				record.optimalNumberOfTrees = Integer.parseInt(columns[6].trim());
-				record.parameters = new GbmParameters(
-						Double.parseDouble(columns[8].trim()), // LR
-						Integer.parseInt(columns[10].trim()), //NOS
-						Double.parseDouble(columns[9].trim()), //BF
-						Integer.parseInt(columns[11].trim()), //MEIN
-						Integer.parseInt(columns[12].trim()), //NOT
-						LearningRatePolicy.valueOf(columns[7].trim()), // LearningRatePolicy
-						SplitsPolicy.CONSTANT);
-				records.add(record);
-			}
-			br.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-		return records;
-	}
-	
+
 	public static void saveRunDataSummaryRecords(String paramTuneDir, String fileNamePrefix, PriorityQueue<RunDataSummaryRecord> sortedEnsembles) {
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "All_" + fileNamePrefix + "Parameters.txt")));
@@ -175,7 +106,7 @@ public class RunDataSummaryRecord {
 			while (!sortedEnsembles.isEmpty()) {
 				RunDataSummaryRecord record = sortedEnsembles.poll();
 				
-				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.4f\t%.8f\t%.8f\t", 
+				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.8f\t%.8f\t", 
 						record.timeInSeconds, 
 						record.allDataTestError, 
 						record.cvEnsembleTestError, 
@@ -217,7 +148,7 @@ public class RunDataSummaryRecord {
 				record.allDataTestError = Double.parseDouble(columns[1].trim());
 				record.cvEnsembleTestError = Double.parseDouble(columns[2].trim());
 				record.cvValidationError = Double.parseDouble(columns[3].trim());
-				record.optimalNumberOfTrees = Integer.parseInt(columns[4].trim());
+				record.optimalNumberOfTrees = Double.parseDouble(columns[4].trim());
 				record.avgNumberOfSplits = Double.parseDouble(columns[5].trim());
 				record.stdDevNumberOfSplits = Double.parseDouble(columns[6].trim());
 				record.avgLearningRate = Double.parseDouble(columns[7].trim());
@@ -265,8 +196,8 @@ public class RunDataSummaryRecord {
 			}
 			// Always have been the same
 			record.numberOfFolds = Integer.parseInt(br.readLine().split(": ")[1].trim());
-			record.totalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
-			record.optimalNumberOfTrees = Integer.parseInt(br.readLine().split(": ")[1].trim());
+			record.totalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.optimalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvValidationError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.allDataTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());

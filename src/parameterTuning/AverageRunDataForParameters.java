@@ -58,8 +58,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				allDataTrainingError = 0, allDataTestError = 0,
 				cvEnsembleTrainingError = 0, cvEnsembleTestError = 0,
 				avgNumberOfSplits = 0, stdDevNumberOfSplits = 0,
-				avgLearningRate = 0, stdDevLearningRate = 0;
-		int optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
+				avgLearningRate = 0, stdDevLearningRate = 0,
+				optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
 		
 		HashMap<String, SumCountAverage> cvEnsembleReltiveInfluences = new HashMap<>();
 		HashMap<String, SumCountAverage> allDataFunctionReltiveInfluences = new HashMap<>();
@@ -77,10 +77,11 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		ArrayList<Double> examplesInNodeStdDevByIteration = new ArrayList<Double>();
 		ArrayList<Double> learningRateMeanByIteration = new ArrayList<Double>();
 		ArrayList<Double> learningRateStdDevByIteration = new ArrayList<Double>();
-		ArrayList<Integer> actualNumberOfSplitsByIteration = new ArrayList<Integer>();
+		ArrayList<Double> actualNumberOfSplitsByIteration = new ArrayList<Double>();
 
 		
-		ArrayList<Integer> totalNumberOfTreesByRunNumber = new ArrayList<Integer>();
+		ArrayList<Double> totalNumberOfTreesByRunNumber = new ArrayList<Double>();
+		ArrayList<Double> optimalNumberOfTreesByRunNumber = new ArrayList<Double>();
 		
 		int numberOfTreesFound = 0;
 		int numberOfRunsFound = 0;
@@ -104,7 +105,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			stepSize += summaryInfo.stepSize;
 			numberOfFolds += summaryInfo.numberOfFolds;
 			totalNumberOfTrees += summaryInfo.totalNumberOfTrees;
+			totalNumberOfTreesByRunNumber.add(summaryInfo.totalNumberOfTrees);
 			optimalNumberOfTrees += summaryInfo.optimalNumberOfTrees;
+			optimalNumberOfTreesByRunNumber.add(summaryInfo.optimalNumberOfTrees);
 			cvValidationError += summaryInfo.cvValidationError;
 			cvTrainingError += summaryInfo.cvTrainingError;
 			allDataTrainingError += summaryInfo.allDataTrainingError;
@@ -207,7 +210,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 							examplesInNodeStdDevByIteration.add(Double.parseDouble(components[9].trim()));
 							learningRateMeanByIteration.add(Double.parseDouble(components[10].trim()));
 							learningRateStdDevByIteration.add(Double.parseDouble(components[11].trim()));
-							actualNumberOfSplitsByIteration.add(Integer.parseInt(components[12].trim()));
+							actualNumberOfSplitsByIteration.add(Double.parseDouble(components[12].trim()));
 						}
 						numberOfTreesFound++;
 						index++;
@@ -220,11 +223,15 @@ public class AverageRunDataForParameters implements Callable<Void>{
 						if (runFileType == RunFileType.ParamTuning4) {
 							cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
 							cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
+							try {
 							examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
+							} catch (Exception e) {
+								System.out.println();
+							}
 							examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
 							learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
 							learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
-							actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Integer.parseInt(components[12].trim()));
+							actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Double.parseDouble(components[12].trim()));
 						}
 						index++;
 					}
@@ -259,8 +266,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		avgLearningRate /= numberOfRunsFound;
 		stdDevLearningRate /= numberOfRunsFound;
 		
-		int minNumberOfTreesAllRunsHave = Integer.MAX_VALUE;
-		for (int i : totalNumberOfTreesByRunNumber) {
+		double minNumberOfTreesAllRunsHave = Double.MAX_VALUE;
+		for (double i : totalNumberOfTreesByRunNumber) {
 			if (i < minNumberOfTreesAllRunsHave) { minNumberOfTreesAllRunsHave = i;}
 		}
 		for (int index = 0; index < numberOfTreesFound; index++) {
@@ -281,7 +288,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				}
 			} else {
 				int numberOfRunsWithThisTree = 0;
-				for (int i : totalNumberOfTreesByRunNumber) {
+				for (double i : totalNumberOfTreesByRunNumber) {
 					if (index < i) { numberOfRunsWithThisTree++; }
 				}
 				avgCvTrainingErrorByIteration.set(index, avgCvTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
@@ -310,10 +317,10 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			BufferedWriter relativeInfluencesWriter = new BufferedWriter(new PrintWriter(averageRunDataDirectory + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averageRelativeInfluences.txt"));
 
 			bw.write(String.format("Time In Seconds: %f \n"
-					+ "Step Size: %d \n"
-					+ "Number Of Folds: %d \n"
-					+ "TotalNumberOfTrees: %d \n"
-					+ "OptimalNumberOfTrees (ONOT): %d \n"
+					+ "Step Size: %.1f \n"
+					+ "Number Of Folds: %.1f \n"
+					+ "Avg TotalNumberOfTrees: %.2f \n"
+					+ "Avg OptimalNumberOfTrees (ONOT): %.2f \n"
 					+ "Avg CV Validation RMSE @ ONOT: %f \n" 
 					+ "Avg CV Training RMSE @ ONOT: %f \n"
 					+ "All Data Training RMSE @ ONOT: %f \n"
@@ -326,7 +333,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					+ "Learning Rate Avg of Per Example Averages: %.8f\n"
 					+ "Learning Rate Std Dev of Per Example Averages: %.8f\n"
 					+ "Number of runs found: %d\n"
-					+ "Number of trees found: %d\n",
+					+ "Total number of trees found: %d\n"
+					+ "Number of trees found in each run: %s\n"
+					+ "Optimal number of trees of each run: %s\n",
 			timeInSeconds,
 			stepSize,
 			numberOfFolds,
@@ -344,7 +353,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			avgLearningRate,
 			stdDevLearningRate,
 			numberOfRunsFound,
-			numberOfTreesFound));
+			numberOfTreesFound,
+			convertDoubleArrayListToCommaSeparatedString(totalNumberOfTreesByRunNumber),
+			convertDoubleArrayListToCommaSeparatedString(optimalNumberOfTreesByRunNumber)));
 
 			bw.write("TreeNumber\t"
 					+ "AvgCvTrainingError\t"
@@ -362,7 +373,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			
 			if (runFileType == RunFileType.ParamTuning4) {
 				for (int i = 0; i < numberOfTreesFound; i++) {
-					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
+					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%.2f\n", 
 							i+1,
 							avgCvTrainingErrorByIteration.get(i),
 							avgCvValidationErrorByIteration.get(i),
@@ -459,6 +470,21 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		System.out.println(String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 		return null;
+	}
+	
+	private static String convertDoubleArrayListToCommaSeparatedString(ArrayList<Double> totalNumberOfTreesByRunNumber) {
+		StringBuffer s = new StringBuffer();
+		boolean first = true;
+		for (double i : totalNumberOfTreesByRunNumber) {
+			if (first) {
+				s.append(i);
+				first = false;
+			} else {
+				s.append(", " + i);
+			}
+			
+		}
+		return s.toString();
 	}
 
 	private static class PerExampleRunDataEntry {

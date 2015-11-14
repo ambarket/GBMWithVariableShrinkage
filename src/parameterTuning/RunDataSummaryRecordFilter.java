@@ -29,6 +29,13 @@ public class RunDataSummaryRecordFilter {
 		}
 	}
 	
+	public RunDataSummaryRecordFilter(RunDataSummaryRecordFilter... filters) {
+		this.filter = new HashMap<FilterableProperty, Object>();
+		for (RunDataSummaryRecordFilter filter : filters) {
+			this.filter.putAll(filter.filter);
+		}
+	}
+	
 	public String getLongFilterDescription() {
 		StringBuffer description = new StringBuffer();
 		for (Map.Entry<FilterableProperty, Object> filterEntry : filter.entrySet()) {
@@ -51,7 +58,7 @@ public class RunDataSummaryRecordFilter {
 		return description.toString();
 	}
 	
-	public List<RunDataSummaryRecord> filterRecordsOnParameterValue(ArrayList<RunDataSummaryRecord> allRecords) {
+	public List<RunDataSummaryRecord> filterRecordsOnParameterValue(List<RunDataSummaryRecord> allRecords) {
 		if (filter == null) {
 			return allRecords;
 		}
@@ -89,7 +96,13 @@ public class RunDataSummaryRecordFilter {
 		return false;
 	}
 	
-	
+	// Predefined Bag Fraction Filters
+	public static RunDataSummaryRecordFilter learningRatePolicyEqualsConstant = 
+			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
+					.put(FilterableProperty.LearningRatePolicy, LearningRatePolicy.CONSTANT).build());
+	public static RunDataSummaryRecordFilter learningRatePolicyEqualsRevisedVariable = 
+			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
+					.put(FilterableProperty.LearningRatePolicy, LearningRatePolicy.REVISED_VARIABLE).build());
 
 	// Predefined Bag Fraction Filters
 	public static RunDataSummaryRecordFilter bagFractionEqualsOneQuarterFilter = 
@@ -108,13 +121,13 @@ public class RunDataSummaryRecordFilter {
 	// Predefined MinExamplesInNode Filters
 	public static RunDataSummaryRecordFilter examplesInNodeEquals1Filter = 
 			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
-					.put(FilterableProperty.MaxNumberOfSplits, 1).build());
+					.put(FilterableProperty.MinExamplesInNode, 1).build());
 	public static RunDataSummaryRecordFilter examplesInNodeEquals50Filter = 
 			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
-					.put(FilterableProperty.MaxNumberOfSplits, 50).build());
+					.put(FilterableProperty.MinExamplesInNode, 50).build());
 	public static RunDataSummaryRecordFilter examplesInNodeEquals100Filter = 
 			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
-					.put(FilterableProperty.MaxNumberOfSplits, 100).build());
+					.put(FilterableProperty.MinExamplesInNode, 100).build());
 	public static RunDataSummaryRecordFilter examplesInNodeEquals250Filter = 
 			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
 					.put(FilterableProperty.MinExamplesInNode, 250).build());

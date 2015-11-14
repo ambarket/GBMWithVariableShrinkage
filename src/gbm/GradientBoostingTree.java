@@ -193,7 +193,7 @@ public class GradientBoostingTree {
 		Queue<Future<Void>> futures = new LinkedList<Future<Void>>();
 		int remainingStepsPastMinimum = 3; // Keep going to collect more error data for graphs.
 		StopWatch timer = new StopWatch().start();
-		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0 ) {
+		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0 && ensembleTimer.getElapsedSeconds() < 3600) {
 			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds+1; i++) {
 				futures.add(executor.submit(steppers[i]));

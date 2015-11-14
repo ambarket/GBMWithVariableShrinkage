@@ -50,9 +50,9 @@ public class ParameterTuningTest {
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 
 			test.averageAllRunData(datasetParams);
-			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
-			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
-			PairwiseRunDataSummaryRecordPlots.generatePairwiseRunDataSummaryRecordPlots(datasetParams.minimalName, test.tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Averages/");
+			//test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
+			//test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
+			//PairwiseRunDataSummaryRecordPlots.generatePairwiseRunDataSummaryRecordPlots(datasetParams.minimalName, test.tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Averages/");
 		}
 	}
 
@@ -147,7 +147,7 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/RunDataSummaryRecords/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryLock.txt")) {
-			System.out.println(String.format("[%s] Already Created RunDataSummaryRecord for %s", datasetParams.minimalName));
+			System.out.println(String.format("[%s] Already Created RunDataSummaryRecords", datasetParams.minimalName));
 			return;
 		}
 		

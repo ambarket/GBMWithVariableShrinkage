@@ -1,20 +1,20 @@
 package parameterTuning.plotting;
-import java.util.ArrayList;
+import java.util.List;
 
 import parameterTuning.RunDataSummaryRecord;
 import utilities.DoubleCompare;
 
 
 	public abstract class ListEntryGetter {
-		public static String CVEMin = "0", CVEMax = "All";
-		public static String ADTEMin = "0", ADTEMax = "All";
-		public static String TISMin = "0", TISMax = "All";
-		public static String NOTMin = "0", NOTMax = "500000";
-		public static String BFMin = "0.4", BFMax = "1.1";
-		public static String NOSMin = "0", NOSMax = "20";
-		public static String MAXLRMin = "0", MAXLRMax = "2.5";
-		public static String MINLRMin = "0", MINLRMax = "2.5";
-		public static String MEINMin = "0", MEINMax = "1000";
+		public String CVEMin = "0", CVEMax = "All";
+		public String ADTEMin = "0", ADTEMax = "All";
+		public String TISMin = "0", TISMax = "All";
+		public String NOTMin = "0", NOTMax = "500000";
+		public String BFMin = "0.4", BFMax = "1.1";
+		public String NOSMin = "0", NOSMax = "20";
+		public String MAXLRMin = "0", MAXLRMax = "2.5";
+		public String MINLRMin = "0", MINLRMax = "2.5";
+		public String MEINMin = "0", MEINMax = "1000";
 		
 		public abstract String getXLabel();
 		public abstract String getYLabel();
@@ -52,18 +52,18 @@ import utilities.DoubleCompare;
 		
 		public abstract String getEntry(RunDataSummaryRecord record);
 		
-		public static void setMinsAndMaxes(ArrayList<RunDataSummaryRecord> records) {
+		public void setMinsAndMaxes(List<RunDataSummaryRecord> records) {
 			double maxCVE  = 0.0, minCVE  = Double.MAX_VALUE, 
 					   maxADTE = 0.0, minADTE = Double.MAX_VALUE,
 					   maxTIME = 0.0, minTIME = Double.MAX_VALUE,
 					   maxBF = 0.0, minBF = Double.MAX_VALUE,
 					   maxMAXLR = 0.0, minMAXLR = Double.MAX_VALUE,
 					   maxMINLR = 0.0, minMINLR = Double.MAX_VALUE;
-			int maxNOT  = 0, minNOT  = Integer.MAX_VALUE,
-			    maxNOS = 0, minNOS  = Integer.MAX_VALUE,
+			double maxNOT  = 0, minNOT  = Double.MAX_VALUE;
+			int maxNOS = 0, minNOS  = Integer.MAX_VALUE,
 			    maxMEIN = 0, minMEIN = Integer.MAX_VALUE;
-				for (int i = 0; i < records.size(); i++) {
-					RunDataSummaryRecord record = records.get(i);
+		
+				for (RunDataSummaryRecord record : records) {
 					if (DoubleCompare.lessThan(record.allDataTestError, minADTE)) {
 						minADTE = record.allDataTestError;
 					}
@@ -100,10 +100,10 @@ import utilities.DoubleCompare;
 					if (DoubleCompare.greaterThan(record.parameters.minLearningRate, maxMINLR)) {
 						maxMINLR = record.parameters.minLearningRate;
 					}
-					if (record.optimalNumberOfTrees < minNOT) {
+					if (DoubleCompare.lessThan(record.optimalNumberOfTrees, minNOT)) {
 						minNOT = record.optimalNumberOfTrees;
 					}
-					if (record.optimalNumberOfTrees > maxNOT) {
+					if (DoubleCompare.greaterThan(record.optimalNumberOfTrees, maxNOT)) {
 						maxNOT = record.optimalNumberOfTrees;
 					}
 					if (record.parameters.maxNumberOfSplits < minNOS) {
@@ -119,6 +119,7 @@ import utilities.DoubleCompare;
 						maxMEIN = record.parameters.minExamplesInNode;
 					}
 					
+					/*
 					CVEMax = "" + (maxCVE + ((maxCVE-minCVE)/5)); 
 					CVEMin = "" + (minCVE - ((maxCVE-minCVE)/5)); 
 					ADTEMax = "" + (maxADTE + ((maxADTE-minADTE)/5)); 
@@ -137,6 +138,25 @@ import utilities.DoubleCompare;
 					BFMin = "" + (minBF - ((maxBF-minBF)/5)); 
 					MEINMax = "" + (maxMEIN + ((maxMEIN-minMEIN)/5));
 					MEINMin = "" + (minMEIN - ((maxMEIN-minMEIN)/5));
+					*/
+					CVEMax = String.format("%f", maxCVE);
+					CVEMin = String.format("%f", minCVE);
+					ADTEMax = String.format("%f", maxADTE);
+					ADTEMin= String.format("%f", minADTE);
+					TISMax = String.format("%f", maxTIME);
+					TISMin = String.format("%f", minTIME);
+					NOTMax = String.format("%f", maxNOT);
+					NOTMin = String.format("%f", minNOT);
+					NOSMax = String.format("%d", maxNOS);
+					NOSMin = String.format("%d", minNOS);
+					MAXLRMax = String.format("%f", maxMAXLR);
+					MAXLRMin = String.format("%f", minMAXLR);
+					MINLRMax = String.format("%f", maxMINLR);
+					MINLRMin = String.format("%f", minMINLR);
+					BFMax = String.format("%f", maxBF);
+					BFMin = String.format("%f", minBF);
+					MEINMax = String.format("%d", maxMEIN);
+					MEINMin = String.format("%d", minMEIN);
 				}
 		}
 		
