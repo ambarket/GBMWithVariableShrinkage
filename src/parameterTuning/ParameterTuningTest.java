@@ -16,6 +16,7 @@ import parameterTuning.plotting.MathematicaLearningCurveCreator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
+import utilities.CompressedTarBallCreator;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import dataset.Dataset;
@@ -35,10 +36,65 @@ public class ParameterTuningTest {
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 			for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
-				test.tryDifferentParameters(dataset, runNumber);
+				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
+				if (runComplete) {
+					compressAndDeleteRunData(datasetParams, test.tuningParameters, runNumber);
+				}
 			}
 		}
 		GradientBoostingTree.executor.shutdownNow();
+	}
+	
+	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+		
+		new File(locksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(locksDir + "compressRunData--doneLock.txt")) {
+			System.out.println(String.format("[%s] Already completed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+		}
+		
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "compressRunData--hostLock.txt")) {
+			System.out.println(String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+		}
+		
+		File source = new File(runDataDir + String.format("/Run%d/", runNumber));
+		File destination = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
+		
+		if (!source.exists()) {
+			System.out.println(String.format("[%s] Run Data doesn't exist! Failed to compress run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
+			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
+			return;
+		}
+
+		StopWatch timer = new StopWatch().start();
+		// DO task
+		try {
+			CompressedTarBallCreator.compressFile(source, destination);
+			deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
+			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
+			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+		} catch (IOException e) {
+			e.printStackTrace();
+			deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
+			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
+		}
+	}
+	public static boolean deleteDirectory(File directory) {
+	    if(directory.exists()){
+	        File[] files = directory.listFiles();
+	        if(null!=files){
+	            for(int i=0; i<files.length; i++) {
+	                if(files[i].isDirectory()) {
+	                    deleteDirectory(files[i]);
+	                }
+	                else {
+	                    files[i].delete();
+	                }
+	            }
+	        }
+	    }
+	    return(directory.delete());
 	}
 	
 	public static void processAllDatasets(ParameterTuningParameters parameters) {
@@ -54,7 +110,14 @@ public class ParameterTuningTest {
 		}
 	}
 
-	public void tryDifferentParameters(Dataset dataset, int runNumber) {
+	/**
+	 * Return true if this host just realized all tests are done for this dataset
+	 * @param dataset
+	 * @param runNumber
+	 * @return
+	 */
+	public boolean tryDifferentParameters(Dataset dataset, int runNumber) {
+		boolean[] doneList = new boolean[tuningParameters.totalNumberOfTests];
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
@@ -70,8 +133,10 @@ public class ParameterTuningTest {
 												learningRatePolicy, splitPolicy);
 									timer.start();
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
+									doneList[done] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
 									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
 											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									
 									//timer.start();
 									//System.gc();
 									//System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
@@ -82,6 +147,11 @@ public class ParameterTuningTest {
 				}
 			}
 		}
+		boolean allDone = true;
+		for (boolean flag : doneList) {
+			allDone = allDone && flag;
+		}
+		return allDone;
 	}
 	
 	public void averageAllRunData(DatasetParameters datasetParams) {
@@ -252,11 +322,11 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		
 		new File(locksDir).mkdirs();
-		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
-			return "Another host has already claimed %s on run number %d. (%d out of %d)";
-		}
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
+		}
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
+			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
 		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
 		if (ensemble != null) {

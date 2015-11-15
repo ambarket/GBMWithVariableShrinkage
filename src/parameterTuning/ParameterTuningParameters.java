@@ -111,27 +111,27 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 1;
-			test5Parameters.NUMBER_OF_TREES = 150000;
+			test5Parameters.NUMBER_OF_RUNS = 5;
+			test5Parameters.NUMBER_OF_TREES = 2;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 4;
-			test5Parameters.CV_STEP_SIZE = 5000;
+			test5Parameters.CV_STEP_SIZE = 2;
 			
-			test5Parameters.constantLearningRates = new double[] {0.01};
-			test5Parameters.minLearningRates = new double[] {0.01};
-			test5Parameters.maxLearningRates = new double[] {0.4};
-			test5Parameters.maxNumberOfSplts = new int[] {1};
+			test5Parameters.constantLearningRates = new double[] {0.1, 0.01, 0.001, 0.0001};
+			test5Parameters.minLearningRates = new double[] {0.01, 0.001, 0.0001};
+			test5Parameters.maxLearningRates = new double[] {0.4, 0.1};
+			test5Parameters.maxNumberOfSplts = new int[] {4, 2, 1};
 
-			test5Parameters.bagFractions = new double[] {0.75};
-			test5Parameters.minExamplesInNode = new int[] {1};	
+			test5Parameters.bagFractions = new double[] {1};
+			test5Parameters.minExamplesInNode = new int[] {250};	
 			test5Parameters.learningRatePolicies = new LearningRatePolicy[] {LearningRatePolicy.REVISED_VARIABLE, LearningRatePolicy.CONSTANT};
 			test5Parameters.splitPolicies = new SplitsPolicy[] {SplitsPolicy.CONSTANT};
 			
 			test5Parameters.totalNumberOfTests = 
-					((test4Parameters.minLearningRates.length * test4Parameters.maxLearningRates.length) + (test4Parameters.constantLearningRates.length))
-					 * test4Parameters.maxNumberOfSplts.length * test4Parameters.bagFractions.length * test4Parameters.minExamplesInNode.length;
+					((test5Parameters.minLearningRates.length * test5Parameters.maxLearningRates.length) + (test5Parameters.constantLearningRates.length))
+					 * test5Parameters.maxNumberOfSplts.length * test5Parameters.bagFractions.length * test5Parameters.minExamplesInNode.length;
 			
 			test5Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
-			
+			test5Parameters.runDataProcessingDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
 			test5Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
 			
 			test5Parameters.datasets = new DatasetParameters[] {bikeSharingHourlyParameters};
