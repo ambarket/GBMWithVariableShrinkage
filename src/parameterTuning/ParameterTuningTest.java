@@ -34,7 +34,7 @@ public class ParameterTuningTest {
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 			for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
-				Dataset dataset = new Dataset(datasetParams, test.tuningParameters.TRAINING_SAMPLE_FRACTION);
+				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
 				test.tryDifferentParameters(dataset, runNumber);
 			}
 		}

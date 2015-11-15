@@ -10,10 +10,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
-import dataset.DatasetParameters;
 import parameterTuning.RunDataSummaryRecord;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import utilities.DoubleCompare;
+import dataset.DatasetParameters;
 
 public class MathematicaLearningCurveCreator {
 	public static void createLearningCurveForParameters(DatasetParameters datasetParams, String runDataFullDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {

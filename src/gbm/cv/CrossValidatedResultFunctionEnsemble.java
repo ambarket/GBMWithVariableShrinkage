@@ -15,15 +15,11 @@ import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
 import parameterTuning.RunDataSummaryRecord.RunFileType;
-import parameterTuning.plotting.MathematicaListCreator;
-import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import utilities.DoubleCompare;
 import utilities.Matrix;
 import utilities.StopWatch;
-import utilities.SumCountAverage;
 import dataset.Attribute;
-import dataset.Dataset;
 
 public class CrossValidatedResultFunctionEnsemble {
 	public GbmParameters parameters;
