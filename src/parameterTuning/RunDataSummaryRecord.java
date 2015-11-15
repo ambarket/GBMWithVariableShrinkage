@@ -20,11 +20,11 @@ import utilities.DoubleCompare;
 public class RunDataSummaryRecord {
 	// An unfortunate consequence of continuously wanting to add more data.
 	public enum RunFileType {Original, ParamTuning2, ParamTuning3, ParamTuning4};
-	public enum FilterableProperty {BagFraction, MinExamplesInNode, MinLearningRate, MaxLearningRate, MaxNumberOfSplits, LearningRatePolicy}
+	
 	public GbmParameters parameters;
 	public double timeInSeconds;
-	public int stepSize;
-	public int numberOfFolds;
+	public double stepSize;
+	public double numberOfFolds;
 	public double totalNumberOfTrees;
 	public double optimalNumberOfTrees;
 	public double cvValidationError;
@@ -189,13 +189,13 @@ public class RunDataSummaryRecord {
 			// Added time in seconds after the original parameter tuning test.
 			if (line.contains("Step Size")) {
 				record.runFileType = RunFileType.Original;
-				record.stepSize = Integer.parseInt(line.split(": ")[1].trim());
+				record.stepSize = Double.parseDouble(line.split(": ")[1].trim());
 			} else {
 				record.timeInSeconds = Double.parseDouble(line.split(": ")[1].trim());
-				record.stepSize = Integer.parseInt(br.readLine().split(": ")[1].trim());
+				record.stepSize = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			}
 			// Always have been the same
-			record.numberOfFolds = Integer.parseInt(br.readLine().split(": ")[1].trim());
+			record.numberOfFolds = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.totalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.optimalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvValidationError = Double.parseDouble(br.readLine().split(": ")[1].trim());

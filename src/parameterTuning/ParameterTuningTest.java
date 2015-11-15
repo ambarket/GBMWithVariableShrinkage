@@ -5,9 +5,7 @@ import gbm.cv.CrossValidatedResultFunctionEnsemble;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
@@ -15,7 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import parameterTuning.plotting.MathematicaLearningCurveCreator;
-import parameterTuning.plotting.PairwiseRunDataSummaryRecordPlots;
+import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.SimpleHostLock;
@@ -50,9 +48,9 @@ public class ParameterTuningTest {
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 
 			test.averageAllRunData(datasetParams);
-			//test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
-			//test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
-			//PairwiseRunDataSummaryRecordPlots.generatePairwiseRunDataSummaryRecordPlots(datasetParams.minimalName, test.tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Averages/");
+			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
+			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
+			RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
 		}
 	}
 
@@ -87,6 +85,13 @@ public class ParameterTuningTest {
 	}
 	
 	public void averageAllRunData(DatasetParameters datasetParams) {
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/";
+		new File(locksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(locksDir + "averageAllDataLock.txt")) {
+			System.out.println(String.format("[%s] Already averages all data for ", datasetParams.minimalName));
+			return;
+		}
+		
 		String paramTuningDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/";
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;
@@ -136,6 +141,7 @@ public class ParameterTuningTest {
 				e.printStackTrace();
 			}
 		}
+		SimpleHostLock.writeDoneLock(locksDir + "averageAllDataLock.txt");
 		System.out.println("Finished averaging all run data.");
 	}
 	
@@ -147,7 +153,7 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/RunDataSummaryRecords/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryLock.txt")) {
-			System.out.println(String.format("[%s] Already Created RunDataSummaryRecords", datasetParams.minimalName));
+			System.out.println(String.format("[%s] Already read sorted and saved all RunDataSummaryRecords", datasetParams.minimalName));
 			return;
 		}
 		
@@ -195,6 +201,13 @@ public class ParameterTuningTest {
 	}
 	
 	public void generateMathematicaLearningCurvesForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
+		String overallLocksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/";
+		new File(overallLocksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt")) {
+			System.out.println(String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
+			return;
+		}
+		
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
@@ -228,6 +241,7 @@ public class ParameterTuningTest {
 				}
 			}
 		}
+		SimpleHostLock.writeDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt");
 	}
 	
 	
