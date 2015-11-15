@@ -42,6 +42,13 @@ public class RunDataSummaryRecord {
 	public RunFileType runFileType; 
 	
 	
+	// Average RunData only fields
+	public double numberOfRunsRound;
+	public double totalNumberOfTreesFound;
+	public double[] numberOfTreesFoundInEachRun;
+	public double[] optimalNumberOfTreesFoundinEachRun;
+	
+	
 	public void inferTimeInSecondsFromPartialRun(int numberOfTreesInPartialRun, double timeInSeconds) {
 		this.timeInSeconds = (timeInSeconds / numberOfTreesInPartialRun) * totalNumberOfTrees;
 	}
@@ -183,6 +190,7 @@ public class RunDataSummaryRecord {
 		
 		String line = null;
 		record.runFileType = null;
+		record.parameters = parameters;
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(new File(runDataFilePath)));
 			line = br.readLine();
@@ -222,7 +230,21 @@ public class RunDataSummaryRecord {
 				record.avgLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.stdDevLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			} 
-			record.parameters = parameters;
+			// Check if this is an averaged run data file, if so read the extra data in.
+			line = br.readLine();
+			if (line.contains("Number of runs found")) {
+				record.numberOfRunsRound = Double.parseDouble(line.split(": ")[1].trim());
+				record.totalNumberOfTreesFound = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				String[] numberOfTreesInEachRun = br.readLine().split(": ")[1].split(", ");
+				String[] optimalNumberOfTreesInEachRun = br.readLine().split(": ")[1].split(", ");
+				record.numberOfTreesFoundInEachRun = new double[(int)record.numberOfRunsRound];
+				record.optimalNumberOfTreesFoundinEachRun = new double[(int)record.numberOfRunsRound];
+				for (int i = 0; i < numberOfTreesInEachRun.length; i++) {
+					record.numberOfTreesFoundInEachRun[i] = Double.parseDouble(numberOfTreesInEachRun[i]);
+					record.optimalNumberOfTreesFoundinEachRun[i] = Double.parseDouble(optimalNumberOfTreesInEachRun[i]);
+				}
+			}
+			
 			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();

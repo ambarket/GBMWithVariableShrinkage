@@ -1,9 +1,7 @@
 package utilities;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
 public class CommandLineExecutor {
     public static void runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
@@ -12,11 +10,21 @@ public class CommandLineExecutor {
     	 Process p = pb.start();
          p.waitFor();
          
+
+
+         Thread closeChildThread = new Thread() {
+             public void run() {
+            	 p .destroy();
+             }
+         };
+
+         Runtime.getRuntime().addShutdownHook(closeChildThread); 
+         
+         /*
+         // Read command standard output
          BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
          BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
-         /*
-         // Read command standard output
          String s;
          System.out.println("Standard output: ");
          while ((s = stdInput.readLine()) != null) {
@@ -31,6 +39,8 @@ public class CommandLineExecutor {
          */
          
     }
+    
+    
     /*
     public static void runProgramAndWaitForItToComplete(String command) {
 

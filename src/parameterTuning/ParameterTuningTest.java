@@ -18,6 +18,7 @@ import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
+import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import dataset.Dataset;
@@ -72,31 +73,16 @@ public class ParameterTuningTest {
 		// DO task
 		try {
 			CompressedTarBallCreator.compressFile(source, destination);
-			deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
+			RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 		} catch (IOException e) {
 			e.printStackTrace();
-			deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
+			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
 		}
 	}
-	public static boolean deleteDirectory(File directory) {
-	    if(directory.exists()){
-	        File[] files = directory.listFiles();
-	        if(null!=files){
-	            for(int i=0; i<files.length; i++) {
-	                if(files[i].isDirectory()) {
-	                    deleteDirectory(files[i]);
-	                }
-	                else {
-	                    files[i].delete();
-	                }
-	            }
-	        }
-	    }
-	    return(directory.delete());
-	}
+
 	
 	public static void processAllDatasets(ParameterTuningParameters parameters) {
 		ParameterTuningTest test = new ParameterTuningTest();
@@ -272,7 +258,7 @@ public class ParameterTuningTest {
 	}
 	
 	public void generateMathematicaLearningCurvesForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
-		String overallLocksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/";
+		String overallLocksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurves/";
 		new File(overallLocksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt")) {
 			System.out.println(String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
@@ -280,8 +266,9 @@ public class ParameterTuningTest {
 		}
 		
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
-		int done = 0;
-		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
+		int submissionNumber = 0;
+		StopWatch globalTimer = new StopWatch().start() ;
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
 		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
 			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
 				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
@@ -293,34 +280,23 @@ public class ParameterTuningTest {
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
-									timer.start();
-									String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
-									new File(locksDir).mkdirs();
-									if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--errorCurveLock.txt")) {
-										System.out.println(String.format("[%s] Already Created error curve runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
-										continue;
-									}
 
-									String errorCurveFilePath = MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters, tuningParameters.runFileType);
-									try {
-									if (errorCurveFilePath != null) {
-										String mathematicFileDirectory = runDataDirectory + parameters.getRunDataSubDirectory( tuningParameters.runFileType);
-										String mathematicaFileName = parameters.getFileNamePrefix(tuningParameters.runFileType)  + "--errorCurve.m";
-		
-										StopWatch errorCurveTimer = new StopWatch().start();
-										errorCurveTimer.printMessageWithTime("Starting execution of " + mathematicFileDirectory + mathematicaFileName);
-										CommandLineExecutor.runProgramAndWaitForItToComplete(mathematicFileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", mathematicaFileName});
-										errorCurveTimer.printMessageWithTime("Finished execution of " + mathematicFileDirectory + mathematicaFileName);
-									}
-									} catch (Exception e) {
-										e.printStackTrace();
-										System.exit(1);
-									}
+									futureQueue.add(GradientBoostingTree.executor.submit(
+											new MathematicaLearningCurveCreator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 									
-									SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--errorCurveLock.txt");
-									System.out.println(String.format("[%s] Created error curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									if (futureQueue.size() >= 8) {
+										System.out.println("Reached 50 error curve threads, waiting for some to finish");
+										while (futureQueue.size() > 4) {
+											try {
+												futureQueue.poll().get();
+
+											} catch (InterruptedException e) {
+												e.printStackTrace();
+											} catch (ExecutionException e) {
+												e.printStackTrace();
+											}
+										}
+									}
 								}
 							}
 						}
@@ -328,7 +304,18 @@ public class ParameterTuningTest {
 				}
 			}
 		}
+		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		while (!futureQueue.isEmpty()) {
+			try {
+				futureQueue.poll().get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
+		}
 		SimpleHostLock.writeDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt");
+		System.out.println("Finished generating error curves for all run data.");
 	}
 	
 	

@@ -17,6 +17,7 @@ import parameterTuning.RunDataSummaryRecordFilter;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.CommandLineExecutor;
 import utilities.DoubleCompare;
+import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
@@ -184,6 +185,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			StopWatch mathematicaCurveTimer = new StopWatch().start();
 			mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
 			CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
+			RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
 			mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -195,7 +195,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 
 				// Avg Per Tree RunData
 				int index = 0;
-				while ((line = br.readLine()) != null) {
+				while ((line = br.readLine()) != null /*&& !line.isEmpty()*/) {
 					String[] components = line.split("\t");
 					if (numberOfTreesFound <= index) {
 						avgCvTrainingErrorByIteration.add(Double.parseDouble(components[1].trim()));
@@ -223,11 +223,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 						if (runFileType == RunFileType.ParamTuning4) {
 							cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
 							cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
-							try {
 							examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
-							} catch (Exception e) {
-								System.out.println();
-							}
 							examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
 							learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
 							learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
@@ -237,7 +233,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					}
 				}
 				br.close();
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
