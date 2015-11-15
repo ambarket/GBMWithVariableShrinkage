@@ -93,7 +93,7 @@ public class RunDataSummaryRecordFilter {
 			if (description.length() > 0) {
 				description.append(" and ");
 			}
-			description.append(filterEntry.getKey().name() + " = " + filterEntry.getValue().toString());
+			description.append(filterEntry.getKey().name() + "=" + filterEntry.getValue().toString());
 		}
 		return description.toString();
 	}
@@ -104,7 +104,7 @@ public class RunDataSummaryRecordFilter {
 			if (description.length() > 0) {
 				description.append("and");
 			}
-			description.append(filterEntry.getKey().name().substring(0, 5) + "=" + filterEntry.getValue().toString());
+			description.append(getMinimizedPropertyName(filterEntry.getKey()) + "=" + filterEntry.getValue().toString());
 		}
 		return description.toString();
 	}
@@ -141,9 +141,29 @@ public class RunDataSummaryRecordFilter {
 			if (!Double.isNaN(doubleValue)) {
 				stringValue = String.format("%f", doubleValue);
 			}
-			buffer.append(property.name() + "-" + stringValue + "/");
+			buffer.append(getMinimizedPropertyName(property) + "-" + stringValue + "/");
 		}
 		return buffer.toString();
+	}
+	
+	private static String getMinimizedPropertyName(FilterableProperty property) {
+		switch(property) {
+			case BagFraction:
+				return "BF";
+			case LearningRatePolicy:
+				return "LRPolicy";
+			case MaxLearningRate:
+				return "MaxLR";
+			case MaxNumberOfSplits:
+				return "Splits";
+			case MinExamplesInNode:
+				return "MEIN";
+			case MinLearningRate:
+				return "MinLR";
+			default:
+				throw new IllegalArgumentException();
+		
+		}
 	}
 	
 	private static boolean doesRecordMatchFilter(RunDataSummaryRecord record, Map.Entry<FilterableProperty, Object> filterEntry) {

@@ -16,6 +16,7 @@ import parameterTuning.plotting.MathematicaLearningCurveCreator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
+import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
@@ -300,7 +301,23 @@ public class ParameterTuningTest {
 												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 										continue;
 									}
-									MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters, tuningParameters.runFileType);
+
+									String errorCurveFilePath = MathematicaLearningCurveCreator.createLearningCurveForParameters(datasetParams, runDataDirectory, parameters, tuningParameters.runFileType);
+									try {
+									if (errorCurveFilePath != null) {
+										String mathematicFileDirectory = runDataDirectory + parameters.getRunDataSubDirectory( tuningParameters.runFileType);
+										String mathematicaFileName = parameters.getFileNamePrefix(tuningParameters.runFileType)  + "--errorCurve.m";
+		
+										StopWatch errorCurveTimer = new StopWatch().start();
+										errorCurveTimer.printMessageWithTime("Starting execution of " + mathematicFileDirectory + mathematicaFileName);
+										CommandLineExecutor.runProgramAndWaitForItToComplete(mathematicFileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", mathematicaFileName});
+										errorCurveTimer.printMessageWithTime("Finished execution of " + mathematicFileDirectory + mathematicaFileName);
+									}
+									} catch (Exception e) {
+										e.printStackTrace();
+										System.exit(1);
+									}
+									
 									SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--errorCurveLock.txt");
 									System.out.println(String.format("[%s] Created error curve for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 											datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));

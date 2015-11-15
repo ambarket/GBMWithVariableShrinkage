@@ -15,8 +15,10 @@ import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
 import parameterTuning.RunDataSummaryRecordFilter;
 import regressionTree.RegressionTree.LearningRatePolicy;
+import utilities.CommandLineExecutor;
 import utilities.DoubleCompare;
 import utilities.SimpleHostLock;
+import utilities.StopWatch;
 import utilities.SumCountAverage;
 import dataset.DatasetParameters;
 
@@ -42,7 +44,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
 		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(datasetParameters.minimalName, runDataDirectory);
 	
-		String outputDirectory = runDataDirectory + "ParameterComparisonGraphs/";
+		String outputDirectory = runDataDirectory + "graphs/";
 		
 
 		
@@ -148,26 +150,41 @@ public class RunDataSummaryRecordGraphGenerator {
 		} 
 		
 		String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-		String filePath = fileDirectory + getNotebookDataFileName(datasetParameters, filter, axes);
+		String mathematicaFilePath = fileDirectory + getNotebookDataFileName(datasetParameters, filter, axes);
+		String latexFilePath = fileDirectory + getLatexCodeFileName(datasetParameters, filter, axes);
 		try {
 			new File(fileDirectory).mkdirs();
-			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(filePath)));
+			BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicaFilePath)));
+			BufferedWriter latexCodeWriter = new BufferedWriter(new PrintWriter(new File(latexFilePath)));
 			if (constantRecordsExist) {
-				bw.write(constantUniquePointsDataListCode + "\n" + constantAllPointsDataListCode + "\n\n" + 
+				mathematica.write(constantUniquePointsDataListCode + "\n" + constantAllPointsDataListCode + "\n\n" + 
 						constantUniquePointsPlotCode + "\n" + constantAllPointsPlotCode + "\n\n");
 			}
 			if (variableRecordsExist) {
-				bw.write(variableUniquePointsDataListCode + "\n" + variableAllPointsDataListCode + "\n\n" + 
+				mathematica.write(variableUniquePointsDataListCode + "\n" + variableAllPointsDataListCode + "\n\n" + 
 					variableUniquePointsPlotCode + "\n" + variableAllPointsPlotCode + "\n\n");
 			}
+			
 			if (constantRecordsExist) {
-				bw.write(constantUniquePointsLatexCode + "\n" + constantAllPointsLatexCode + "\n\n");
+				latexCodeWriter.write(constantUniquePointsLatexCode + "\n" + constantAllPointsLatexCode + "\n\n");
 			}
 			if (variableRecordsExist) {
-				bw.write(variableUniquePointsLatexCode + "\n" + variableAllPointsLatexCode);
+				latexCodeWriter.write(variableUniquePointsLatexCode + "\n" + variableAllPointsLatexCode);
 			}
-			bw.flush();
-			bw.close();
+			latexCodeWriter.flush();
+			latexCodeWriter.close();
+			mathematica.flush();
+			mathematica.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		try {
+			StopWatch mathematicaCurveTimer = new StopWatch().start();
+			mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
+			CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
+			mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -315,7 +332,12 @@ public class RunDataSummaryRecordGraphGenerator {
 	
 	private static String getNotebookDataFileName(DatasetParameters datasetParameters, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		//String filerDescription = (filter==null) ? "noFilter" : filter.getMinimalFilterDescription();
-		return datasetParameters.minimalName + convertGraphablePropertyAxesArrayToMinimalString(axes) + "--NotebookData.txt";
+		return datasetParameters.minimalName + convertGraphablePropertyAxesArrayToMinimalString(axes) + "--NotebookData.m";
+	}
+	
+	private static String getLatexCodeFileName(DatasetParameters datasetParameters, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+		//String filerDescription = (filter==null) ? "noFilter" : filter.getMinimalFilterDescription();
+		return datasetParameters.minimalName + convertGraphablePropertyAxesArrayToMinimalString(axes) + "--LatexCode.txt";
 	}
 	
 	private static String getPlotGraphFileName(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, GraphType graphType, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
@@ -332,7 +354,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		String learningRatePolicyNiceName = (learningRatePolicy == LearningRatePolicy.CONSTANT) ? "Constant LR" : "Variable LR";
 		String axesInfo = convertGraphablePropertyAxesArrayToNiceString(axes);
 		String filterInfo = (filter == null) ? "" : filter.getLongFilterDescription();
-		return datasetParameters.minimalName + " " + learningRatePolicyNiceName + " " + axesInfo +  " " + filterInfo;
+		return datasetParameters.fullName + " " + learningRatePolicyNiceName + " " + axesInfo +  " " + filterInfo;
 	}
 	
 	private static String getLatexCaption(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy,  RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
@@ -465,7 +487,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			if (!first) {
 				buffer.append("vs");
 			}
-			buffer.append(val.name());
+			buffer.append(getMinimalPropertyName(val));
 			first = false;
 		}
 		return buffer.toString();
@@ -527,6 +549,43 @@ public class RunDataSummaryRecordGraphGenerator {
 			}
 		}
 		return maxAndMin;
+	}
+	
+	private static String getMinimalPropertyName(GraphableProperty property) {
+		switch(property) {
+			case AllDataTestError:
+				return "ADTE";
+			case AvgLearningRate:
+				return "AvgLR";
+			case AvgNumberOfSplits:
+				return "AvgSplits";
+			case BagFraction:
+				return "BF";
+			case ConstantLearningRate:
+				return "ConstantLR";
+			case CvEnsembleTestError:
+				return "CvEnsTestError";
+			case CvValidationError:
+				return "CvValidError";
+			case MaxLearningRate:
+				return "MaxLR";
+			case MaxNumberOfSplits:
+				return "MaxSplits";
+			case MinExamplesInNode:
+				return "MEIN";
+			case MinLearningRate:
+				return "MinLR";
+			case OptimalNumberOfTrees:
+				return "OptNOT";
+			case StdDevLearningRate:
+				return "StdDevLR";
+			case StdDevNumberOfSplits:
+				return "StdDevSplits";
+			case TimeInSeconds:
+				return "TIME";
+			default:
+				throw new IllegalArgumentException();
+		}
 	}
 	
 	private static double getPropertyValue(RunDataSummaryRecord record, GraphableProperty property) {

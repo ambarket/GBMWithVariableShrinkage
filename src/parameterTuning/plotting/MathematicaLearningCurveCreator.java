@@ -16,7 +16,15 @@ import utilities.DoubleCompare;
 import dataset.DatasetParameters;
 
 public class MathematicaLearningCurveCreator {
-	public static void createLearningCurveForParameters(DatasetParameters datasetParams, String runDataFullDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
+	/**
+	 * Return path to mathematica file containing learning curve code.
+	 * @param datasetParams
+	 * @param runDataFullDirectory
+	 * @param parameters
+	 * @param expectedRunFileType
+	 * @return
+	 */
+	public static String createLearningCurveForParameters(DatasetParameters datasetParams, String runDataFullDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
 		double maxRMSE = Double.MIN_VALUE;
 		ArrayList<Double> avgCvTrainingErrorByIteration = new ArrayList<Double>();
 		ArrayList<Double> avgCvValidationErrorByIteration = new ArrayList<Double>();
@@ -38,7 +46,7 @@ public class MathematicaLearningCurveCreator {
 		RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataFullDirectory, parameters, expectedRunFileType);
 		if (record == null) {
 			System.out.println("Couldn't create learning curve for " + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType) + " because runData not found.");
-			return;
+			return null;
 		}
 		String runDataFilePath = runDataFullDirectory + parameters.getRunDataSubDirectory(record.runFileType) + parameters.getFileNamePrefix(record.runFileType)  + "--runData.txt";
 		try {
@@ -76,14 +84,16 @@ public class MathematicaLearningCurveCreator {
 			e.printStackTrace();
 		}
 
-		String mathematicFileName = runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--learningCurve.txt";
+		String mathematicFileName = runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--errorCurve.m";
+		String latexFileName = runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--latexCode.txt";
 		mathematicFileName = mathematicFileName.replace("\\", "/");
+		latexFileName = latexFileName.replace("\\", "/");
 		String imageFileNameNoExtension = (runDataFullDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)).replace("\\", "/");
 		StringBuffer saveToFile = new StringBuffer();
 		StringBuffer latexCode = new StringBuffer();
 		
 		saveToFile.append("fileName := \"" + imageFileNameNoExtension + "\"\n");
-		saveToFile.append("Export[fileName <> \".png\", learningCurve]\n\n");
+		saveToFile.append("Export[fileName <> \".png\", learningCurve, ImageResolution -> 300]\n\n");
 
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
 		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + imageFileNameNoExtension + "}.png}\n");
@@ -93,6 +103,7 @@ public class MathematicaLearningCurveCreator {
 		
 		try {
 			BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicFileName)));
+			BufferedWriter latex = new BufferedWriter(new PrintWriter(new File(latexFileName)));
 			mathematica.write("avgCvTrainingError := " + MathematicaListCreator.convertToMathematicaList(avgCvTrainingErrorByIteration) + "\n");
 			mathematica.write("avgCvValidationError := " + MathematicaListCreator.convertToMathematicaList(avgCvValidationErrorByIteration) + "\n");
 			mathematica.write("avgCvTestError := " + MathematicaListCreator.convertToMathematicaList(avgCvTestErrorByIteration) + "\n");
@@ -106,13 +117,17 @@ public class MathematicaLearningCurveCreator {
 					+ ", PlotStyle -> {{Magenta, Dashed}, {Cyan, Dashed}, {Red, Dashed}, Blue, Orange, Pink, Brown, {Green, Thin}}"
 					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
+					+ ", ImageSize -> Large"
 					+ "] \nlearningCurve\n\n");
 			mathematica.write(saveToFile.toString());
-			mathematica.write(latexCode.toString());
+			latex.write(latexCode.toString());
 			mathematica.flush();
 			mathematica.close();
+			latex.flush();
+			latex.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return mathematicFileName;
 	}
 }
