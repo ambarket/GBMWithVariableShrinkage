@@ -1,5 +1,7 @@
 package parameterTuning.plotting;
 
+import gbm.GradientBoostingTree;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.PrintWriter;
@@ -7,9 +9,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
@@ -37,159 +46,228 @@ public class RunDataSummaryRecordGraphGenerator {
 		String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-			System.out.println(String.format("[%s] Already Created RunDataSummaryGraphs", datasetParameters.minimalName));
+			System.out.println(String.format("[%s] Already Created all RunDataSummaryGraphs", datasetParameters.minimalName));
 			return;
 		}
+		
+		ExecutorService executor = Executors.newCachedThreadPool();
 		
 		// Read in all RunDataSummaryRecords
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
 		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(datasetParameters.minimalName, runDataDirectory);
 	
 		String outputDirectory = runDataDirectory + "graphs/";
-		
-
-		
 		HashSet<RunDataSummaryRecordFilter> filters = RunDataSummaryRecordFilter.getAllPossibleFilters(tuningParameters);
+		GraphableProperty[][] graphAxes = new GraphableProperty[][] 
+				{ 
+					{GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MinLearningRate, GraphableProperty.AllDataTestError},
+					{GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.AllDataTestError},
+					{GraphableProperty.AvgNumberOfSplits, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError},
+					{GraphableProperty.BagFraction, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
+					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError}
+				};
+		int submissionNumber = 0;
+		int totalNumberOfTests = filters.size() * graphAxes.length;
+		StopWatch globalTimer = new StopWatch().start();
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
 		
 		for (RunDataSummaryRecordFilter filter : filters) {
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MinLearningRate, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MaxNumberOfSplits, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.AvgNumberOfSplits, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.BagFraction, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MaxNumberOfSplits, GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError);
-			
-			generateAndSaveGraph(datasetParameters, tuningParameters, allRecords, filter, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, 
-					GraphableProperty.MaxNumberOfSplits, GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError);
+			for (GraphableProperty[] axes : graphAxes) {
+				futureQueue.add(executor.submit(
+						new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecords, filter, 
+								AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, 
+								totalNumberOfTests, globalTimer, axes)));
+				
+				if (futureQueue.size() >= 8) {
+					System.out.println("Reached 8 run data summary graph threads, waiting for some to finish");
+					while (futureQueue.size() > 4) {
+						try {
+							futureQueue.poll().get();
+	
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						} catch (ExecutionException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		}
+		System.out.println("Submitted the last of the run data summary graph jobs, just waiting until they are all done.");
+		while (!futureQueue.isEmpty()) {
+			try {
+				futureQueue.poll().get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
 		}
 		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
+		System.out.println("Finished generating run data summary graph for all filters and axes.");
 	}
 	
-	private static void generateAndSaveGraph(DatasetParameters datasetParameters, 
-			ParameterTuningParameters tuningParameters, 
-			List<RunDataSummaryRecord> allRecords, 
-			RunDataSummaryRecordFilter filter,
-			AxesType axesType,
-			String outputDirectory,
-			GraphableProperty... axes) {
+	private static class RunDataSummaryGraphTask implements Callable<Void>{
+		DatasetParameters datasetParameters;
+		ParameterTuningParameters tuningParameters;
+		List<RunDataSummaryRecord> allRecords; 
+		RunDataSummaryRecordFilter filter;
+		AxesType axesType;
+		String outputDirectory;
+		GraphableProperty[] axes;
+		int submissionNumber;
+		int totalNumberOfTests;
+		StopWatch globalTimer;
 		
-		if (axes.length < 2 || axes.length > 3) {
-			System.out.println("Only defined for 2D or 3D graphs");
+		public RunDataSummaryGraphTask(DatasetParameters datasetParameters, 
+				ParameterTuningParameters tuningParameters, 
+				List<RunDataSummaryRecord> allRecords, 
+				RunDataSummaryRecordFilter filter,
+				AxesType axesType,
+				String outputDirectory,
+				int submissionNumber,
+				int totalNumberOfTests,
+				StopWatch globalTimer,
+				GraphableProperty... axes) {
+			this.datasetParameters = datasetParameters;
+			this.tuningParameters = tuningParameters;
+			this.allRecords = allRecords;
+			this.filter = filter;
+			this.axesType = axesType;
+			this.outputDirectory = outputDirectory;
+			this.axes = axes;
+			this.submissionNumber = submissionNumber;
+			this.totalNumberOfTests = totalNumberOfTests;
+			this.globalTimer = globalTimer;
 		}
 		
-		List<RunDataSummaryRecord> filteredRecords = null;
-		if (filter == null) {
-			filteredRecords = allRecords;
-		} else {
-			filteredRecords = filter.filterRecordsOnParameterValue(allRecords);
-		}
-		
-		List<RunDataSummaryRecord> constantRecords = RunDataSummaryRecordFilter.learningRatePolicyEqualsConstant.filterRecordsOnParameterValue(filteredRecords);
-		List<RunDataSummaryRecord> variableRecords = RunDataSummaryRecordFilter.learningRatePolicyEqualsRevisedVariable.filterRecordsOnParameterValue(filteredRecords);
-		
-		String constantUniquePointsDataListCode = "", constantUniquePointsPlotCode = "", constantUniquePointsLatexCode = "",
-				variableUniquePointsDataListCode = "", variableUniquePointsPlotCode = "", variableUniquePointsLatexCode = "",
-				constantAllPointsDataListCode = "", constantAllPointsPlotCode = "", constantAllPointsLatexCode = "",
-				variableAllPointsDataListCode = "", variableAllPointsPlotCode = "", variableAllPointsLatexCode = "";
-		boolean constantRecordsExist = !constantRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.MinLearningRate) < 0 && Arrays.binarySearch(axes, GraphableProperty.MaxLearningRate) < 0;
-		boolean variableRecordsExist = !variableRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.ConstantLearningRate) < 0;
-		if (constantRecordsExist) {
-			constantUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, constantRecords, axes);
-			constantUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.UniquePoints, constantRecords, filter, outputDirectory, axes);
-			constantUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, filter, outputDirectory, axes);
-			constantAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, constantRecords, axes);
-			constantAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.AllPoints, constantRecords, filter, outputDirectory, axes);
-			constantAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, filter, outputDirectory, axes);
-		}
-		if (variableRecordsExist) {
-			variableUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, variableRecords, axes);
-			variableUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.UniquePoints, variableRecords, filter, outputDirectory, axes);
-			variableUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, filter, outputDirectory, axes);
-			variableAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, variableRecords, axes);
-			variableAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.AllPoints, variableRecords, filter, outputDirectory, axes);
-			variableAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, filter, outputDirectory, axes);
-		}
-		
-		if (!variableRecordsExist && !constantRecordsExist) {
-			System.out.println("No records exist mathing the filter " + filter.getLongFilterDescription());
-			return;
-		} 
-		
-		if (constantUniquePointsDataListCode == null || constantAllPointsDataListCode == null) {
-			System.out.println("Skipping the constant graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
-			" because only 1 unique X or Y value exists.");
-			constantRecordsExist = false;
-		}
-		if (variableUniquePointsDataListCode == null || variableAllPointsDataListCode == null) {
-			System.out.println("Skipping the variable graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
-			" because only 1 unique X or Y value exists.");
-			variableRecordsExist = false;
-		}
-		if (!variableRecordsExist && !constantRecordsExist) {
-			System.out.println("Both constant and variable graphs would have been pointless so skipping " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + " entirely");
-			return;
-		} 
-		
-		String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-		String mathematicaFilePath = fileDirectory + getNotebookDataFileName(datasetParameters, filter, axes);
-		String latexFilePath = fileDirectory + getLatexCodeFileName(datasetParameters, filter, axes);
-		try {
-			new File(fileDirectory).mkdirs();
-			BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicaFilePath)));
-			BufferedWriter latexCodeWriter = new BufferedWriter(new PrintWriter(new File(latexFilePath)));
-			if (constantRecordsExist) {
-				mathematica.write(constantUniquePointsDataListCode + "\n" + constantAllPointsDataListCode + "\n\n" + 
-						constantUniquePointsPlotCode + "\n" + constantAllPointsPlotCode + "\n\n");
-			}
-			if (variableRecordsExist) {
-				mathematica.write(variableUniquePointsDataListCode + "\n" + variableAllPointsDataListCode + "\n\n" + 
-					variableUniquePointsPlotCode + "\n" + variableAllPointsPlotCode + "\n\n");
+		@Override
+		public Void call() {
+			StopWatch timer = new StopWatch().start();
+			String testSubDirectory = ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
+			String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/" + testSubDirectory;
+			new File(locksDir).mkdirs();
+			if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
+				System.out.println(String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				return null;
 			}
 			
+			
+			if (axes.length < 2 || axes.length > 3) {
+				System.out.println("Only defined for 2D or 3D graphs");
+			}
+			
+			List<RunDataSummaryRecord> filteredRecords = null;
+			if (filter == null) {
+				filteredRecords = allRecords;
+			} else {
+				filteredRecords = filter.filterRecordsOnParameterValue(allRecords);
+			}
+			
+			List<RunDataSummaryRecord> constantRecords = RunDataSummaryRecordFilter.learningRatePolicyEqualsConstant.filterRecordsOnParameterValue(filteredRecords);
+			List<RunDataSummaryRecord> variableRecords = RunDataSummaryRecordFilter.learningRatePolicyEqualsRevisedVariable.filterRecordsOnParameterValue(filteredRecords);
+			
+			String constantUniquePointsDataListCode = "", constantUniquePointsPlotCode = "", constantUniquePointsLatexCode = "",
+					variableUniquePointsDataListCode = "", variableUniquePointsPlotCode = "", variableUniquePointsLatexCode = "",
+					constantAllPointsDataListCode = "", constantAllPointsPlotCode = "", constantAllPointsLatexCode = "",
+					variableAllPointsDataListCode = "", variableAllPointsPlotCode = "", variableAllPointsLatexCode = "";
+			boolean constantRecordsExist = !constantRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.MinLearningRate) < 0 && Arrays.binarySearch(axes, GraphableProperty.MaxLearningRate) < 0;
+			boolean variableRecordsExist = !variableRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.ConstantLearningRate) < 0;
 			if (constantRecordsExist) {
-				latexCodeWriter.write(constantUniquePointsLatexCode + "\n" + constantAllPointsLatexCode + "\n\n");
+				constantUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, constantRecords, axes);
+				constantUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.UniquePoints, constantRecords, filter, outputDirectory, axes);
+				constantUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, filter, outputDirectory, axes);
+				constantAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, constantRecords, axes);
+				constantAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.AllPoints, constantRecords, filter, outputDirectory, axes);
+				constantAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, filter, outputDirectory, axes);
 			}
 			if (variableRecordsExist) {
-				latexCodeWriter.write(variableUniquePointsLatexCode + "\n" + variableAllPointsLatexCode);
+				variableUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, variableRecords, axes);
+				variableUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.UniquePoints, variableRecords, filter, outputDirectory, axes);
+				variableUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, filter, outputDirectory, axes);
+				variableAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, variableRecords, axes);
+				variableAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.AllPoints, variableRecords, filter, outputDirectory, axes);
+				variableAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, filter, outputDirectory, axes);
 			}
-			latexCodeWriter.flush();
-			latexCodeWriter.close();
-			mathematica.flush();
-			mathematica.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-		
-		try {
-			StopWatch mathematicaCurveTimer = new StopWatch().start();
-			mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
-			CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
-			RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
-			mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
-		} catch (Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+			
+			if (!variableRecordsExist && !constantRecordsExist) {
+				System.out.println(String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
+				return null;
+			} 
+			
+			if (constantUniquePointsDataListCode == null || constantAllPointsDataListCode == null) {
+				System.out.println("Skipping the constant graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
+				" because only 1 unique X or Y value exists.");
+				constantRecordsExist = false;
+			}
+			if (variableUniquePointsDataListCode == null || variableAllPointsDataListCode == null) {
+				System.out.println("Skipping the variable graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
+				" because only 1 unique X or Y value exists.");
+				variableRecordsExist = false;
+			}
+			if (!variableRecordsExist && !constantRecordsExist) {
+				System.out.println(String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
+				return null;
+			} 
+			
+			String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
+			String mathematicaFilePath = fileDirectory + getNotebookDataFileName(datasetParameters, filter, axes);
+			String latexFilePath = fileDirectory + getLatexCodeFileName(datasetParameters, filter, axes);
+			try {
+				new File(fileDirectory).mkdirs();
+				BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicaFilePath)));
+				BufferedWriter latexCodeWriter = new BufferedWriter(new PrintWriter(new File(latexFilePath)));
+				if (constantRecordsExist) {
+					mathematica.write(constantUniquePointsDataListCode + "\n" + constantAllPointsDataListCode + "\n\n" + 
+							constantUniquePointsPlotCode + "\n" + constantAllPointsPlotCode + "\n\n");
+				}
+				if (variableRecordsExist) {
+					mathematica.write(variableUniquePointsDataListCode + "\n" + variableAllPointsDataListCode + "\n\n" + 
+						variableUniquePointsPlotCode + "\n" + variableAllPointsPlotCode + "\n\n");
+				}
+				
+				if (constantRecordsExist) {
+					latexCodeWriter.write(constantUniquePointsLatexCode + "\n" + constantAllPointsLatexCode + "\n\n");
+				}
+				if (variableRecordsExist) {
+					latexCodeWriter.write(variableUniquePointsLatexCode + "\n" + variableAllPointsLatexCode);
+				}
+				latexCodeWriter.flush();
+				latexCodeWriter.close();
+				mathematica.flush();
+				mathematica.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+			
+			try {
+				StopWatch mathematicaCurveTimer = new StopWatch().start();
+				mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
+				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
+				RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
+				mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println(String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				return null;
+			}
+			System.out.println(String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+					datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
+			return null;
 		}
 	}
 	

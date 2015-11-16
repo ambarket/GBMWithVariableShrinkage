@@ -280,12 +280,12 @@ public class ParameterTuningTest {
 									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
-
+								
 									futureQueue.add(GradientBoostingTree.executor.submit(
 											new MathematicaLearningCurveCreator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 									
 									if (futureQueue.size() >= 8) {
-										System.out.println("Reached 50 error curve threads, waiting for some to finish");
+										System.out.println("Reached 8 error curve threads, waiting for some to finish");
 										while (futureQueue.size() > 4) {
 											try {
 												futureQueue.poll().get();
