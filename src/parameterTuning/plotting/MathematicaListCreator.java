@@ -13,8 +13,9 @@ public class MathematicaListCreator {
 			if (i != error.size() - 1) {
 				retval.append(",");
 			} 
-			retval.append("\n");
+			//retval.append("\n");
 		}
+		retval.append("\n");
 		retval.append("}");
 		return retval.toString();
 	}

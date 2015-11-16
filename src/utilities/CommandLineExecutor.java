@@ -14,7 +14,7 @@ public class CommandLineExecutor {
 
          Thread closeChildThread = new Thread() {
              public void run() {
-            	 p .destroy();
+				p.destroyForcibly();
              }
          };
 

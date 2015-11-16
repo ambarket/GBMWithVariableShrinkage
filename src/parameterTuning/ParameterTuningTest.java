@@ -1,28 +1,27 @@
 package parameterTuning;
-import gbm.GbmParameters;
-import gbm.GradientBoostingTree;
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.Dataset;
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
+import gbm.GradientBoostingTree;
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import parameterTuning.plotting.MathematicaLearningCurveCreator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
-import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
-import dataset.Dataset;
-import dataset.DatasetParameters;
 
 
 public class ParameterTuningTest {
@@ -264,7 +263,7 @@ public class ParameterTuningTest {
 			System.out.println(String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
 			return;
 		}
-		
+		ExecutorService executor = Executors.newFixedThreadPool(3);
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;
@@ -281,12 +280,12 @@ public class ParameterTuningTest {
 												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
 												learningRatePolicy, splitPolicy);
 								
-									futureQueue.add(GradientBoostingTree.executor.submit(
+									futureQueue.add(executor.submit(
 											new MathematicaLearningCurveCreator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 									
-									if (futureQueue.size() >= 8) {
-										System.out.println("Reached 8 error curve threads, waiting for some to finish");
-										while (futureQueue.size() > 4) {
+									if (futureQueue.size() >= 6) {
+										System.out.println("Reached 6 error curve threads, waiting for some to finish");
+										while (futureQueue.size() > 3) {
 											try {
 												futureQueue.poll().get();
 

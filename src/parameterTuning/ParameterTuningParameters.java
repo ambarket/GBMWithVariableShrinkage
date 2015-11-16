@@ -99,7 +99,7 @@ public class ParameterTuningParameters {
 					 * test4Parameters.maxNumberOfSplts.length * test4Parameters.bagFractions.length * test4Parameters.minExamplesInNode.length;
 			
 			test4Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
-			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
+			test4Parameters.runDataProcessingDirectory = "/mnt/freenas/Austin/GBMWithVariableShrinkage/parameterTuning/4/";
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
 			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};

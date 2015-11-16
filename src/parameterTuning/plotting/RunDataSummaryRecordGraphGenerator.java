@@ -1,7 +1,5 @@
 package parameterTuning.plotting;
 
-import gbm.GradientBoostingTree;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.PrintWriter;
@@ -20,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.DatasetParameters;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
 import parameterTuning.RunDataSummaryRecordFilter;
@@ -30,7 +29,6 @@ import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.DatasetParameters;
 
 public class RunDataSummaryRecordGraphGenerator {
 	public enum GraphableProperty {TimeInSeconds, AllDataTestError, CvEnsembleTestError, CvValidationError, 
@@ -81,12 +79,12 @@ public class RunDataSummaryRecordGraphGenerator {
 			for (GraphableProperty[] axes : graphAxes) {
 				futureQueue.add(executor.submit(
 						new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecords, filter, 
-								AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, 
+								AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, ++submissionNumber, 
 								totalNumberOfTests, globalTimer, axes)));
 				
-				if (futureQueue.size() >= 8) {
+				if (futureQueue.size() >= 20) {
 					System.out.println("Reached 8 run data summary graph threads, waiting for some to finish");
-					while (futureQueue.size() > 4) {
+					while (futureQueue.size() > 5) {
 						try {
 							futureQueue.poll().get();
 	
@@ -255,7 +253,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			try {
 				StopWatch mathematicaCurveTimer = new StopWatch().start();
 				mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
-				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"cmd", "/c", "math.exe", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
+				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"math", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
 				RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
 				mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 			} catch (Exception e) {

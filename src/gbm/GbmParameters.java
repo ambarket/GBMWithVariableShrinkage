@@ -228,40 +228,78 @@ public class GbmParameters {
 				minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
 	}
 	
-	public String getLearningCurveLatexCaption() {
+	public String getErrorCurveLatexCaption() {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("Revised Variable - "
-					+ " MinLR: %.6f" 
-					+ " MaxLR: %.6f" 
-					+ " MaxSplits: %d"
-					+ " BagFraction: %.2f"
-					+ " MinEIN: %d",
+			return String.format("Error Curve (Variable) - "
+					+ " MinLearningRate = %.6f" 
+					+ " MaxLearningRate = %.6f" 
+					+ " MaxSplits = %d"
+					+ " BagFraction = %.2f"
+					+ " MinExamplesInNode = %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("Constant - " 
-					+ " LR: %.6f" 
-					+ " MaxSplits: %d"
-					+ " BagFraction: %.2f"
-					+ " MinEIN: %d",
+			return String.format("Error Curve (Constant) - " 
+					+ " LearningRate = %.6f" 
+					+ " MaxSplits = %d"
+					+ " BagFraction = %.2f"
+					+ " MinExamplesInNode = %d",
 					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		}
 	}
 	
-	public String getLearningCurveLatexFigureReference() {
+	public String getErrorCurveLatexFigureReference() {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("RevisedVariable"
-					+ " MinLR%.6f" 
-					+ " MaxLR%.6f" 
-					+ " MaxSplits%d"
-					+ " BagFraction%.2f"
-					+ " MinEIN: %d",
+			return String.format("ErrorCurveVariable"
+					+ "MinLR%.6f" 
+					+ "MaxLR%.6f" 
+					+ "Splits%d"
+					+ "BF%.2f"
+					+ "MEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("Constant - " 
-					+ " LR%.6f" 
-					+ " MaxSplits%d"
-					+ " BagFraction%.2f"
-					+ " MinEIN%d",
+			return String.format("ErrorCurveConstant" 
+					+ "LR%.6f" 
+					+ "Splits%d"
+					+ "BF%.2f"
+					+ "MEIN%d",
+					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		}
+	}
+	
+	public String getMetaDataCurveLatexCaption() {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format("Tree MetaData (Variable) - "
+					+ " MinLearningRate = %.6f" 
+					+ " MaxLearningRate = %.6f" 
+					+ " MaxSplits = %d"
+					+ " BagFraction = %.2f"
+					+ " MinExamplesInNode = %d",
+					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		} else {
+			return String.format("Tree MetaData (Constant) - " 
+					+ " LearningRate = %.6f" 
+					+ " MaxSplits = %d"
+					+ " BagFraction = %.2f"
+					+ " MinExamplesInNode = %d",
+					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		}
+	}
+	
+	public String getMetaDataCurveLatexFigureReference() {
+		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			return String.format("TreeMetaDataVariable"
+					+ "MinLR%.6f" 
+					+ "MaxLR%.6f" 
+					+ "Splits%d"
+					+ "BF%.2f"
+					+ "MEIN: %d",
+					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
+		} else {
+			return String.format("TreeMetaDataConstant" 
+					+ "LR%.6f" 
+					+ "Splits%d"
+					+ "BF%.2f"
+					+ "MEIN%d",
 					maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		}
 	}
