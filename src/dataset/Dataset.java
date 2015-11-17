@@ -79,6 +79,42 @@ public class Dataset {
 		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
 	}
 	
+	/**
+	 * Read in a Dataset without splitting into training/test data and without shuffling.
+	 * This hould be used only for graphing purposes.
+	 * Guarentees that an index into trainingInstances/trainingResponses is the same as the line numbr of that
+	 * example in the original dataset file.
+	 * @param parameters
+	 * @param trainingSampleFraction
+	 */
+	public Dataset(DatasetParameters parameters) {
+		StopWatch timer = (new StopWatch()).start();
+		if (!parameters.attributeTypeHeader) {
+			throw new UnsupportedOperationException("Support for dataset files without an explicit attribute type header is not yet implemented");
+		}
+		if (parameters.responseVariableColumn < 0) {
+			throw new IllegalArgumentException("responseVariableColumn must be specificed");
+		}
+		
+		this.parameters = parameters;
+		
+		// Read dataset file as strings
+		RawFile file = new RawFile(parameters.fileDirectory + parameters.fileName, parameters.attributeTypeHeader, parameters.attributeNameHeader);
+		this.numberOfTrainingExamples = file.numberOfRecords;
+		this.numberOfPredictors = file.numberOfAttributes - 1;
+		
+		// Extract, validate, and store the dataset information in Attribute.Type, Attribute, and Response objects
+		extractAndStoreAttributeTypes(file, parameters.responseVariableColumn);
+		extractAndStoreAttributeNames(file, parameters.responseVariableColumn);
+		extractAndStoreExamples(file, parameters.responseVariableColumn);
+		
+		// Pre-process trainingData to improve speed of split calculation
+		buildCategoricalPredictorIndexMap();
+		buildnumericalPredictorSortedIndexMap();
+		
+		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
+	}
+	
 	public double getMinErrorDelta() {
 		return minErrorDelta;
 	}
@@ -165,6 +201,48 @@ public class Dataset {
 				testInstances[recordIndex-numberOfTrainingExamples] = instance;
 				testResponses[recordIndex-numberOfTrainingExamples] = response;
 			}
+		}
+	}
+	
+	/**
+	 * Don't sample test data and don't shuffle. So index into trainingInstances/trainingResponses will be same as original file line number
+	 * @param file
+	 * @param responseVariableColumn
+	 */
+	private void extractAndStoreExamples(RawFile file, int responseVariableColumn) {
+		trainingInstances = new Attribute[numberOfTrainingExamples][file.numberOfAttributes - 1];
+		trainingResponses = new Attribute[numberOfTrainingExamples];
+		
+		for (int recordIndex = 0; recordIndex < file.numberOfRecords; recordIndex++) {
+			Attribute[] instance = new Attribute[file.numberOfAttributes - 1];
+			Attribute response = null;
+			for (int attributeIndex = 0; attributeIndex < file.numberOfAttributes; attributeIndex++) {
+				String stringElement = file.data.get(shuffledIndices[recordIndex])[attributeIndex];
+				boolean missingValue = false;
+				if (formsOfMissingValue.contains(stringElement)) {
+					missingValue = true;
+				}
+				if (attributeIndex != responseVariableColumn) {
+					if (predictorTypes[attributeIndex] == Attribute.Type.Numeric) {
+						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = (missingValue) ? new Attribute(Attribute.Type.Numeric) : new Attribute(Double.parseDouble(stringElement));
+					} else if (predictorTypes[attributeIndex] == Attribute.Type.Categorical) {
+						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = (missingValue) ? new Attribute(Attribute.Type.Categorical) : new Attribute(stringElement);
+					}
+				} else {
+					if (missingValue) {
+						throw new IllegalStateException("Missing values not allowed in response field");
+					} else {
+						if (responseType == Attribute.Type.Numeric) {
+							response = new Attribute(Double.parseDouble(stringElement));
+						} else if (responseType  == Attribute.Type.Categorical) {
+								response= new Attribute(stringElement);
+						}
+					}
+				} 
+			}
+	
+			trainingInstances[recordIndex] = instance;
+			trainingResponses[recordIndex] = response;
 		}
 	}
 

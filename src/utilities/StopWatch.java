@@ -47,6 +47,11 @@ public class StopWatch {
 		System.out.println(generateMessageWithTime(message));
 	}
 	
+	public String getTimeInMostAppropriateUnit() {
+		Unit u = determineMostAppropriateUnit();
+		return getTimeInUnit(u) + " " + u.name();
+	}
+	
 	public Unit determineMostAppropriateUnit() {
 		endTime = System.nanoTime();
 		int tmp = (int)Math.ceil(Math.log10(endTime - startTime));

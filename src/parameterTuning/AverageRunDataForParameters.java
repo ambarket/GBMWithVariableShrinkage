@@ -48,8 +48,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
-			System.out.println(String.format("[%s] Already averaged runData for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			System.out.println(String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
 		
@@ -191,12 +191,17 @@ public class AverageRunDataForParameters implements Callable<Void>{
 						}
 						avg.addData(Double.parseDouble(components[1]));
 					}
-				}
-
-				// Avg Per Tree RunData
+				} 
+				BufferedWriter suspiciousFiles = new BufferedWriter(new PrintWriter("Z:/suspiciousFilesDuringAveraging"));				// Avg Per Tree RunData
 				int index = 0;
 				while ((line = br.readLine()) != null /*&& !line.isEmpty()*/) {
 					String[] components = line.split("\t");
+					if (components.length < 6) {
+						suspiciousFiles.write(String.format("Line: %d in %s\n", index, runDataFilePath ));
+						suspiciousFiles.flush();
+						index++;
+						continue;
+					}
 					if (numberOfTreesFound <= index) {
 						avgCvTrainingErrorByIteration.add(Double.parseDouble(components[1].trim()));
 						avgCvValidationErrorByIteration.add(Double.parseDouble(components[2].trim()));
@@ -233,15 +238,15 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					}
 				}
 				br.close();
+				suspiciousFiles.close();
 			} catch (Exception e) {
 				e.printStackTrace();
-				System.exit(1);
 			}
 		} // End runNumber Loop
 		if (numberOfRunsFound == 0) {
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
-			System.out.println(String.format("[%s] No run data was found for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			System.out.println(String.format("[%s] No run data was found for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
 		// Compute the averages. Don't need to worry about runFileTypes b/c/ they will just be 0 if they aren't present.
@@ -410,11 +415,11 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			
 			perExampleRunDataWriter.write("OriginalFileLineNum\t"
 					+ "TargetResponse\t"
-					+ "AsTrainingData_Count"
+					+ "AsTrainingData_Count\t"
 					+ "AsTrainingData_PredictionAtOptimalNOT\t"
 					+ "AsTrainingData_Residual\t"
 					+ "AsTrainingData_AvgLearningRate\t"
-					+ "AsTestData_Count"
+					+ "AsTestData_Count\t"
 					+ "AsTestData_PredictionAtOptimalNOT\t"
 					+ "AsTestData_Residual\t"
 					+ "AsTestData_AvgLearningRate\n");
@@ -463,8 +468,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		}
 		SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
 		
-		System.out.println(String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+		System.out.println(String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		return null;
 	}
 	

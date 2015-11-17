@@ -228,9 +228,9 @@ public class GbmParameters {
 				minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
 	}
 	
-	public String getErrorCurveLatexCaption() {
+	public String getErrorCurveLatexCaption(String prefix) {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("Error Curve (Variable) - "
+			return prefix + String.format(" Error Curve (Variable) - "
 					+ " MinLearningRate = %.6f" 
 					+ " MaxLearningRate = %.6f" 
 					+ " MaxSplits = %d"
@@ -238,7 +238,7 @@ public class GbmParameters {
 					+ " MinExamplesInNode = %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("Error Curve (Constant) - " 
+			return prefix + String.format(" Error Curve (Constant) - " 
 					+ " LearningRate = %.6f" 
 					+ " MaxSplits = %d"
 					+ " BagFraction = %.2f"
@@ -247,9 +247,9 @@ public class GbmParameters {
 		}
 	}
 	
-	public String getErrorCurveLatexFigureReference() {
+	public String getErrorCurveLatexFigureReference(String prefix) {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("ErrorCurveVariable"
+			return prefix + String.format("ErrorCurveVariable"
 					+ "MinLR%.6f" 
 					+ "MaxLR%.6f" 
 					+ "Splits%d"
@@ -257,7 +257,7 @@ public class GbmParameters {
 					+ "MEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("ErrorCurveConstant" 
+			return prefix + String.format("ErrorCurveConstant" 
 					+ "LR%.6f" 
 					+ "Splits%d"
 					+ "BF%.2f"
@@ -266,9 +266,9 @@ public class GbmParameters {
 		}
 	}
 	
-	public String getMetaDataCurveLatexCaption() {
+	public String getMetaDataCurveLatexCaption(String prefix) {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("Tree MetaData (Variable) - "
+			return prefix + String.format(" (Variable) - "
 					+ " MinLearningRate = %.6f" 
 					+ " MaxLearningRate = %.6f" 
 					+ " MaxSplits = %d"
@@ -276,7 +276,7 @@ public class GbmParameters {
 					+ " MinExamplesInNode = %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("Tree MetaData (Constant) - " 
+			return prefix + String.format(" (Constant) - " 
 					+ " LearningRate = %.6f" 
 					+ " MaxSplits = %d"
 					+ " BagFraction = %.2f"
@@ -285,9 +285,9 @@ public class GbmParameters {
 		}
 	}
 	
-	public String getMetaDataCurveLatexFigureReference() {
+	public String getMetaDataCurveLatexFigureReference(String prefix) {
 		if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
-			return String.format("TreeMetaDataVariable"
+			return prefix + String.format("Variable"
 					+ "MinLR%.6f" 
 					+ "MaxLR%.6f" 
 					+ "Splits%d"
@@ -295,7 +295,7 @@ public class GbmParameters {
 					+ "MEIN: %d",
 					minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode);
 		} else {
-			return String.format("TreeMetaDataConstant" 
+			return prefix + String.format("Constant" 
 					+ "LR%.6f" 
 					+ "Splits%d"
 					+ "BF%.2f"

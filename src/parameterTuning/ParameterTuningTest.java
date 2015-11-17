@@ -1,4 +1,8 @@
 package parameterTuning;
+import gbm.GbmParameters;
+import gbm.GradientBoostingTree;
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
@@ -9,12 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import dataset.Dataset;
-import dataset.DatasetParameters;
-import gbm.GbmParameters;
-import gbm.GradientBoostingTree;
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
-import parameterTuning.plotting.MathematicaLearningCurveCreator;
+import parameterTuning.plotting.ErrorCurveScriptGenerator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
@@ -22,6 +21,8 @@ import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
+import dataset.Dataset;
+import dataset.DatasetParameters;
 
 
 public class ParameterTuningTest {
@@ -34,8 +35,8 @@ public class ParameterTuningTest {
 		test.tuningParameters = parameters;
 		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
-			for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+		for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
 				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
 				if (runComplete) {
@@ -90,9 +91,10 @@ public class ParameterTuningTest {
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 
 			test.averageAllRunData(datasetParams);
-			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
+			
 			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
 			RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
+			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
 		}
 	}
 
@@ -120,8 +122,8 @@ public class ParameterTuningTest {
 									timer.start();
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 									doneList[done] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %.4f minutes total.", 
-											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %s total.", 
+											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 									
 									//timer.start();
 									//System.gc();
@@ -237,11 +239,11 @@ public class ParameterTuningTest {
 										sortedByCvValidationError.add(record);
 										sortedByAllDataTestError.add(record);
 										sortedByTimeInSeconds.add(record);
-										System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 									} else {
-										System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+										System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
+												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 									}
 								}
 							}
@@ -281,11 +283,11 @@ public class ParameterTuningTest {
 												learningRatePolicy, splitPolicy);
 								
 									futureQueue.add(executor.submit(
-											new MathematicaLearningCurveCreator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+											new ErrorCurveScriptGenerator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 									
-									if (futureQueue.size() >= 6) {
-										System.out.println("Reached 6 error curve threads, waiting for some to finish");
-										while (futureQueue.size() > 3) {
+									if (futureQueue.size() >= 30) {
+										System.out.println("Reached 30 error curve threads, waiting for some to finish");
+										while (futureQueue.size() > 20) {
 											try {
 												futureQueue.poll().get();
 

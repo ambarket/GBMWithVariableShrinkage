@@ -3,6 +3,7 @@ package dataset;
 import utilities.DoubleCompare;
 
 public class Attribute implements Comparable<Attribute> {
+
 	public enum Type {Numeric, Categorical};
 	public static String MISSING_CATEGORY = "MISSING_CATEGORY";
 	
@@ -79,5 +80,45 @@ public class Attribute implements Comparable<Attribute> {
 			return this.categoricalValue.compareTo(that.categoricalValue);
 		}
 		throw new IllegalStateException("Unsupported attribute type in Attribute.compareTo " + this.type.name());
+	}
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime
+				* result
+				+ ((categoricalValue == null) ? 0 : categoricalValue.hashCode());
+		result = prime * result + (missing ? 1231 : 1237);
+		result = prime * result
+				+ ((numericValue == null) ? 0 : numericValue.hashCode());
+		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Attribute other = (Attribute) obj;
+		if (categoricalValue == null) {
+			if (other.categoricalValue != null)
+				return false;
+		} else if (!categoricalValue.equals(other.categoricalValue))
+			return false;
+		if (missing != other.missing)
+			return false;
+		if (numericValue == null) {
+			if (other.numericValue != null)
+				return false;
+		} else if (!numericValue.equals(other.numericValue))
+			return false;
+		if (type != other.type)
+			return false;
+		return true;
 	}
 }

@@ -254,7 +254,7 @@ public class RunDataSummaryRecordGraphGenerator {
 				StopWatch mathematicaCurveTimer = new StopWatch().start();
 				mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
 				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"math", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
-				RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
+				//RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
 				mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 			} catch (Exception e) {
 				e.printStackTrace();
