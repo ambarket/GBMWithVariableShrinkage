@@ -122,7 +122,7 @@ public class ParameterTuningTest {
 									timer.start();
 									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 									doneList[done] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test took %.4f minutes. Have been runnung for %s total.", 
+									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
 											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 									
 									//timer.start();
