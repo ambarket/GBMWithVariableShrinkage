@@ -1,13 +1,3 @@
-#!/bin/bash
-
-#echo "I'm killing things on" $HOSTNAME
-
-#pid=`pgrep research`
-
-#kill $pid
-#!/bin/bash
-
-#if ps aux | grep -v "grep" | grep "research_amb6470"
 if ps aux | grep -v "grep" | grep "amb6470" | grep "research_amb647" >> /dev/null
 then
     echo -e "Research is still running on ${HOSTNAME}\n"

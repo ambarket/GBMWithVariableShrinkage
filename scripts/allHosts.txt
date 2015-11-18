@@ -4,7 +4,6 @@ gauss
 godel
 grace
 hamming
-hilbert
 courant
 dijkstra
 galois
