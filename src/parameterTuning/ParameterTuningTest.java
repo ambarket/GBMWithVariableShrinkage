@@ -53,7 +53,7 @@ public class ParameterTuningTest {
 	
 	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -67,7 +67,7 @@ public class ParameterTuningTest {
 		
 		try {
 			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "tar", "-czf", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 		} catch (InterruptedException | IOException e1) {
 			e1.printStackTrace();
 		}
