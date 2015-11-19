@@ -9,7 +9,7 @@ public class CommandLineExecutor {
     public static void runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
     	 ProcessBuilder pb =new ProcessBuilder(command);
     	 pb = pb.directory(new File(directory));
-    	 System.out.println("Starting: Directory:  " + pb.directory() + " Command: " + pb.command());
+    	 System.out.println("\tStarting: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
     	 Process p = pb.start();
     	 p.toString();
         
@@ -26,18 +26,17 @@ public class CommandLineExecutor {
          BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
          String s;
-         System.out.println("Standard output: ");
          while ((s = stdInput.readLine()) != null) {
-             System.out.println(s);
+             System.out.println("StdOut: " + s);
          }
 
          // Read command errors
-         System.out.println("Standard error: ");
          while ((s = stdError.readLine()) != null) {
-             System.out.println(s);
+             System.out.println("StdError: " + s);
          }
          
          p.waitFor();
+         System.out.println("\tFinished: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
     }
     
     

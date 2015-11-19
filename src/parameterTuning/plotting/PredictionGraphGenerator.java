@@ -225,7 +225,7 @@ public class PredictionGraphGenerator implements Callable<Void> {
 		
 			for (int i = 0; i < predictorNames.length; i++) {
 				for (int j = 0; j < dsPredictorNames.length; j++) {
-					if (dsPredictorNames.equals(predictorNames[i])) {
+					if (dsPredictorNames[j].equals(predictorNames[i])) {
 						predictorIndices[i] = j;
 						break;
 					}
@@ -326,48 +326,40 @@ public class PredictionGraphGenerator implements Callable<Void> {
 			if (graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) {
 				plotCommand = "ListLinePlot";
 			} else {
-				plotCommand = "ListPointPlot3D";
+				plotCommand = "ListPlot3D";
 			}
 			
 			String responsePlotRange = "{" + responseMaxAndMin.min + ", " + responseMaxAndMin.max + "}";
-			String automaticPlotRange = "All";
+			String automaticPlotRange = "Automatic";
 			String twoDimPlotRange = ", PlotRange -> {" + automaticPlotRange + ", " + responsePlotRange + "}";
 			String threeDimPlotRange = ", PlotRange -> {" + automaticPlotRange + ", " + automaticPlotRange + ", " + responsePlotRange + "}";
 			bw.write(responseCurveBaseName + "Plot = " + plotCommand + "[{" + responseCurveBaseName + "Data}"
 					+ ", PlotLegends -> {\"Target\"}"
-					+ ", PlotStyle -> {Red, Opacity[0.5]}"
+					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? ", PlotStyle -> {Red, Opacity[0.5]}" : ", PlotStyle -> {Red}")
 					+ axesLabels
 					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? twoDimPlotRange : threeDimPlotRange)
-					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? "" : getCodeToDropPrettyLineDownFromListPointPlot3D())
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
 			bw.write(trainingPredictionCurveBaseName + "Plot = " + plotCommand + "[{" + trainingPredictionCurveBaseName + "Data}"
-					+ ", PlotLegends -> {\"TrainingDataPredictions\"}"
-					+ ", PlotStyle -> {{Blue, Opacity[0.5]}}"
+					+ ", PlotLegends -> {\"Training\"}"
+					+ ", PlotStyle -> {{Green, Opacity[0.5]}}"
 					+ axesLabels
 					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? twoDimPlotRange : threeDimPlotRange)
-					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? "" : getCodeToDropPrettyLineDownFromListPointPlot3D())
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
 			bw.write(testPredictionCurveBaseName + "Plot = " + plotCommand + "[{" + testPredictionCurveBaseName + "Data}"
-					+ ", PlotLegends -> {\"TestDataPredictions\"}"
-					+ ", PlotStyle -> {{Green, Opacity[0.5]}}"
+					+ ", PlotLegends -> {\"Test\"}"
+					+ ", PlotStyle -> {{Blue, Opacity[0.5]}}"
 					+ axesLabels
 					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? twoDimPlotRange : threeDimPlotRange)
-					+ ((graphType == GraphType.ExampleNumberToPredictionGraph || predictorIndices.length == 1) ? "" : getCodeToDropPrettyLineDownFromListPointPlot3D())
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 
 			bw.write("allCurves = Show[" + responseCurveBaseName + "Plot, " + trainingPredictionCurveBaseName + "Plot, " + testPredictionCurveBaseName + "Plot , PlotRange -> All]\n\n");
 			bw.write("targetAndTrainingCurves = Show[" + responseCurveBaseName + "Plot, " + trainingPredictionCurveBaseName + "Plot, PlotRange -> All]\n\n");
 			bw.write("targetAndTestCurves = Show[" + responseCurveBaseName + "Plot, " + testPredictionCurveBaseName + "Plot, PlotRange -> All]\n\n");
-		}
-		
-		private String getCodeToDropPrettyLineDownFromListPointPlot3D() {
-			return "Filling -> Bottom,  ColorFunction -> \"Rainbow\", BoxRatios -> 1, " +
-					"FillingStyle -> Directive[LightGreen, Thick, Opacity[.5]],  ImageSize -> 400";
 		}
 		
 		private void printSaveToFileCode(BufferedWriter bw) throws IOException {

@@ -86,7 +86,7 @@ public class ParameterTuningTest {
 			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
 			
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\";", datasetParams.minimalName, runNumber));
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz;\"", datasetParams.minimalName, runNumber));
 			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
 			
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");

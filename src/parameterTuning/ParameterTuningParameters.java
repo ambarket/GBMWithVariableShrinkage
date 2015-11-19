@@ -55,6 +55,15 @@ public class ParameterTuningParameters {
 					{"PctKids2Par", "racePctWhite"},
 					{"PctKids2Par", "racePctBlack"},
 				})
+			.put("bikeSharingHourly", new String[][] {
+					{"hr"},
+					{"hum"},
+					{"temp"},
+					{"mnth"},
+					{"hr", "hum"},
+					{"hr", "temp"},
+					{"hum", "temp"}
+				})
 			.build();
 	
 	public int NUMBER_OF_TREES, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE, NUMBER_OF_RUNS;
@@ -143,7 +152,7 @@ public class ParameterTuningParameters {
 			
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
+			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ bikeSharingDayParameters, powerPlantParameters/*, crimeCommunitiesParameters ,bikeSharingHourlyParameters*/};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test4Parameters.parametersList = new GbmParameters[test4Parameters.totalNumberOfTests];
