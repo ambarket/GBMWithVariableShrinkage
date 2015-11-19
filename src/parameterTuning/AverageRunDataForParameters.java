@@ -465,6 +465,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 		SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
 		

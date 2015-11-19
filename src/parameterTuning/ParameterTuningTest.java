@@ -53,7 +53,7 @@ public class ParameterTuningTest {
 	
 	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
+		String remoteDataDir = "~/" + datasetParams.minimalName + "/"; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -91,7 +91,7 @@ public class ParameterTuningTest {
 			CompressedTarBallCreator.compressFile(source, destination);
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			//RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", "-pr", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
 		} catch (IOException | InterruptedException e) {
