@@ -134,7 +134,7 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		
 		String baseFileDirectory = (runDataFullDirectory + parameters.getRunDataSubDirectory( tuningParameters.runFileType)).replace("\\", "/");
 
-		String generatedGraphsFullPathNoExtension = baseFileDirectory + "/graphs/";
+		String generatedGraphsFullPathNoExtension = baseFileDirectory + "/PerTreeRunDataGraphs/";
 		new File(baseFileDirectory + "/graphs/").mkdirs();
 		String mathematicaFileName = "mathematica.m";
 		String mathematicaFileFullPath = baseFileDirectory + mathematicaFileName;

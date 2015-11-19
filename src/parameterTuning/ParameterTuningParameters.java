@@ -1,8 +1,16 @@
 package parameterTuning;
 
+import gbm.GbmParameters;
+
+import java.util.HashMap;
+
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
+import utilities.StopWatch;
+
+import com.google.common.collect.ImmutableMap;
+
 import dataset.DatasetParameters;
 
 
@@ -20,7 +28,35 @@ public class ParameterTuningParameters {
 	public static DatasetParameters bikeSharingDayParameters = new DatasetParameters("bikeSharingDay", "Bike Sharing By Day", "data/BikeSharing/", "bikeSharing.txt",11);
 	public static DatasetParameters bikeSharingHourlyParameters = new DatasetParameters("bikeSharingHourly", "Bike Sharing By Hour", "data/BikeSharing/", "bikeSharingHourly_OnlyFirstYear.txt",12);
 	public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
-			
+		
+	public static ImmutableMap<String, String[][]> interestingPredictorGraphsByDataset = new ImmutableMap.Builder<String, String[][]>()
+			.put("nasa", new String[][] {
+					{"suctionSideDisplacment"},
+					{"frequency"},
+					{"suctionSideDisplacment", "Frequency"}
+				})
+			.put("powerPlant", new String[][] {
+					{"PEAT"},
+					{"RH"},
+					{"PEAT", "RH"}
+				})
+			.put("bikeSharingDay", new String[][] {
+					{"mnth"},
+					{"weekday"},
+					{"mnth", "weekday"}
+				})
+			.put("crimeCommunities", new String[][] {
+					{"PctIlleg"},
+					{"racePctWhite"},
+					{"PctKids2Par"},
+					{"PctHousLess3BR"},
+					{"PctKids2Par", "PctIlleg"},
+					{"PctKids2Par", "PctHousLess3BR"},
+					{"PctKids2Par", "racePctWhite"},
+					{"PctKids2Par", "racePctBlack"},
+				})
+			.build();
+	
 	public int NUMBER_OF_TREES, CV_NUMBER_OF_FOLDS, CV_STEP_SIZE, NUMBER_OF_RUNS;
 	public static double TRAINING_SAMPLE_FRACTION = 0.8;
 	public double[] constantLearningRates;
@@ -37,6 +73,9 @@ public class ParameterTuningParameters {
 	public String runDataProcessingDirectory;
 	public String locksDirectory;
 	public RunFileType runFileType;
+	
+	public GbmParameters[] parametersList;
+	public String runDataFreenasDirectory;
 	
 	private static ParameterTuningParameters test3Parameters;
 	private static ParameterTuningParameters test4Parameters;
@@ -70,7 +109,7 @@ public class ParameterTuningParameters {
 			
 			test3Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/3/");
 			
-			test3Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingHourlyParameters, crimeCommunitiesParameters, bikeSharingDayParameters};
+			test3Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingHourlyParameters, crimeCommunitiesParameters, /*bikeSharingDayParameters*/};
 			test3Parameters.runFileType = RunFileType.ParamTuning3;
 		}
 		return test3Parameters;
@@ -100,10 +139,36 @@ public class ParameterTuningParameters {
 			
 			test4Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/4/");
 			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
+			test4Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/4/";
+			
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters, bikeSharingHourlyParameters};
+			test4Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
+			
+			test4Parameters.parametersList = new GbmParameters[test4Parameters.totalNumberOfTests];
+			
+			int done = 0;
+			for (LearningRatePolicy learningRatePolicy : test4Parameters.learningRatePolicies) {
+				for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? test4Parameters.minLearningRates : new double[] {-1}) {
+					for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? test4Parameters.maxLearningRates : test4Parameters.constantLearningRates) {
+						for (int numberOfSplits : test4Parameters.maxNumberOfSplts) {
+							for (double bagFraction : test4Parameters.bagFractions) {
+								for (int minExamplesInNode : test4Parameters.minExamplesInNode) {
+									for (SplitsPolicy splitPolicy : test4Parameters.splitPolicies) {
+										// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
+										test4Parameters.parametersList[done] = new GbmParameters(minLR, maxLR, numberOfSplits, 
+													bagFraction, minExamplesInNode, test4Parameters.NUMBER_OF_TREES, 
+													learningRatePolicy, splitPolicy);
+										done++;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
 		}
 		return test4Parameters;
 	}

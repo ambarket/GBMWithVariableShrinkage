@@ -9,13 +9,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import utilities.MaxAndMin;
 import utilities.RandomSample;
 import utilities.RawFile;
 import utilities.StopWatch;
 
 public class Dataset {
-	public static HashSet<String> formsOfMissingValue = new HashSet<String>(Arrays.asList("NA", "N/A", "?", "NULL"));
-	public double trainingSampleFraction;
+	private static HashSet<String> formsOfMissingValue = new HashSet<String>(Arrays.asList("NA", "N/A", "?", "NULL"));
+	private double trainingSampleFraction;
 	private int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors;
 	
 	private Attribute.Type[] predictorTypes;
@@ -181,14 +182,16 @@ public class Dataset {
 					} else if (predictorTypes[attributeIndex] == Attribute.Type.Categorical) {
 						instance[(attributeIndex < responseVariableColumn) ? attributeIndex : attributeIndex - 1] = (missingValue) ? new Attribute(Attribute.Type.Categorical) : new Attribute(stringElement);
 					}
+					
 				} else {
 					if (missingValue) {
 						throw new IllegalStateException("Missing values not allowed in response field");
 					} else {
 						if (responseType == Attribute.Type.Numeric) {
-							response = new Attribute(Double.parseDouble(stringElement));
-						} else if (responseType  == Attribute.Type.Categorical) {
-								response= new Attribute(stringElement);
+							double val = Double.parseDouble(stringElement);
+							response = new Attribute(val);
+						} else if (responseType == Attribute.Type.Categorical) {
+							response= new Attribute(stringElement);
 						}
 					}
 				} 
@@ -217,7 +220,7 @@ public class Dataset {
 			Attribute[] instance = new Attribute[file.numberOfAttributes - 1];
 			Attribute response = null;
 			for (int attributeIndex = 0; attributeIndex < file.numberOfAttributes; attributeIndex++) {
-				String stringElement = file.data.get(shuffledIndices[recordIndex])[attributeIndex];
+				String stringElement = file.data.get(recordIndex)[attributeIndex];
 				boolean missingValue = false;
 				if (formsOfMissingValue.contains(stringElement)) {
 					missingValue = true;

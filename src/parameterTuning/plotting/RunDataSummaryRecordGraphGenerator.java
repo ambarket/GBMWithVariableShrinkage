@@ -18,17 +18,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import dataset.DatasetParameters;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
 import parameterTuning.RunDataSummaryRecordFilter;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.CommandLineExecutor;
 import utilities.DoubleCompare;
-import utilities.RecursiveFileDeleter;
+import utilities.MaxAndMin;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
+import dataset.DatasetParameters;
 
 public class RunDataSummaryRecordGraphGenerator {
 	public enum GraphableProperty {TimeInSeconds, AllDataTestError, CvEnsembleTestError, CvValidationError, 
@@ -109,6 +109,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		}
 		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 		System.out.println("Finished generating run data summary graph for all filters and axes.");
+		executor.shutdownNow();
 	}
 	
 	private static class RunDataSummaryGraphTask implements Callable<Void>{
@@ -701,12 +702,6 @@ public class RunDataSummaryRecordGraphGenerator {
 			default:
 				throw new IllegalArgumentException();
 		}
-	}
-	
-	
-	private static class MaxAndMin {
-		public double max = Double.MIN_VALUE;
-		public double min = Double.MAX_VALUE;
 	}
 	
 	private static class UniqueXYPointKey {

@@ -4,6 +4,20 @@ import utilities.DoubleCompare;
 
 public class Attribute implements Comparable<Attribute> {
 
+	@Override
+	public String toString() {
+		if (missing) {
+			return MISSING_CATEGORY;
+		}
+		if (type == Type.Numeric) {
+			return String.format("%f", numericValue);
+		}
+		if (type == Type.Categorical) {
+			return categoricalValue;
+		}
+		throw new IllegalStateException();
+	}
+
 	public enum Type {Numeric, Categorical};
 	public static String MISSING_CATEGORY = "MISSING_CATEGORY";
 	
@@ -77,9 +91,25 @@ public class Attribute implements Comparable<Attribute> {
 			return DoubleCompare.compare(this.numericValue, that.numericValue);
 		}
 		if (this.type == Type.Categorical) {
-			return this.categoricalValue.compareTo(that.categoricalValue);
+			return customStringCompare(this.categoricalValue, that.categoricalValue);
 		}
 		throw new IllegalStateException("Unsupported attribute type in Attribute.compareTo " + this.type.name());
+	}
+	
+	/**
+	 * Problem is alphabetical says "2" > "12", which destroys line plotting ability.
+	 * @param arg1
+	 * @param arg2
+	 * @return
+	 */
+	public int customStringCompare(String arg1, String arg2) {
+		if (arg1.length() < arg2.length()) {
+			return -1;
+		}
+		if (arg1.length() > arg2.length()) {
+			return 1;
+		}
+		return arg1.compareTo(arg2);
 	}
 	
 	@Override

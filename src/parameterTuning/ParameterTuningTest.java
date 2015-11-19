@@ -5,6 +5,7 @@ import gbm.cv.CrossValidatedResultFunctionEnsemble;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -13,10 +14,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import parameterTuning.plotting.ErrorCurveScriptExecutor;
 import parameterTuning.plotting.ErrorCurveScriptGenerator;
+import parameterTuning.plotting.PredictionGraphGenerator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
+import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
@@ -49,6 +53,7 @@ public class ParameterTuningTest {
 	
 	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -58,6 +63,13 @@ public class ParameterTuningTest {
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "compressRunData--hostLock.txt")) {
 			System.out.println(String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+		}
+		
+		try {
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "tar", "-czf", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
+		} catch (InterruptedException | IOException e1) {
+			e1.printStackTrace();
 		}
 		
 		File source = new File(runDataDir + String.format("/Run%d/", runNumber));
@@ -94,7 +106,9 @@ public class ParameterTuningTest {
 			
 			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
 			RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
-			test.generateMathematicaLearningCurvesForAllRunData(datasetParams, "/Averages/");
+			test.generateErrorCurveScriptsForAllRunData(datasetParams, "/Averages/");
+
+			test.executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 50);
 		}
 	}
 
@@ -106,40 +120,32 @@ public class ParameterTuningTest {
 	 */
 	public boolean tryDifferentParameters(Dataset dataset, int runNumber) {
 		boolean[] doneList = new boolean[tuningParameters.totalNumberOfTests];
-		int done = 0;
-		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
-					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
-						for (double bagFraction : tuningParameters.bagFractions) {
-							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
-									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
-									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
-												learningRatePolicy, splitPolicy);
-									timer.start();
-									String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
-									doneList[done] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-									System.out.println(String.format("[%s]" + resultMessage + "\n This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
-											dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
-									
-									//timer.start();
-									//System.gc();
-									//System.out.println(String.format("Spent %.4f seconds doing garabge collection", timer.getElapsedMinutes()));
-								}
-							}
-						}
-					}
+
+		StopWatch timer = new StopWatch().start(), globalTimer = new StopWatch().start();
+		for (int testNum = 0; testNum < tuningParameters.parametersList.length; testNum++) {
+			GbmParameters parameters = tuningParameters.parametersList[testNum];
+			timer.start();
+			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
+			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
+			System.out.println(String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
+					dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
+					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+		}
+		for (int i = 0; i < doneList.length; i++) {//boolean flag : doneList) {
+			if (doneList[i] == false) {
+				String lockPath = tuningParameters.locksDirectory 
+						+ dataset.parameters.minimalName
+						+ "/Run" + runNumber + "/" 
+						+ tuningParameters.parametersList[i].getRunDataSubDirectory(tuningParameters.runFileType)
+						+ tuningParameters.parametersList[i].getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt";
+				
+				if (!SimpleHostLock.checkDoneLock(lockPath)) {
+					return false;
 				}
 			}
 		}
-		boolean allDone = true;
-		for (boolean flag : doneList) {
-			allDone = allDone && flag;
-		}
-		return allDone;
+		// All the ones we thought still needed to be done are done -> all are done.
+		return true;
 	}
 	
 	public void averageAllRunData(DatasetParameters datasetParams) {
@@ -154,37 +160,20 @@ public class ParameterTuningTest {
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;
 		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
-		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
-					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
-						for (double bagFraction : tuningParameters.bagFractions) {
-							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
-									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
-									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
-												learningRatePolicy, splitPolicy);
-		
-									futureQueue.add(GradientBoostingTree.executor.submit(
-											new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
-									
-									if (futureQueue.size() >= 50) {
-										System.out.println("Reached 50 threads, waiting for some to finish");
-										while (futureQueue.size() > 20) {
-											try {
-												futureQueue.poll().get();
+		for (GbmParameters parameters : tuningParameters.parametersList) {
+			futureQueue.add(GradientBoostingTree.executor.submit(
+					new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			
+			if (futureQueue.size() >= 50) {
+				System.out.println("Reached 50 threads, waiting for some to finish");
+				while (futureQueue.size() > 20) {
+					try {
+						futureQueue.poll().get();
 
-											} catch (InterruptedException e) {
-												e.printStackTrace();
-											} catch (ExecutionException e) {
-												e.printStackTrace();
-											}
-										}
-									}
-								}
-							}
-						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
 					}
 				}
 			}
@@ -221,35 +210,19 @@ public class ParameterTuningTest {
 		PriorityQueue<RunDataSummaryRecord> sortedByTimeInSeconds = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.TimeInSecondsComparator());
 		int done = 0;
 		StopWatch timer = (new StopWatch()), globalTimer = new StopWatch().start() ;
-		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
-					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
-						for (double bagFraction : tuningParameters.bagFractions) {
-							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
-									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
-									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
-												learningRatePolicy, splitPolicy);
-									timer.start();
+		for (GbmParameters parameters : tuningParameters.parametersList) {
+			timer.start();
 
-									RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
-									if (record != null) {
-										sortedByCvValidationError.add(record);
-										sortedByAllDataTestError.add(record);
-										sortedByTimeInSeconds.add(record);
-										System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
-									} else {
-										System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
-												datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
-									}
-								}
-							}
-						}
-					}
-				}
+			RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
+			if (record != null) {
+				sortedByCvValidationError.add(record);
+				sortedByAllDataTestError.add(record);
+				sortedByTimeInSeconds.add(record);
+				System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+			} else {
+				System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
+						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			}
 		}
 		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByCvValidationError", sortedByCvValidationError);
@@ -258,49 +231,32 @@ public class ParameterTuningTest {
 		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryLock.txt");
 	}
 	
-	public void generateMathematicaLearningCurvesForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
+	public void generateErrorCurveScriptsForAllRunData(DatasetParameters datasetParams, String runDataSubDirectory) {
 		String overallLocksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurves/";
 		new File(overallLocksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt")) {
 			System.out.println(String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
 			return;
 		}
-		ExecutorService executor = Executors.newFixedThreadPool(3);
+		ExecutorService executor = Executors.newCachedThreadPool();
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;
 		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
-		for (LearningRatePolicy learningRatePolicy : tuningParameters.learningRatePolicies) {
-			for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.minLearningRates : new double[] {-1}) {
-				for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? tuningParameters.maxLearningRates : tuningParameters.constantLearningRates) {
-					for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
-						for (double bagFraction : tuningParameters.bagFractions) {
-							for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
-								for (SplitsPolicy splitPolicy : tuningParameters.splitPolicies) {
-									// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
-									GbmParameters parameters = new GbmParameters(minLR, maxLR, numberOfSplits, 
-												bagFraction, minExamplesInNode, tuningParameters.NUMBER_OF_TREES, 
-												learningRatePolicy, splitPolicy);
-								
-									futureQueue.add(executor.submit(
-											new ErrorCurveScriptGenerator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
-									
-									if (futureQueue.size() >= 30) {
-										System.out.println("Reached 30 error curve threads, waiting for some to finish");
-										while (futureQueue.size() > 20) {
-											try {
-												futureQueue.poll().get();
+		for (GbmParameters parameters : tuningParameters.parametersList) {
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptGenerator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			
+			if (futureQueue.size() >= 30) {
+				System.out.println("Reached 30 error curve threads, waiting for some to finish");
+				while (futureQueue.size() > 20) {
+					try {
+						futureQueue.poll().get();
 
-											} catch (InterruptedException e) {
-												e.printStackTrace();
-											} catch (ExecutionException e) {
-												e.printStackTrace();
-											}
-										}
-									}
-								}
-							}
-						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
 					}
 				}
 			}
@@ -319,6 +275,105 @@ public class ParameterTuningTest {
 		System.out.println("Finished generating error curves for all run data.");
 	}
 	
+	public void executeErrorCurveScriptsForAllRunData(DatasetParameters datasetParameters, String runDataSubDirectory) {
+		String overallLocksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/ErrorCurveExecutor/";
+		new File(overallLocksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(overallLocksDir + "executedAllErrorCurvesLock.txt")) {
+			System.out.println(String.format("[%s] Already executed all error curve scripts for ", datasetParameters.minimalName));
+			return;
+		}
+		ExecutorService executor = Executors.newFixedThreadPool(3);
+		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
+		int submissionNumber = 0;
+		StopWatch globalTimer = new StopWatch().start() ;
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
+		for (GbmParameters parameters : tuningParameters.parametersList) {
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptExecutor(datasetParameters, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			
+			if (futureQueue.size() >= 30) {
+				System.out.println("Reached 30 error curve executor threads, waiting for some to finish");
+				while (futureQueue.size() > 20) {
+					try {
+						futureQueue.poll().get();
+	
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		while (!futureQueue.isEmpty()) {
+			try {
+				futureQueue.poll().get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
+		}
+		SimpleHostLock.writeDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt");
+		System.out.println("Finished executing error curves for all run data.");
+	}
+	
+	public void executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(DatasetParameters datasetParameters, String runDataSubDirectory, int numberOfBestAndWorst) {
+		ExecutorService executor = Executors.newFixedThreadPool(3);
+		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
+		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(datasetParameters.minimalName, runDataDirectory);
+		
+		int submissionNumber = 0;
+		StopWatch globalTimer = new StopWatch().start() ;
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
+
+		Dataset dataset = new Dataset(datasetParameters);
+		
+		for (int i = 0; i < numberOfBestAndWorst; i++) {					
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptExecutor(datasetParameters, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptExecutor(datasetParameters, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			
+			// Don't have per example run data for these due to bug.
+			if (dataset.parameters.minimalName.equals("nasa") || dataset.parameters.minimalName.equals("powerPlant")) {
+				continue;
+			}
+			futureQueue.add(executor.submit(
+					new PredictionGraphGenerator(dataset, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
+			futureQueue.add(executor.submit(
+					new PredictionGraphGenerator(dataset, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
+			
+			if (futureQueue.size() >= 30) {
+				System.out.println("Reached 30 error curve executor threads, waiting for some to finish");
+				while (futureQueue.size() > 20) {
+					try {
+						futureQueue.poll().get();
+
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+
+		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		while (!futureQueue.isEmpty()) {
+			try {
+				futureQueue.poll().get();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("Finished executing error curves for all run data.");
+		executor.shutdownNow();
+	}
+
 	
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
