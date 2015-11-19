@@ -36,15 +36,6 @@ public class ParameterTuningTest {
 	
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {
 		ParameterTuningTest test = new ParameterTuningTest();
-		try {
-			CommandLineExecutor.runProgramAndWaitForItToComplete("C:/Users/ambar_000/Desktop/", "scp", "fileToSend.txt", "euler.hbg.psu.edu:~/");
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		test.tuningParameters = parameters;
 		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
@@ -88,13 +79,14 @@ public class ParameterTuningTest {
 		StopWatch timer = new StopWatch().start();
 		// DO task
 		try {
+			timer.printMessageWithTime(String.format("[%s] Beginning to compress run data for run number %d.", datasetParams.minimalName, runNumber));
 			CompressedTarBallCreator.compressFile(source, destination);
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 
 			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
 			
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "\"ambarket.info\"", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\";", datasetParams.minimalName, runNumber));
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\";", datasetParams.minimalName, runNumber));
 			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
 			
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
