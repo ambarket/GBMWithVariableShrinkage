@@ -1,17 +1,18 @@
 package utilities;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class CommandLineExecutor {
     public static void runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
     	 ProcessBuilder pb =new ProcessBuilder(command);
     	 pb = pb.directory(new File(directory));
+    	 System.out.println("Starting: Directory:  " + pb.directory() + " Command: " + pb.command());
     	 Process p = pb.start();
-         p.waitFor();
-         
-
-
+    	 p.toString();
+        
          Thread closeChildThread = new Thread() {
              public void run() {
 				p.destroyForcibly();
@@ -20,7 +21,6 @@ public class CommandLineExecutor {
 
          Runtime.getRuntime().addShutdownHook(closeChildThread); 
          
-         /*
          // Read command standard output
          BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
          BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
@@ -36,8 +36,8 @@ public class CommandLineExecutor {
          while ((s = stdError.readLine()) != null) {
              System.out.println(s);
          }
-         */
          
+         p.waitFor();
     }
     
     

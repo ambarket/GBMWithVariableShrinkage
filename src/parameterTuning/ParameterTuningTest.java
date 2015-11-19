@@ -36,6 +36,15 @@ public class ParameterTuningTest {
 	
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {
 		ParameterTuningTest test = new ParameterTuningTest();
+		try {
+			CommandLineExecutor.runProgramAndWaitForItToComplete("C:/Users/ambar_000/Desktop/", "scp", "fileToSend.txt", "euler.hbg.psu.edu:~/");
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		test.tuningParameters = parameters;
 		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
@@ -53,7 +62,7 @@ public class ParameterTuningTest {
 	
 	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = "~/" + datasetParams.minimalName + "/"; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -66,15 +75,6 @@ public class ParameterTuningTest {
 			System.out.println(String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			return;
 		}
-		
-		/*
-		try {
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "tar", "-czf", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
-		} catch (InterruptedException | IOException e1) {
-			e1.printStackTrace();
-		}
-		*/
 		
 		File source = new File(runDataDir + String.format("/Run%d/", runNumber));
 		File destination = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
@@ -91,7 +91,7 @@ public class ParameterTuningTest {
 			CompressedTarBallCreator.compressFile(source, destination);
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			//RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:~/");
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
 		} catch (IOException | InterruptedException e) {
