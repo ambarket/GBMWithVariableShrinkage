@@ -1,8 +1,0 @@
-gauss
-grace
-hamming
-galois
-wilkinson
-riemann
-wilkes
-zermelo
