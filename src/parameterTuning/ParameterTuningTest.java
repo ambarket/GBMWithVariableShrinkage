@@ -59,18 +59,22 @@ public class ParameterTuningTest {
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "compressRunData--doneLock.txt")) {
 			System.out.println(String.format("[%s] Already completed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
 		}
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "compressRunData--hostLock.txt")) {
 			System.out.println(String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
 		}
 		
+		/*
 		try {
 			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "tar", "-czf", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), String.format("/Run%d/", runNumber));
 			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 		} catch (InterruptedException | IOException e1) {
 			e1.printStackTrace();
 		}
+		*/
 		
 		File source = new File(runDataDir + String.format("/Run%d/", runNumber));
 		File destination = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
@@ -85,10 +89,11 @@ public class ParameterTuningTest {
 		// DO task
 		try {
 			CompressedTarBallCreator.compressFile(source, destination);
-			RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
+			//RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
-			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
-		} catch (IOException e) {
+			timer.printMessageWithTime(String.format("[%s] Finished compressing and scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
+		} catch (IOException | InterruptedException e) {
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
