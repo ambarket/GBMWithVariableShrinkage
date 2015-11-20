@@ -163,7 +163,8 @@ public class ParameterTuningTest {
 		StopWatch timer = new StopWatch().start();
 		// DO task
 		try {
-			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\"", datasetParams.minimalName, runNumber));
+			//String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\"", datasetParams.minimalName, runNumber));
+			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(System.getProperty("user.dir") + "/scripts/", "./extractRunDataOnRemoteHost.sh", datasetParams.minimalName, String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
 			if (stdOutAndError.length() > 0) {
 				System.err.println(StopWatch.getDateTimeStamp() + "\n" + stdOutAndError);
 				timer.printMessageWithTime(String.format("[%s] Failed to extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
