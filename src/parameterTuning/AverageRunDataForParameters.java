@@ -49,7 +49,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
-					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
 		
@@ -247,7 +247,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		if (numberOfRunsFound == 0) {
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No run data was found for %s (%d out of %d) in %s. Have been runnung for %s total.", 
-					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
 		// Compute the averages. Don't need to worry about runFileTypes b/c/ they will just be 0 if they aren't present.
@@ -472,7 +472,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
 		
 		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
-				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+				datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		return null;
 	}
 	

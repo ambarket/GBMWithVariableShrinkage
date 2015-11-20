@@ -42,16 +42,17 @@ public class ParameterTuningTest {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
 				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
 				if (runComplete) {
-					compressAndDeleteRunData(datasetParams, test.tuningParameters, runNumber);
+					compressRunData(datasetParams, test.tuningParameters, runNumber);
+					scpCompressedRunData(datasetParams, test.tuningParameters, runNumber);
+					extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
 				}
 			}
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
 	
-	public static void compressAndDeleteRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+	public static void compressRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -80,19 +81,78 @@ public class ParameterTuningTest {
 			timer.printMessageWithTime(String.format("[%s] Beginning to compress run data for run number %d.", datasetParams.minimalName, runNumber));
 			CompressedTarBallCreator.compressFile(source, destination);
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
-
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
-			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
-			
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz;\"", datasetParams.minimalName, runNumber));
-			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
 			
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
+		}
+	}
+	
+	public static void scpCompressedRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+		
+		new File(locksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(locksDir + "scpRunData--doneLock.txt")) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already completed scp run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
+		}
+		
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "scpRunData--hostLock.txt")) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed scp run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
+		}
+		
+		StopWatch timer = new StopWatch().start();
+		// DO task
+		try {
+			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
+			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
+		
+			SimpleHostLock.writeDoneLock(locksDir + "scpRunData--doneLock.txt");
+		} catch (IOException | InterruptedException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
+			e.printStackTrace();
+			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "scpRunData--hostLock.txt"));
+			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to scp run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
+		}
+	}
+	
+	public static void extractCompressedRunDataOnRemoteServer(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+		
+		new File(locksDir).mkdirs();
+		if (SimpleHostLock.checkDoneLock(locksDir + "extractRunData--doneLock.txt")) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already completed extracting run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
+		}
+		
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "extractRunData--hostLock.txt")) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed extracting run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
+		}
+		
+		StopWatch timer = new StopWatch().start();
+		// DO task
+		try {
+			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\"", datasetParams.minimalName, runNumber));
+			if (stdOutAndError.contains("No such file or directory")) {
+				System.err.println(StopWatch.getDateTimeStamp() + "\n" + stdOutAndError);
+				timer.printMessageWithTime(String.format("[%s] Failed to extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
+			}
+			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
+			SimpleHostLock.writeDoneLock(locksDir + "extractRunData--doneLock.txt");
+		} catch (IOException | InterruptedException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
+			e.printStackTrace();
+			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "extractRunData--hostLock.txt"));
+			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to extracting run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
 		}
 	}
 
@@ -224,10 +284,10 @@ public class ParameterTuningTest {
 				sortedByAllDataTestError.add(record);
 				sortedByTimeInSeconds.add(record);
 				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
-						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+						datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			} else {
 				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
-						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+						datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			}
 		}
 		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByCvValidationError", sortedByCvValidationError);

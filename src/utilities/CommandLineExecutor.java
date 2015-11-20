@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public class CommandLineExecutor {
-    public static void runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
+    public static String runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
     	 ProcessBuilder pb =new ProcessBuilder(command);
     	 pb = pb.directory(new File(directory));
     	 System.out.println(StopWatch.getDateTimeStamp() + "\tStarting: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
@@ -25,18 +25,20 @@ public class CommandLineExecutor {
          BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
          BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 
+         StringBuilder stdOutAndError = new StringBuilder();
          String s;
          while ((s = stdInput.readLine()) != null) {
-             System.out.println(StopWatch.getDateTimeStamp() + "StdOut: " + s);
+        	 stdOutAndError.append("\t\t" + StopWatch.getDateTimeStamp() + "StdOut: " + s);
          }
 
          // Read command errors
          while ((s = stdError.readLine()) != null) {
-             System.out.println(StopWatch.getDateTimeStamp() + "StdError: " + s);
+        	 stdOutAndError.append("\t\t" + StopWatch.getDateTimeStamp() + "StdError: " + s);
          }
          
          p.waitFor();
          System.out.println(StopWatch.getDateTimeStamp() + "\tFinished: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
+         return stdOutAndError.toString();
     }
     
     
