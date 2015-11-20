@@ -107,6 +107,14 @@ public class ParameterTuningTest {
 			return;
 		}
 		
+		File source = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
+		
+		if (!source.exists()) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Compressed Run Data doesn't exist! Failed to scp run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
+			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
+			return;
+		}
+		
 		StopWatch timer = new StopWatch().start();
 		// DO task
 		try {
@@ -130,7 +138,7 @@ public class ParameterTuningTest {
 	
 	public static void extractCompressedRunDataOnRemoteServer(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
+		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -141,6 +149,14 @@ public class ParameterTuningTest {
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "extractRunData--hostLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed extracting run data for run number %d.", datasetParams.minimalName, runNumber));
+			return;
+		}
+		
+		File source = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
+		
+		if (!source.exists()) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Compressed Run Data doesn't exist! (TODO, do this check on remote host instead) Failed to extract run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
+			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 			return;
 		}
 		
