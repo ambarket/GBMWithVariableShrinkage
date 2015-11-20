@@ -110,15 +110,21 @@ public class ParameterTuningTest {
 		StopWatch timer = new StopWatch().start();
 		// DO task
 		try {
-			CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
+			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
+			if (stdOutAndError.length() > 0) {
+				System.err.println(StopWatch.getDateTimeStamp() + "\n" + stdOutAndError);
+				timer.printMessageWithTime(String.format("[%s] Failed to scp run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
+				System.exit(1);
+			}
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
-		
+			
 			SimpleHostLock.writeDoneLock(locksDir + "scpRunData--doneLock.txt");
 		} catch (IOException | InterruptedException e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "scpRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to scp run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
+			System.exit(1);
 		}
 	}
 	
@@ -142,9 +148,10 @@ public class ParameterTuningTest {
 		// DO task
 		try {
 			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "ssh", "ambarket.info", "\"cd " + remoteDataDir + "; " + "tar -xzf " + String.format("%sRun%d.tar.gz\"", datasetParams.minimalName, runNumber));
-			if (stdOutAndError.contains("No such file or directory")) {
+			if (stdOutAndError.length() > 0) {
 				System.err.println(StopWatch.getDateTimeStamp() + "\n" + stdOutAndError);
 				timer.printMessageWithTime(String.format("[%s] Failed to extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
+				System.exit(1);
 			}
 			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
 			SimpleHostLock.writeDoneLock(locksDir + "extractRunData--doneLock.txt");
@@ -153,6 +160,7 @@ public class ParameterTuningTest {
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "extractRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to extracting run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
+			System.exit(1);
 		}
 	}
 
