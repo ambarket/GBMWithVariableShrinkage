@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import utilities.MaxAndMin;
 import utilities.RandomSample;
 import utilities.RawFile;
 import utilities.StopWatch;
@@ -77,7 +76,7 @@ public class Dataset {
 		//	magnitude of the response variables in different datasets can differ significantly.
 		this.minErrorDelta = calcMeanTrainingResponse() * 0.000001;
 		
-		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
+		System.out.println(StopWatch.getDateTimeStamp() + "Done processing dataset: " + timer.getElapsedSeconds());
 	}
 	
 	/**
@@ -113,7 +112,7 @@ public class Dataset {
 		buildCategoricalPredictorIndexMap();
 		buildnumericalPredictorSortedIndexMap();
 		
-		System.out.println("Done processing dataset: " + timer.getElapsedSeconds());
+		System.out.println(StopWatch.getDateTimeStamp() + "Done processing dataset: " + timer.getElapsedSeconds());
 	}
 	
 	public double getMinErrorDelta() {

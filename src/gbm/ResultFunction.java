@@ -14,6 +14,7 @@ import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import regressionTree.TreeNode;
 import utilities.DoubleCompare;
+import utilities.StopWatch;
 import utilities.SumCountAverage;
 import dataset.Attribute;
 
@@ -77,7 +78,7 @@ public class ResultFunction {
 			return result;
 		}
 		if ( numberOfTrees > trees.size()) {
-			System.out.println("ERROR: Cannot predict using " + numberOfTrees + " when only " + trees.size() + " trees exists.");
+			System.err.println(StopWatch.getDateTimeStamp() + "ERROR: Cannot predict using " + numberOfTrees + " when only " + trees.size() + " trees exists.");
 		}
 		
 		for (int i = 0; i < numberOfTrees; i++) {
@@ -161,13 +162,13 @@ public class ResultFunction {
 		String userInput = "";
 		Scanner sc = new Scanner(System.in);
 		while(!userInput.equalsIgnoreCase("n")) {
-			System.out.println("Would you like to print an individual tree? Enter a number between 0 and " + (trees.size()-1) + " or type 'N'");
+			System.out.println(StopWatch.getDateTimeStamp() + "Would you like to print an individual tree? Enter a number between 0 and " + (trees.size()-1) + " or type 'N'");
 			userInput = sc.nextLine();
 			int value = 0;
 			try {
 				value = Integer.parseInt(userInput);
 			} catch(Exception e) {
-				System.out.println("Try again :)");
+				System.out.println(StopWatch.getDateTimeStamp() + "Try again :)");
 				continue;
 			}
 			
@@ -178,6 +179,7 @@ public class ResultFunction {
 			try {
 				this.trees.get(value).root.printTree(new OutputStreamWriter(System.out));
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}

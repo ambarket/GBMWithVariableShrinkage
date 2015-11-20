@@ -18,8 +18,6 @@ import parameterTuning.plotting.ErrorCurveScriptExecutor;
 import parameterTuning.plotting.ErrorCurveScriptGenerator;
 import parameterTuning.plotting.PredictionGraphGenerator;
 import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
-import regressionTree.RegressionTree.LearningRatePolicy;
-import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
@@ -58,12 +56,12 @@ public class ParameterTuningTest {
 		
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "compressRunData--doneLock.txt")) {
-			System.out.println(String.format("[%s] Already completed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already completed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			return;
 		}
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "compressRunData--hostLock.txt")) {
-			System.out.println(String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			return;
 		}
 		
@@ -71,7 +69,7 @@ public class ParameterTuningTest {
 		File destination = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
 		
 		if (!source.exists()) {
-			System.out.println(String.format("[%s] Run Data doesn't exist! Failed to compress run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Run Data doesn't exist! Failed to compress run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 			return;
 		}
@@ -91,6 +89,7 @@ public class ParameterTuningTest {
 			
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
 		} catch (IOException | InterruptedException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
@@ -129,7 +128,7 @@ public class ParameterTuningTest {
 			timer.start();
 			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-			System.out.println(String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
 					dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
 					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		}
@@ -154,7 +153,7 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "averageAllDataLock.txt")) {
-			System.out.println(String.format("[%s] Already averages all data for ", datasetParams.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averages all data for ", datasetParams.minimalName));
 			return;
 		}
 		
@@ -167,31 +166,35 @@ public class ParameterTuningTest {
 					new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			
 			if (futureQueue.size() >= 50) {
-				System.out.println("Reached 50 threads, waiting for some to finish");
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 50 threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
 						futureQueue.poll().get();
 
 					} catch (InterruptedException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					} catch (ExecutionException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					}
 				}
 			}
 		}
-		System.out.println("Submitted the last of them, just waiting until they are all done.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of them, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
 				futureQueue.poll().get();
 			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
 		SimpleHostLock.writeDoneLock(locksDir + "averageAllDataLock.txt");
-		System.out.println("Finished averaging all run data.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished averaging all run data.");
 	}
 	
 	/**
@@ -202,7 +205,7 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/RunDataSummaryRecords/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryLock.txt")) {
-			System.out.println(String.format("[%s] Already read sorted and saved all RunDataSummaryRecords", datasetParams.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already read sorted and saved all RunDataSummaryRecords", datasetParams.minimalName));
 			return;
 		}
 		
@@ -220,10 +223,10 @@ public class ParameterTuningTest {
 				sortedByCvValidationError.add(record);
 				sortedByAllDataTestError.add(record);
 				sortedByTimeInSeconds.add(record);
-				System.out.println(String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			} else {
-				System.out.println(String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
 						datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			}
 		}
@@ -237,7 +240,7 @@ public class ParameterTuningTest {
 		String overallLocksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurves/";
 		new File(overallLocksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt")) {
-			System.out.println(String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated all error curves for ", datasetParams.minimalName));
 			return;
 		}
 		ExecutorService executor = Executors.newCachedThreadPool();
@@ -250,38 +253,42 @@ public class ParameterTuningTest {
 					new ErrorCurveScriptGenerator(datasetParams, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			
 			if (futureQueue.size() >= 30) {
-				System.out.println("Reached 30 error curve threads, waiting for some to finish");
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 30 error curve threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
 						futureQueue.poll().get();
 
 					} catch (InterruptedException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					} catch (ExecutionException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					}
 				}
 			}
 		}
-		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the error curve jobs, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
 				futureQueue.poll().get();
 			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
 		SimpleHostLock.writeDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt");
-		System.out.println("Finished generating error curves for all run data.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished generating error curves for all run data.");
 	}
 	
 	public void executeErrorCurveScriptsForAllRunData(DatasetParameters datasetParameters, String runDataSubDirectory) {
 		String overallLocksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/ErrorCurveExecutor/";
 		new File(overallLocksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(overallLocksDir + "executedAllErrorCurvesLock.txt")) {
-			System.out.println(String.format("[%s] Already executed all error curve scripts for ", datasetParameters.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already executed all error curve scripts for ", datasetParameters.minimalName));
 			return;
 		}
 		ExecutorService executor = Executors.newFixedThreadPool(3);
@@ -294,31 +301,35 @@ public class ParameterTuningTest {
 					new ErrorCurveScriptExecutor(datasetParameters, parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			
 			if (futureQueue.size() >= 30) {
-				System.out.println("Reached 30 error curve executor threads, waiting for some to finish");
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 30 error curve executor threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
 						futureQueue.poll().get();
 	
 					} catch (InterruptedException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					} catch (ExecutionException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					}
 				}
 			}
 		}
-		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the error curve jobs, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
 				futureQueue.poll().get();
 			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
 		SimpleHostLock.writeDoneLock(overallLocksDir + "generatedAllErrorCurvesLock.txt");
-		System.out.println("Finished executing error curves for all run data.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished executing error curves for all run data.");
 	}
 	
 	public void executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(DatasetParameters datasetParameters, String runDataSubDirectory, int numberOfBestAndWorst) {
@@ -348,31 +359,35 @@ public class ParameterTuningTest {
 					new PredictionGraphGenerator(dataset, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
 			
 			if (futureQueue.size() >= 30) {
-				System.out.println("Reached 30 error curve executor threads, waiting for some to finish");
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 30 error curve executor threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
 						futureQueue.poll().get();
 
 					} catch (InterruptedException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					} catch (ExecutionException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
 						e.printStackTrace();
 					}
 				}
 			}
 		}
 
-		System.out.println("Submitted the last of the error curve jobs, just waiting until they are all done.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the error curve jobs, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
 				futureQueue.poll().get();
 			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
-		System.out.println("Finished executing error curves for all run data.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished executing error curves for all run data.");
 		executor.shutdownNow();
 	}
 
@@ -395,6 +410,7 @@ public class ParameterTuningTest {
 			try {
 				ensemble.saveRunDataToFile(runDataDir, tuningParameters.runFileType);
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");

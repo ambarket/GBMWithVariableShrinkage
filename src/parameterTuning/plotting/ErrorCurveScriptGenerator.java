@@ -12,9 +12,6 @@ import java.util.concurrent.Callable;
 
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
-import utilities.CommandLineExecutor;
-import utilities.CompressedTarBallCreator;
-import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 
@@ -51,7 +48,7 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurves/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "errorCurveLock.txt")) {
-			System.out.println(String.format("[%s] Already generated error curve runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated error curve runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
@@ -75,7 +72,7 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		// Read through all the files cooresponding to these parameters and average the data.
 		RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataFullDirectory, parameters, tuningParameters.runFileType);
 		if (record == null) {
-			System.out.println(String.format("[%s] Run Data Not Found! Failed to generate error curve runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Run Data Not Found! Failed to generate error curve runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			SimpleHostLock.writeDoneLock(locksDir + "errorCurveLock.txt");
 			return null;
@@ -123,8 +120,9 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 			}
 			br.close();
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
-			System.out.println(String.format("[%s] Reading of per tree run data failed! Failed to generate error curve for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Reading of per tree run data failed! Failed to generate error curve for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
@@ -345,11 +343,12 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 			mathematica.close();
 			latex.flush();
 			latex.close();
-			System.out.println(String.format("[%s] Successfully generated error curve for run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully generated error curve for run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, perTaskTimer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
-			System.out.println(String.format("[%s] Writing of error curve to file Failed! Failed to generate error curve for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Writing of error curve to file Failed! Failed to generate error curve for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, perTaskTimer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}

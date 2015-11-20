@@ -10,6 +10,7 @@ import java.util.TreeSet;
 
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.DoubleCompare;
+import utilities.StopWatch;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -191,7 +192,7 @@ public class RunDataSummaryRecordFilter {
 			case MinExamplesInNode:
 				return record.parameters.minExamplesInNode == (int)filterEntry.getValue();
 		}
-		System.out.println("ERROR: Shouldn't reach here in RunDataSummaryRecord.doesRecordMatchFilter");
+		System.err.println(StopWatch.getDateTimeStamp() + "ERROR: Shouldn't reach here in RunDataSummaryRecord.doesRecordMatchFilter");
 		return false;
 	}
 	
@@ -225,7 +226,7 @@ public class RunDataSummaryRecordFilter {
 			case MinExamplesInNode:
 				return (int)value1 == (int)value2;
 		}
-		System.out.println("ERROR: Shouldn't reach here in RunDataSummaryRecord.doesRecordMatchFilter");
+		System.err.println(StopWatch.getDateTimeStamp() + "ERROR: Shouldn't reach here in RunDataSummaryRecord.doesRecordMatchFilter");
 		return false;
 	}
 	

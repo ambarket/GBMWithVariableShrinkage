@@ -15,7 +15,6 @@ import java.util.concurrent.Callable;
 
 import parameterTuning.ParameterTuningParameters;
 import utilities.CommandLineExecutor;
-import utilities.DoubleCompare;
 import utilities.MaxAndMin;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
@@ -113,6 +112,7 @@ public class PredictionGraphGenerator implements Callable<Void> {
 			}
 			br.close();
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			printFailureMessage("Reading of per example run data failed, not writing done lock!", timer);
 			return null;
@@ -155,12 +155,12 @@ public class PredictionGraphGenerator implements Callable<Void> {
 	}
 	
 	private void printFailureMessage(String reason, StopWatch timer) {
-		System.out.println(String.format("[%s] " + reason + "\n\t\t Failed to generate per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t%s", 
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t\t Failed to generate per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t%s", 
 				dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(), allGraphsDirectory));
 	}
 	
 	private void printSuccessMessage(String reason, StopWatch timer) {
-		System.out.println(String.format("[%s] " + reason + "\n\t\t Successfully finished generating and executing per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t%s", 
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t\t Successfully finished generating and executing per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t%s", 
 				dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(), allGraphsDirectory));
 	}
 	
@@ -251,6 +251,7 @@ public class PredictionGraphGenerator implements Callable<Void> {
 				
 				return true;
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 				return false;
 			}
@@ -261,6 +262,7 @@ public class PredictionGraphGenerator implements Callable<Void> {
 				CommandLineExecutor.runProgramAndWaitForItToComplete(graphsDirectory, new String[] {"cmd", "/c", "math.exe", "-script", mathematicaScriptFileName});
 				return true;
 			} catch (Exception e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 				return false;
 			}

@@ -48,7 +48,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
-			System.out.println(String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
@@ -240,12 +240,13 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				br.close();
 				suspiciousFiles.close();
 			} catch (Exception e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		} // End runNumber Loop
 		if (numberOfRunsFound == 0) {
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
-			System.out.println(String.format("[%s] No run data was found for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No run data was found for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 					datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
@@ -426,7 +427,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			for (int i = 0; i < perExampleRunData.size(); i++) {
 				PerExampleRunDataEntry entry = perExampleRunData.get(i);
 				if (entry == null) {
-					System.out.println("WARNING: No per example data found for original file line number " + i + ". "
+					System.out.println(StopWatch.getDateTimeStamp() + "WARNING: No per example data found for original file line number " + i + ". "
 							+ "This is possible due to a bug that has since been fixed. "
 							+ "Watch out and make sure this isn't happening on new data."
 							+ "Breaking early because this per example run data is worthless due to that bug.");
@@ -464,12 +465,13 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			relativeInfluencesWriter.close();
 
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			System.exit(1);
 		}
 		SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt");
 		
-		System.out.println(String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully averaged run data for %s (%d out of %d) in %s. Have been runnung for %s total.", 
 				datasetParams.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		return null;
 	}

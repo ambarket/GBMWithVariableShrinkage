@@ -56,6 +56,7 @@ public class RawFile {
 			numberOfRecords = i;
 			br.close();
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			System.exit(1);
 		} 

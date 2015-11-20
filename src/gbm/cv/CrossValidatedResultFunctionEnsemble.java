@@ -90,7 +90,7 @@ public class CrossValidatedResultFunctionEnsemble {
 		}
 	
 		if (optimalNumberOfTrees == totalNumberOfTrees) {
-			System.out.println("Warning: The optimal number was trees was equivalent to the number of trees grown. Consider running longer");
+			System.out.println(StopWatch.getDateTimeStamp() + "Warning: The optimal number was trees was equivalent to the number of trees grown. Consider running longer");
 		}
 		
 		StopWatch timer = new StopWatch().start();
@@ -108,12 +108,12 @@ public class CrossValidatedResultFunctionEnsemble {
 		for (int i = 0; i < numberOfTestExamples; i++) {
 			testPredictionsAtOptimalNumberOfTrees[i] = allDataFunction.getLearnedValue(testInstances[i], optimalNumberOfTrees);	
 		}
-		System.out.println(String.format("Took %.4f seconds to compute predictions at optimal number of trees", timer.getElapsedSeconds()));
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("Took %.4f seconds to compute predictions at optimal number of trees", timer.getElapsedSeconds()));
 		
 		// Compute the CvEnsemble learning curve.
 		timer.start();
 		computeCvEnsembleLearningCurveData();
-		System.out.println(String.format("Took %.4f seconds to compute cv ensemble learning curve", timer.getElapsedSeconds()));
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("Took %.4f seconds to compute cv ensemble learning curve", timer.getElapsedSeconds()));
 	}
 	
 	public void computeCvEnsembleLearningCurveData() {
@@ -331,6 +331,7 @@ public class CrossValidatedResultFunctionEnsemble {
 						allDataFunction.trees.get(i).actualNumberOfSplits));
 			}
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			System.exit(1);
 		}

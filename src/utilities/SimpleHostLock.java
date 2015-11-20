@@ -17,10 +17,12 @@ public class SimpleHostLock {
 				BufferedReader br = new BufferedReader(new FileReader(hostLock));
 				String hostName = br.readLine();
 				br.close();
-				return (hostName).equals(InetAddress.getLocalHost().getHostName());
+				
+				return (hostName != null) && (hostName).equals(InetAddress.getLocalHost().getHostName());
 			} catch (FileNotFoundException e) {
-				System.out.println("Host lock file exists but file not found. Makes no sense.");
+				System.out.println(StopWatch.getDateTimeStamp() + "Host lock file exists but file not found. Makes no sense.");
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		} else {
@@ -31,10 +33,13 @@ public class SimpleHostLock {
 				bw.close();
 				return true;
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
+				System.exit(1);
 			} 
 		}
-		System.out.println("ERROR Shouldnt reach here in checkAndClaimHostLock");
+		System.err.println(StopWatch.getDateTimeStamp() + "ERROR Shouldnt reach here in checkAndClaimHostLock");
 		return false;
 	}
 	
@@ -52,9 +57,12 @@ public class SimpleHostLock {
 			bw.close();
 			return true;
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
+			System.exit(1);
 		} 
-		System.out.println("ERROR Shouldnt reach here in writeDoneLock");
+		System.err.println(StopWatch.getDateTimeStamp() + "ERROR Shouldnt reach here in writeDoneLock");
 		return false;
 	}
 }

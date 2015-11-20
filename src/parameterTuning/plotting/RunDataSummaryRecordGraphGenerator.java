@@ -44,7 +44,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-			System.out.println(String.format("[%s] Already Created all RunDataSummaryGraphs", datasetParameters.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already Created all RunDataSummaryGraphs", datasetParameters.minimalName));
 			return;
 		}
 		
@@ -83,32 +83,36 @@ public class RunDataSummaryRecordGraphGenerator {
 								totalNumberOfTests, globalTimer, axes)));
 				
 				if (futureQueue.size() >= 20) {
-					System.out.println("Reached 8 run data summary graph threads, waiting for some to finish");
+					System.out.println(StopWatch.getDateTimeStamp() + "Reached 8 run data summary graph threads, waiting for some to finish");
 					while (futureQueue.size() > 5) {
 						try {
 							futureQueue.poll().get();
 	
 						} catch (InterruptedException e) {
+							System.err.println(StopWatch.getDateTimeStamp());
 							e.printStackTrace();
 						} catch (ExecutionException e) {
+							System.err.println(StopWatch.getDateTimeStamp());
 							e.printStackTrace();
 						}
 					}
 				}
 			}
 		}
-		System.out.println("Submitted the last of the run data summary graph jobs, just waiting until they are all done.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the run data summary graph jobs, just waiting until they are all done.");
 		while (!futureQueue.isEmpty()) {
 			try {
 				futureQueue.poll().get();
 			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
 		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
-		System.out.println("Finished generating run data summary graph for all filters and axes.");
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished generating run data summary graph for all filters and axes.");
 		executor.shutdownNow();
 	}
 	
@@ -153,14 +157,14 @@ public class RunDataSummaryRecordGraphGenerator {
 			String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/" + testSubDirectory;
 			new File(locksDir).mkdirs();
 			if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-				System.out.println(String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
 			
 			
 			if (axes.length < 2 || axes.length > 3) {
-				System.out.println("Only defined for 2D or 3D graphs");
+				System.out.println(StopWatch.getDateTimeStamp() + "Only defined for 2D or 3D graphs");
 			}
 			
 			List<RunDataSummaryRecord> filteredRecords = null;
@@ -197,24 +201,24 @@ public class RunDataSummaryRecordGraphGenerator {
 			}
 			
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
 			} 
 			
 			if (constantUniquePointsDataListCode == null || constantAllPointsDataListCode == null) {
-				System.out.println("Skipping the constant graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
+				System.out.println(StopWatch.getDateTimeStamp() + "Skipping the constant graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
 				" because only 1 unique X or Y value exists.");
 				constantRecordsExist = false;
 			}
 			if (variableUniquePointsDataListCode == null || variableAllPointsDataListCode == null) {
-				System.out.println("Skipping the variable graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
+				System.out.println(StopWatch.getDateTimeStamp() + "Skipping the variable graphs of " + filter.getSubDirectory() + convertGraphablePropertyAxesArrayToMinimalString(axes) + 
 				" because only 1 unique X or Y value exists.");
 				variableRecordsExist = false;
 			}
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
@@ -247,6 +251,7 @@ public class RunDataSummaryRecordGraphGenerator {
 				mathematica.flush();
 				mathematica.close();
 			} catch (Exception e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 				System.exit(1);
 			}
@@ -258,12 +263,13 @@ public class RunDataSummaryRecordGraphGenerator {
 				//RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
 				mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 			} catch (Exception e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
-				System.out.println(String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
-			System.out.println(String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
 					datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 			SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 			return null;

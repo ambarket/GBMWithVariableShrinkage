@@ -107,6 +107,7 @@ public class PlotGenerator {
 		try {
 			ImageIO.write((RenderedImage) bufferedImage, "PNG", new File(directory + plotFileName + ".png"));
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 		}
 	}
@@ -181,6 +182,7 @@ public class PlotGenerator {
 		try {
 			ImageIO.write((RenderedImage) bufferedImage, "PNG", new File(directory + plotFileName + ".png"));
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 		}
 		g.dispose();

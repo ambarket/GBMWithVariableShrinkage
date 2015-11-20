@@ -15,6 +15,7 @@ import java.util.PriorityQueue;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.DoubleCompare;
+import utilities.StopWatch;
 
 
 public class RunDataSummaryRecord {
@@ -138,6 +139,7 @@ public class RunDataSummaryRecord {
 			bw.flush();
 			bw.close();
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 		}
 	}
@@ -173,6 +175,7 @@ public class RunDataSummaryRecord {
 			}
 			br.close();
 		} catch (Exception e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			System.exit(1);
 		}
@@ -184,7 +187,7 @@ public class RunDataSummaryRecord {
 		RunDataSummaryRecord record = new RunDataSummaryRecord();
 		
 		if (!new File(runDataFilePath).exists()) {
-			System.out.println("Couldn't find " + runDataFilePath);
+			System.out.println(StopWatch.getDateTimeStamp() + "Couldn't find " + runDataFilePath);
 			return null;
 		}
 		
@@ -247,6 +250,7 @@ public class RunDataSummaryRecord {
 			
 			br.close();
 		} catch (IOException e) {
+			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 		}
 		return record;

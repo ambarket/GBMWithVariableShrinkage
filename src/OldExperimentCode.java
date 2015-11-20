@@ -35,13 +35,13 @@ public class OldExperimentCode {
 		String userInput = "";
 		Scanner sc = new Scanner(System.in);
 		while(!userInput.equalsIgnoreCase("n")) {
-			System.out.println("Would you like to print an individual tree? Enter a number between 0 and " + (NUMBER_OF_TREES-1) + " or type 'N'");
+			System.out.println(StopWatch.getDateTimeStamp() + "Would you like to print an individual tree? Enter a number between 0 and " + (NUMBER_OF_TREES-1) + " or type 'N'");
 			userInput = sc.nextLine();
 			int value = 0;
 			try {
 				value = Integer.parseInt(userInput);
 			} catch(Exception e) {
-				System.out.println("Try again :)");
+				System.out.println(StopWatch.getDateTimeStamp() + "Try again :)");
 				continue;
 			}
 			
@@ -53,6 +53,7 @@ public class OldExperimentCode {
 				function.trees.get(value).root.printTree(new OutputStreamWriter(System.out));
 
 			} catch (IOException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
@@ -72,7 +73,7 @@ public class OldExperimentCode {
 		ResultFunction function = GradientBoostingTree.buildGradientBoostingMachine(parameters, trainingDataset);
 		Logger.println("Trained GBM " + timer.getElapsedSeconds() + " seconds");
 		
-		System.out.println(function.getRelativeInfluencesString());
+		System.out.println(StopWatch.getDateTimeStamp() + function.getRelativeInfluencesString());
 		
 		
 		timer.start();

@@ -203,6 +203,7 @@ public class GradientBoostingTree {
 				try {
 					futures.poll().get();
 				} catch (InterruptedException | ExecutionException e) {
+					System.err.println(StopWatch.getDateTimeStamp());
 					e.printStackTrace();
 					System.exit(1);
 				}
@@ -229,7 +230,7 @@ public class GradientBoostingTree {
 			// If we have less than a gig left, need to just print out what we got
 			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
 			if (memoryPossiblyAvailableInGigs < 1.0) {
-				System.out.println("Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
+				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
 				break;
 			}
 			

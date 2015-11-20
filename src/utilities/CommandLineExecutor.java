@@ -9,7 +9,7 @@ public class CommandLineExecutor {
     public static void runProgramAndWaitForItToComplete(String directory, String... command) throws InterruptedException, IOException {
     	 ProcessBuilder pb =new ProcessBuilder(command);
     	 pb = pb.directory(new File(directory));
-    	 System.out.println("\tStarting: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
+    	 System.out.println(StopWatch.getDateTimeStamp() + "\tStarting: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
     	 Process p = pb.start();
     	 p.toString();
         
@@ -27,16 +27,16 @@ public class CommandLineExecutor {
 
          String s;
          while ((s = stdInput.readLine()) != null) {
-             System.out.println("StdOut: " + s);
+             System.out.println(StopWatch.getDateTimeStamp() + "StdOut: " + s);
          }
 
          // Read command errors
          while ((s = stdError.readLine()) != null) {
-             System.out.println("StdError: " + s);
+             System.out.println(StopWatch.getDateTimeStamp() + "StdError: " + s);
          }
          
          p.waitFor();
-         System.out.println("\tFinished: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
+         System.out.println(StopWatch.getDateTimeStamp() + "\tFinished: \n\t\tDirectory:  " + pb.directory() + " \n\t\tCommand: " + pb.command());
     }
     
     
@@ -52,15 +52,15 @@ public class CommandLineExecutor {
 
             // Read command standard output
             String s;
-            System.out.println("Standard output: ");
+            System.out.println(StopWatch.getDateTimeStamp() + "Standard output: ");
             while ((s = stdInput.readLine()) != null) {
-                System.out.println(s);
+                System.out.println(StopWatch.getDateTimeStamp() + s);
             }
 
             // Read command errors
-            System.out.println("Standard error: ");
+            System.out.println(StopWatch.getDateTimeStamp() + "Standard error: ");
             while ((s = stdError.readLine()) != null) {
-                System.out.println(s);
+                System.out.println(StopWatch.getDateTimeStamp() + s);
             }
         } catch (Exception e) {
             e.printStackTrace(System.err);

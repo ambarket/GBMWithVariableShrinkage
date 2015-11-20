@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import utilities.DoubleCompare;
+import utilities.StopWatch;
 import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
@@ -47,6 +48,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			try {
 				tmpSplit = split.get();
 			} catch (InterruptedException | ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 				System.exit(1);
 			}
