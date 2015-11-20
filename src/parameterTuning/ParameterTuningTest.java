@@ -42,28 +42,30 @@ public class ParameterTuningTest {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
 				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
 				if (runComplete) {
-					compressRunData(datasetParams, test.tuningParameters, runNumber);
-					scpCompressedRunData(datasetParams, test.tuningParameters, runNumber);
-					extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
+					if (compressRunData(datasetParams, test.tuningParameters, runNumber)) {
+						if (scpCompressedRunData(datasetParams, test.tuningParameters, runNumber)) {
+							extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
+						}
+					}
 				}
 			}
 		}
 		GradientBoostingTree.executor.shutdownNow();
 	}
 	
-	public static void compressRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+	public static boolean compressRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "compressRunData--doneLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already completed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
-			return;
+			return true;
 		}
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "compressRunData--hostLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed compressing run data for run number %d.", datasetParams.minimalName, runNumber));
-			return;
+			return false;
 		}
 		
 		File source = new File(runDataDir + String.format("/Run%d/", runNumber));
@@ -72,7 +74,7 @@ public class ParameterTuningTest {
 		if (!source.exists()) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Run Data doesn't exist! Failed to compress run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
-			return;
+			return true;
 		}
 
 		StopWatch timer = new StopWatch().start();
@@ -83,15 +85,17 @@ public class ParameterTuningTest {
 			timer.printMessageWithTime(String.format("[%s] Finished compressing run data for run number %d.", datasetParams.minimalName, runNumber));
 			
 			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
+			return true;
 		} catch (IOException e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			RecursiveFileDeleter.deleteDirectory(new File(locksDir +  "compressRunData--hostLock.txt"));
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to compress run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
 		}
+		return false;
 	}
 	
-	public static void scpCompressedRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
+	public static boolean scpCompressedRunData(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
 		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName + "/"; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
@@ -99,20 +103,20 @@ public class ParameterTuningTest {
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "scpRunData--doneLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already completed scp run data for run number %d.", datasetParams.minimalName, runNumber));
-			return;
+			return true;
 		}
 		
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "scpRunData--hostLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host has already claimed scp run data for run number %d.", datasetParams.minimalName, runNumber));
-			return;
+			return false;
 		}
 		
 		File source = new File(runDataDir + String.format("/%sRun%d.tar.gz", datasetParams.minimalName, runNumber));
 		
 		if (!source.exists()) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Compressed Run Data doesn't exist! Failed to scp run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
-			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
-			return;
+			SimpleHostLock.writeDoneLock(locksDir + "scpRunData--doneLock.txt");
+			return true;
 		}
 		
 		StopWatch timer = new StopWatch().start();
@@ -127,6 +131,7 @@ public class ParameterTuningTest {
 			timer.printMessageWithTime(String.format("[%s] Finished scp'ing run data for run number %d.", datasetParams.minimalName, runNumber));
 			
 			SimpleHostLock.writeDoneLock(locksDir + "scpRunData--doneLock.txt");
+			return true;
 		} catch (IOException | InterruptedException e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
@@ -134,6 +139,7 @@ public class ParameterTuningTest {
 			timer.printMessageWithTime(String.format("[%s] Unexpectedly failed to scp run data for run number %d. Removed host lock so someone else can try.", datasetParams.minimalName, runNumber));
 			System.exit(1);
 		}
+		return false;
 	}
 	
 	public static void extractCompressedRunDataOnRemoteServer(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
@@ -156,7 +162,7 @@ public class ParameterTuningTest {
 		
 		if (!source.exists()) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Compressed Run Data doesn't exist! (TODO, do this check on remote host instead) Failed to extract run data for run number %d. Marking as done.", datasetParams.minimalName, runNumber));
-			SimpleHostLock.writeDoneLock(locksDir + "compressRunData--doneLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + "extractRunData--doneLock.txt");
 			return;
 		}
 		

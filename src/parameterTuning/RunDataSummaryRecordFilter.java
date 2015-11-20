@@ -58,6 +58,7 @@ public class RunDataSummaryRecordFilter {
 	 * Use to concatenate predefined filters;
 	 * @param filters
 	 */
+	@SafeVarargs
 	public RunDataSummaryRecordFilter(Map<FilterableProperty, Object>... filters) {
 		this.filter = new HashMap<FilterableProperty, Object>();
 		for (Map<FilterableProperty, Object> map : filters) {
