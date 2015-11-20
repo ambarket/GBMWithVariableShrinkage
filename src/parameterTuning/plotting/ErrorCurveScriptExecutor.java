@@ -42,7 +42,7 @@ public class ErrorCurveScriptExecutor implements Callable<Void>{
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurveExecutor/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "errorCurveExecutorLock.txt")) {
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already executed error curve script for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already executed error curve script for %s (%d out of %d) in %s. Have been running for %s total.", 
 					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
@@ -62,7 +62,7 @@ public class ErrorCurveScriptExecutor implements Callable<Void>{
 		} catch (Exception e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Call to mathematica script failed, not writing done lock! Failed to generate error curve for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Call to mathematica script failed, not writing done lock! Failed to generate error curve for %s (%d out of %d) in %s. Have been running for %s total.", 
 					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}

@@ -188,7 +188,7 @@ public class ParameterTuningTest {
 			timer.start();
 			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been runnung for %s total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
 					dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
 					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		}
@@ -283,10 +283,10 @@ public class ParameterTuningTest {
 				sortedByCvValidationError.add(record);
 				sortedByAllDataTestError.add(record);
 				sortedByTimeInSeconds.add(record);
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been runnung for %s total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Created RunDataSummaryRecord for %s (%d out of %d) in %s. Have been running for %s total.", 
 						datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			} else {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been runnung for %s total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to create RunDataSummaryRecord for %s because runData was not found (%d out of %d) in %s. Have been running for %s total.", 
 						datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), ++done, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			}
 		}

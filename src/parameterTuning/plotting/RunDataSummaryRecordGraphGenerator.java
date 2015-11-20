@@ -157,7 +157,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/" + testSubDirectory;
 			new File(locksDir).mkdirs();
 			if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
@@ -201,7 +201,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			}
 			
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
@@ -218,7 +218,7 @@ public class RunDataSummaryRecordGraphGenerator {
 				variableRecordsExist = false;
 			}
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
@@ -265,11 +265,11 @@ public class RunDataSummaryRecordGraphGenerator {
 			} catch (Exception e) {
 				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
 						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been runnung for %.4f minutes total.", 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
 					datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 			SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 			return null;
