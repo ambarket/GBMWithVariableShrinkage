@@ -94,9 +94,10 @@ public class StopWatch {
 	}
 	
 	private static DateFormat df = new SimpleDateFormat("MM/dd HH:mm:ss");
-	private static Calendar calobj = Calendar.getInstance();
+	private static Calendar start = Calendar.getInstance();
 	public  static String getDateTimeStamp() {
-		return "[" + df.format(calobj.getTime()) + "] ";
+	    Calendar now = Calendar.getInstance();
+		return "[" + df.format(now.getTime()) + ", " + df.format(start.getTime()) + "] ";
 	}
 	
 	private enum Unit {nanoseconds, microseconds, milliseconds, seconds, minutes, hours}

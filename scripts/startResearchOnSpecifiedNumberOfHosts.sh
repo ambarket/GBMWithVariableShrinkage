@@ -21,8 +21,8 @@ else
     echo "Flag specified not to kill already running research"
 fi
 
-echo "Recompiling project\n"
-`javac -cp ../src/plotStuff.jar:../src/guava-18.0.jar:../src/jarchivelib-0.7.0-jar-with-dependencies.jar ../src/Main.java ../src/parameterTuning/*.java ../src/parameterTuning/plotting/*.java ../src/regressionTree/*.java ../src/gbm/*.java ../src/gbm/cv/*.java ../src/dataset/*.java ../src/utilities/*.java`
+echo "Recompiling project"
+`javac -cp "../jars/*" ../src/Main.java ../src/parameterTuning/*.java ../src/parameterTuning/plotting/*.java ../src/regressionTree/*.java ../src/gbm/*.java ../src/gbm/cv/*.java ../src/dataset/*.java ../src/utilities/*.java`
 
 count=0;
 for host in $(cat $hostsFile); do
@@ -31,7 +31,7 @@ for host in $(cat $hostsFile); do
     then
         if [ $count -lt $maxHosts ];
         then
-            ssh "$host" "cd git/GBMWithVariableShrinkage; nohup ./${script} > ./consoleOutput/${host}.out 2>&1&";
+            ssh "$host" "cd git/GBMWithVariableShrinkage; nohup ./${script} > ./consoleOutput/${host}.out 2> ./errorOutput/${host}.out &";
             echo "started ${script} on ${host} which only had ${load}% CPU usage"
             count=$(($count + 1));
         else
