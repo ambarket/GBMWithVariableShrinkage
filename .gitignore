@@ -2,3 +2,5 @@
 /parameterTuning/
 /locks/
 *.class
+/consoleOutput/
+/errorOutput/
