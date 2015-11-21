@@ -219,11 +219,11 @@ public class ParameterTuningTest {
 			timer.start();
 			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]" + resultMessage + "\n\t\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
-					dataset.parameters.minimalName, parameters.getFileNamePrefix(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + resultMessage + "\n\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
+					dataset.parameters.minimalName, parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
 					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 		}
-		for (int i = 0; i < doneList.length; i++) {//boolean flag : doneList) {
+		for (int i = 0; i < doneList.length; i++) {
 			if (doneList[i] == false) {
 				String lockPath = tuningParameters.locksDirectory 
 						+ dataset.parameters.minimalName
@@ -244,7 +244,7 @@ public class ParameterTuningTest {
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/";
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + "averageAllDataLock.txt")) {
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averages all data for ", datasetParams.minimalName));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averaged all data for ", datasetParams.minimalName));
 			return;
 		}
 		

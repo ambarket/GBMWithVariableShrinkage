@@ -97,7 +97,7 @@ public class StopWatch {
 	private static Calendar start = Calendar.getInstance();
 	public  static String getDateTimeStamp() {
 	    Calendar now = Calendar.getInstance();
-		return "[" + df.format(now.getTime()) + ", " + df.format(start.getTime()) + "] ";
+		return "[" + df.format(now.getTime()) + ", " + df.format(start.getTime()) + "]\n\t";
 	}
 	
 	private enum Unit {nanoseconds, microseconds, milliseconds, seconds, minutes, hours}

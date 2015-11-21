@@ -155,12 +155,12 @@ public class PredictionGraphGenerator implements Callable<Void> {
 	}
 	
 	private void printFailureMessage(String reason, StopWatch timer) {
-		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t\t Failed to generate per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t\t%s", 
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t Failed to generate per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t\t%s", 
 				dataset.parameters.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(), allGraphsDirectory));
 	}
 	
 	private void printSuccessMessage(String reason, StopWatch timer) {
-		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t\t Successfully finished generating and executing per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t\t%s", 
+		System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + reason + "\n\t Successfully finished generating and executing per example graphs for %s (%d out of %d) in %s. Have been running for %s total.\n\t\t%s", 
 				dataset.parameters.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(), allGraphsDirectory));
 	}
 	

@@ -148,7 +148,7 @@ public class ParameterTuningParameters {
 			
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters/* ,bikeSharingHourlyParameters*/};
+			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters/*, crimeCommunitiesParameters ,bikeSharingHourlyParameters*/};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test4Parameters.parametersList = new GbmParameters[test4Parameters.totalNumberOfTests];
