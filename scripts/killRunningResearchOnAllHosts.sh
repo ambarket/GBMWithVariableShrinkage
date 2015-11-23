@@ -1,12 +1,15 @@
 #!/bin/bash
 
 hostsFile="allHosts.txt"
+maxHosts=$1
 
 command="cd git/GBMWithVariableShrinkage/scripts; ./killRunningResearch.sh;"
 
-for host in $(cat $hostsFile); do 
-    ssh "$host" "$command"; 
-done
+if [ "$#" -eq 0 ];
+then
+    maxHosts=50
+fi
+echo "Max hosts ${maxHosts}"
 
 count=0;
 for host in $(cat $hostsFile); do

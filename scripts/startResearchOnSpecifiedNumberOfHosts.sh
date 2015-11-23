@@ -16,7 +16,7 @@ fi
 if [ $killRunningResearch -gt 0 ];
 then
     echo "Killing all running Research"
-    echo -e `./killRunningResearchOnAllHosts.sh $hostsFile`
+    echo -e `./killRunningResearchOnAllHosts.sh`
 else
     echo "Flag specified not to kill already running research"
 fi
