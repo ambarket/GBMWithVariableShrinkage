@@ -457,23 +457,25 @@ public class RunDataSummaryRecord {
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "BestCVTables.txt")));
 			bw.write("\\begin{table}[!t]\n");
-			bw.write("\t\\resizebox{\\linewidth}{!}{\n");
-			bw.write("\t\\begin{tabular}{ | c || c | c | c | c | c | }\n");
-			bw.write("\t\t\\hline\n");
-			//bw.write("\t\t\\rule{0pt}{2ex} Columns Sorted by Best Cross Validation Error \\\\ \\hline \n");
+			bw.write("\\resizebox{\\linewidth}{!}{\n");
+			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  c | }\n");
+			//bw.write("\t\t\\hline\n");
+			bw.write("\t\t\\multicolumn{1}{c}{\textbf{Property}} & \\multicolumn{5}{c}{\textbf{Best 5 Parameters with Constant Shrinkage}} & \\multicolumn{1}{c}{\textbf{Averages}} \\\\ \\hline");
 			bw.write(getNBestColumns(constantRecords, 5, LearningRatePolicy.CONSTANT));
-			bw.write("\t\\end{tabular}}\n");
+			bw.write("\t\\end{tabular}\n");
+			bw.write("\t}\n");
 			bw.write("\t\\caption{Constant Shrinkage: " + datasetParameters.fullName + " Parameters with Best Cross Validation RMSE.}\n");
 			bw.write("\t\\label{tab:" + datasetParameters.minimalName  + "constantBestAndWorstParameters}\n");
 			bw.write("\\end{table}\n\n\n");
 			
 			bw.write("\\begin{table}[!t]\n");
-			bw.write("\t\\resizebox{\\linewidth}{!}{\n");
-			bw.write("\t\\begin{tabular}{ | c || c | c | c | c | c | }\n");
-			bw.write("\t\t\\hline\n");
-			//bw.write("\t\t\\rule{0pt}{2ex} Columns Sorted by Best Cross Validation Error  \\\\ \\hline \n");
+			bw.write("\\resizebox{\\linewidth}{!}{\n");
+			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  c | }\n");
+			//bw.write("\t\t\\hline\n");
+			bw.write("\t\t\\multicolumn{1}{c}{\textbf{Property}} & \\multicolumn{5}{c}{\textbf{Best 5 Parameters with Constant Shrinkage}} & \\multicolumn{1}{c}{\textbf{Averages}} \\\\ \\hline");
 			bw.write(getNBestColumns(variableRecords, 5, LearningRatePolicy.REVISED_VARIABLE));
-			bw.write("\t\\end{tabular}}\n");
+			bw.write("\t\\end{tabular}\n");
+			bw.write("\t}\n");
 			bw.write("\t\\caption{Variable Shrinkage: " + datasetParameters.fullName + " Parameters with Best Cross Validation RMSE.}\n");
 			bw.write("\t\\label{tab:" + datasetParameters.minimalName + "constantBestAndWorstParameters}\n");
 			bw.write("\\end{table}\n");
@@ -568,11 +570,19 @@ public class RunDataSummaryRecord {
 		return minIndex;
 	}
 	
+	private static int getAverage(double[] array) {
+		int avg = 0;
+		for (int i = 0; i < array.length; i++){
+			avg += array[i];
+		} 
+		return avg / array.length;
+	}
+	
 	private static String getRowFromBestNRecords(RowType rowType, List<RunDataSummaryRecord> records, int n) {
 		StringBuilder retval = new StringBuilder();
 		retval.append("\t\t\\rule{0pt}{2ex} " + rowType + " & ");
 		double[] values = new double[n];
-		String[] formattedValues = new String[n];
+		String[] formattedValues = new String[n+1];
 		boolean highlightMinAndMaxValue = true;
 		for (int i = 0; i < n; i++) {
 			RunDataSummaryRecord record = records.get(i);
@@ -644,7 +654,9 @@ public class RunDataSummaryRecord {
 				values[i] = 0; // StdDev formula breaks down when value is practically zero but not quite due to rounding
 			}
 			formattedValues[i] = (isInteger) ? String.valueOf(values[i]) : (String.format("%f", values[i])).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+		
 		}
+		formattedValues[n] = (String.format("%f", getAverage(values))).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
 		int minIndex = getIndexWithMin(values), maxIndex = getIndexWithMax(values);
 		for (int j = 0; j < formattedValues.length; j++) {
 			if (j == minIndex && highlightMinAndMaxValue) {
