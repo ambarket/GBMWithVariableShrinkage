@@ -27,4 +27,4 @@ for host in $(cat $hostsFile); do
 done
 
 # Clean up any old locks hosts had on tests before I killed them
-`find ../locks/ -type f -name '*--hostLock.txt' -delete`
+`find ../locks/5/ -type f -name '*--hostLock.txt' -delete`
