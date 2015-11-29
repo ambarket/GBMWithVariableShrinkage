@@ -137,7 +137,9 @@ public class TreeNode {
 			this.rightChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}
 		if (this.missingChild == null) {
-			sca.addData(this.missingTerminalNode.instanceCount);
+			if (this.missingTerminalNode.instanceCount != 0) {
+				sca.addData(this.missingTerminalNode.instanceCount);
+			}
 		} else {
 			this.missingChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}
