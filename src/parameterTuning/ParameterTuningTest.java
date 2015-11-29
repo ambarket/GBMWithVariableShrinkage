@@ -36,10 +36,11 @@ public class ParameterTuningTest {
 		test.tuningParameters = parameters;
 		
 		GradientBoostingTree.executor = Executors.newCachedThreadPool();
-		for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+		for (int runNumber = 5; runNumber < test.tuningParameters.NUMBER_OF_RUNS + 5; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
 				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
+				/*
 				if (runComplete) {
 					if (compressRunData(datasetParams, test.tuningParameters, runNumber)) {
 						if (scpCompressedRunData(datasetParams, test.tuningParameters, runNumber)) {
@@ -47,6 +48,7 @@ public class ParameterTuningTest {
 						}
 					}
 				}
+				*/
 			}
 		}
 		GradientBoostingTree.executor.shutdownNow();
