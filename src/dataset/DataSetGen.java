@@ -28,6 +28,7 @@ public class DataSetGen {
 	    return (char) (base + rnd % 26);
 
 	}
+	
 	public static void genAndWriteFile(String fileName, int numOfAttributes, int numOfTrainExamples, int numOfCategories, int numOfCharInCategory ) throws IOException {
 		BufferedWriter trainingFile = new BufferedWriter(new PrintWriter(new File(fileName)));
 		MersenneTwisterFast rand = new MersenneTwisterFast();

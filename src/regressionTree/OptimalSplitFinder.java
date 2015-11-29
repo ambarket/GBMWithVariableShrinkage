@@ -14,7 +14,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import utilities.DoubleCompare;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
 import dataset.Attribute;
@@ -56,7 +55,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			if (bestSplit == null || !bestSplit.success) {
 				bestSplit = tmpSplit;
 			} else if (tmpSplit != null && tmpSplit.success && 
-					(DoubleCompare.lessThan(bestSplit.getErrorImprovement(), tmpSplit.getErrorImprovement()))) {
+					(bestSplit.getErrorImprovement() < tmpSplit.getErrorImprovement())) {
 				bestSplit = tmpSplit;
 			}
 		}
@@ -88,7 +87,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			if (bestSplit == null || !bestSplit.success) {
 				bestSplit = tmpSplit;
 			} else if (tmpSplit != null && tmpSplit.success && 
-					(DoubleCompare.lessThan(bestSplit.getErrorImprovement(), tmpSplit.getErrorImprovement()))) {
+					(bestSplit.getErrorImprovement() < tmpSplit.getErrorImprovement())) {
 				bestSplit = tmpSplit;
 			}
 		}
@@ -237,7 +236,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 				//	need to move to the next split point. If the values differ, evaluate the new error and update bestSplit if necessary
 				if (lastLeftAttribute.compareTo(firstRightAttribute) != 0) {
 					snapshot.recomputeErrors();
-					if (DoubleCompare.lessThan(snapshot.currentTotalError, snapshot.minimumTotalError)) {
+					if (snapshot.currentTotalError < snapshot.minimumTotalError) {
 						bestSplit.splitPredictorType = Type.Numeric;
 						bestSplit.splitPredictorIndex = splitPredictorIndex;
 						bestSplit.numericSplitValue = (lastLeftAttribute.getNumericValue() + firstRightAttribute.getNumericValue())/2;
@@ -317,7 +316,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 			
 			snapshot.recomputeErrors();
 			
-			if (DoubleCompare.lessThan(snapshot.currentTotalError, snapshot.minimumTotalError)) {
+			if (snapshot.currentTotalError < snapshot.minimumTotalError) {
 				bestSplit.splitPredictorType = Type.Categorical;
 				bestSplit.splitPredictorIndex = splitPredictorIndex;
 				if (bestSplit.leftCategories != null) {bestSplit.leftCategories.clear();}
@@ -348,7 +347,7 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 	private static class CategoryAverageComparator implements Comparator<Map.Entry<String, SumCountAverage>> {
 		@Override
 		public int compare(Map.Entry<String, SumCountAverage> arg0, Map.Entry<String, SumCountAverage> arg1) {
-			return DoubleCompare.compare(arg0.getValue().getMean(), arg1.getValue().getMean());
+			return Double.compare(arg0.getValue().getMean(), arg1.getValue().getMean());
 		}
 	}
 

@@ -52,7 +52,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		
 		// Read in all RunDataSummaryRecords
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
-		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(datasetParameters.minimalName, runDataDirectory);
+		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
 	
 		String outputDirectory = runDataDirectory + "graphs/";
 		HashSet<RunDataSummaryRecordFilter> filters = RunDataSummaryRecordFilter.getAllPossibleFilters(tuningParameters);

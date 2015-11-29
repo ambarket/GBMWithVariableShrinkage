@@ -45,7 +45,12 @@ public class AverageRunDataForParameters implements Callable<Void>{
 
 	public Void call() {
 		StopWatch timer = new StopWatch().start();
-		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
+		String locksDir = null;
+		try {
+		locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
+		} catch (Exception e) {
+			System.err.println();
+		}
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been running for %s total.", 
@@ -59,6 +64,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				cvEnsembleTrainingError = 0, cvEnsembleTestError = 0,
 				avgNumberOfSplits = 0, stdDevNumberOfSplits = 0,
 				avgLearningRate = 0, stdDevLearningRate = 0,
+				avgExamplesInNode = 0, stdDevExamplesInNode = 0,
 				optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
 		
 		HashMap<String, SumCountAverage> cvEnsembleReltiveInfluences = new HashMap<>();
@@ -88,7 +94,6 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		RunFileType runFileType = null;
 		// Read through all the files cooresponding to these parameters and average the data.
 		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
-			
 			// Get the summary info at the top of the file.
 			RunDataSummaryRecord summaryInfo = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters, tuningParameters.runFileType);
 			if (summaryInfo == null) {
@@ -117,15 +122,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			if (runFileType != RunFileType.Original) {
 				timeInSeconds += summaryInfo.timeInSeconds;
 			}
-			// Changed things in the middle of ParamTuning3
-			if (runFileType == RunFileType.ParamTuning3) {
-				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
-			}
 			if (runFileType == RunFileType.ParamTuning4) {
 				cvEnsembleTrainingError += summaryInfo.cvEnsembleTrainingError;
 				cvEnsembleTestError += summaryInfo.cvEnsembleTestError;
-				avgNumberOfSplits += summaryInfo.avgNumberOfSplits;
-				stdDevNumberOfSplits += summaryInfo.stdDevNumberOfSplits;
 				avgLearningRate += summaryInfo.avgLearningRate;
 				stdDevLearningRate += summaryInfo.stdDevLearningRate;
 			}
@@ -263,10 +262,18 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		allDataTestError  /= numberOfRunsFound;
 		cvEnsembleTrainingError /= numberOfRunsFound;
 		cvEnsembleTestError /= numberOfRunsFound;
-		avgNumberOfSplits  /= numberOfRunsFound;
-		stdDevNumberOfSplits /= numberOfRunsFound;
+
 		avgLearningRate /= numberOfRunsFound;
 		stdDevLearningRate /= numberOfRunsFound;
+		
+		SumCountAverage numberOfSplits = new SumCountAverage(actualNumberOfSplitsByIteration, numberOfRunsFound);
+		avgNumberOfSplits = numberOfSplits.getMean();
+		stdDevNumberOfSplits = numberOfSplits.getRootMeanSquaredError();
+		
+		SumCountAverage examplesInNode = new SumCountAverage(examplesInNodeMeanByIteration, numberOfRunsFound);
+		avgExamplesInNode = examplesInNode.getMean();
+		stdDevExamplesInNode = examplesInNode.getRootMeanSquaredError();
+		
 		
 		double minNumberOfTreesAllRunsHave = Double.MAX_VALUE;
 		for (double i : totalNumberOfTreesByRunNumber) {
@@ -334,6 +341,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					+ "All Data Number Of Splits Std Dev (All Trees): %f\n"
 					+ "Learning Rate Avg of Per Example Averages: %.8f\n"
 					+ "Learning Rate Std Dev of Per Example Averages: %.8f\n"
+					+ "All Data Avg Examples In Node (All Trees): %f\n"
+					+ "All Data Examples In Node Std Dev (All Trees): %f\n"
 					+ "Number of runs found: %d\n"
 					+ "Total number of trees found: %d\n"
 					+ "Number of trees found in each run: %s\n"
@@ -354,6 +363,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			stdDevNumberOfSplits,
 			avgLearningRate,
 			stdDevLearningRate,
+			avgExamplesInNode,
+			stdDevExamplesInNode,
 			numberOfRunsFound,
 			numberOfTreesFound,
 			convertDoubleArrayListToCommaSeparatedString(totalNumberOfTreesByRunNumber),

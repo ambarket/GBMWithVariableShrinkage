@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
-import utilities.DoubleCompare;
 import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
@@ -104,7 +103,7 @@ public class TreeNode {
 		int whichChild = 0;
 		switch (node.splitPredictorType) {
 			case Numeric:
-				if (DoubleCompare.lessThan(node.numericSplitValue, instance[node.splitPredictorIndex].getNumericValue())) {
+				if (node.numericSplitValue < instance[node.splitPredictorIndex].getNumericValue()) {
 					whichChild = 2;
 				} else {
 					whichChild = 1;

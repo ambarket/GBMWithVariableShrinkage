@@ -5,10 +5,10 @@ public class MaxAndMin {
 	public double min = Double.MAX_VALUE;
 	
 	public void updateMaxAndMinIfNecessary(double newValue) {
-		if (DoubleCompare.lessThan(newValue, min)) {
+		if (newValue < min) {
 			min = newValue;
 		}
-		if (DoubleCompare.greaterThan(newValue, max)) {
+		if (newValue > max) {
 			max = newValue;
 		}
 	}

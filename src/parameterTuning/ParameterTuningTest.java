@@ -144,7 +144,6 @@ public class ParameterTuningTest {
 	
 	public static void extractCompressedRunDataOnRemoteServer(DatasetParameters datasetParams, ParameterTuningParameters tuningParameters, int runNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + datasetParams.minimalName; 
-		String remoteDataDir = tuningParameters.runDataFreenasDirectory + datasetParams.minimalName; 
 		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 		
 		new File(locksDir).mkdirs();
@@ -193,14 +192,25 @@ public class ParameterTuningTest {
 		test.tuningParameters = parameters;
 		
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
-
-			test.averageAllRunData(datasetParams);
-			
-			test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
-			RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
-			test.generateErrorCurveScriptsForAllRunData(datasetParams, "/Averages/");
-
-			test.executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 50);
+			try {
+				test.averageAllRunData(datasetParams);
+				test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
+				RunDataSummaryRecord.writeBestColumnWiseLatexTable(datasetParams, test.tuningParameters, "/Averages/");
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+		
+		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
+			try {
+				test.generateErrorCurveScriptsForAllRunData(datasetParams, "/Averages/");
+				test.executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 50);
+				RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
 		}
 	}
 
@@ -256,7 +266,7 @@ public class ParameterTuningTest {
 			futureQueue.add(GradientBoostingTree.executor.submit(
 					new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			
-			if (futureQueue.size() >= 50) {
+			if (futureQueue.size() >= 35) {
 				System.out.println(StopWatch.getDateTimeStamp() + "Reached 50 threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
@@ -426,7 +436,7 @@ public class ParameterTuningTest {
 	public void executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(DatasetParameters datasetParameters, String runDataSubDirectory, int numberOfBestAndWorst) {
 		ExecutorService executor = Executors.newFixedThreadPool(3);
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
-		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(datasetParameters.minimalName, runDataDirectory);
+		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
 		
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;

@@ -133,7 +133,7 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		String baseFileDirectory = (runDataFullDirectory + parameters.getRunDataSubDirectory( tuningParameters.runFileType)).replace("\\", "/");
 
 		String generatedGraphsFullPathNoExtension = baseFileDirectory + "/PerTreeRunDataGraphs/";
-		new File(baseFileDirectory + "/graphs/").mkdirs();
+		new File(generatedGraphsFullPathNoExtension).mkdirs();
 		String mathematicaFileName = "mathematica.m";
 		String mathematicaFileFullPath = baseFileDirectory + mathematicaFileName;
 		
@@ -169,49 +169,49 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		saveToFile.append("Export[fileName <> \".png\", splitsCurve, ImageResolution -> 300]\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "allDataAndCvEnsembleErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "allDataAndCvEnsembleErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Training Data And CvEnsemble") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllTrainingDataAndCvEnsemble")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "everyErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "everyErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Plots") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllPlots")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "allDataErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "allDataErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Training Data") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllTrainingData")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "cvEnsembleErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "cvEnsembleErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("CvEnsemble") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("CvEnsemble")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "cvErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "cvErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("Avg Cross Validation") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AvgCrossValidation")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "examplesInNodeCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "examplesInNodeCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Examples In Node") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualExamplesInNode")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "learningRateCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "learningRateCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Learning Rates") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualLearningRates")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=1\\textwidth]{{" + (generatedGraphsFullPathNoExtension + "splitsCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "splitsCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Number Of Splits") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualNumberOfSplits")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
