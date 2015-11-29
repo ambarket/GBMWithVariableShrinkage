@@ -1,7 +1,5 @@
 package utilities;
 
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
-
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -16,6 +14,8 @@ import javax.swing.JFrame;
 
 import org.math.plot.Plot2DPanel;
 import org.math.plot.plotObjects.BaseLabel;
+
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
 
 public class PlotGenerator {
 	public static int msBeforeClosingEachGraph = 2500;

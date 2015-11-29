@@ -1,7 +1,5 @@
 package parameterTuning;
 
-import gbm.GbmParameters;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,12 +13,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
-import utilities.DoubleCompare;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.DatasetParameters;
 
 /**
  * ONLY works for multithreading on a single host. Locking isn't set up to support multiple hosts working on this.
@@ -522,7 +520,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 	private static class MapEntryDescendingSumCountAverageComparator implements Comparator<Map.Entry<String,SumCountAverage>> {
 		@Override
 		public int compare(Entry<String, SumCountAverage> arg0, Entry<String, SumCountAverage> arg1) {
-			return DoubleCompare.compare(arg1.getValue().getMean(), arg0.getValue().getMean());
+			return Double.compare(arg1.getValue().getMean(), arg0.getValue().getMean());
 		}
 	}
 }

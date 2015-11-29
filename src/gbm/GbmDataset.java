@@ -5,11 +5,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import dataset.Attribute;
+import dataset.Dataset;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import utilities.SumCountAverage;
-import dataset.Attribute;
-import dataset.Dataset;
 
 /**
  * Wraps a Dataset object and adds an array for storing the current predictions and pseudo responses for each

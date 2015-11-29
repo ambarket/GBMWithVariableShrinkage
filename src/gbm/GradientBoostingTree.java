@@ -6,9 +6,6 @@ package gbm;
 */
 
 
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
-import gbm.cv.CrossValidationStepper;
-
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
@@ -16,14 +13,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.Dataset;
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
+import gbm.cv.CrossValidationStepper;
 import regressionTree.RegressionTree;
-import utilities.DoubleCompare;
 import utilities.Logger;
 //import gbt.ranker.RegressionTree.TerminalType;
 import utilities.Logger.LEVELS;
 import utilities.RandomSample;
 import utilities.StopWatch;
-import dataset.Dataset;
 
 public class GradientBoostingTree {
 	public static ExecutorService executor = Executors.newCachedThreadPool();
@@ -220,7 +218,7 @@ public class GradientBoostingTree {
 					"\nLast Avg Validation Error: " + lastAvgValidationError + 
 					"\nCurrent Avg Validation Error: " + avgValidError + 
 					"\nDifference: " + (lastAvgValidationError - avgValidError));
-			if (DoubleCompare.lessThan(avgValidError, lastAvgValidationError, training.getMinErrorDelta())) {
+			if (avgValidError < lastAvgValidationError) {
 				lastAvgValidationError = avgValidError;
 				remainingStepsPastMinimum = 3;
 			} else {

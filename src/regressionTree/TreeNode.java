@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
-import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
+import utilities.SumCountAverage;
 
 public class TreeNode {
 	public Attribute.Type splitPredictorType = null;

@@ -1,6 +1,4 @@
 package parameterTuning;
-import gbm.GbmParameters;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,11 +10,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
-import utilities.DoubleCompare;
 import utilities.StopWatch;
-import dataset.DatasetParameters;
 
 
 public class RunDataSummaryRecord {
@@ -60,35 +58,35 @@ public class RunDataSummaryRecord {
 	public static class CvValidationErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
 		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
-			return DoubleCompare.compare(o1.cvValidationError, o2.cvValidationError);
+			return Double.compare(o1.cvValidationError, o2.cvValidationError);
 		}
 	}
 	
 	public static class CvTestErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
 		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
-			return DoubleCompare.compare(o1.cvTestError, o2.cvTestError);
+			return Double.compare(o1.cvTestError, o2.cvTestError);
 		}
 	}
 	
 	public static class TimeInSecondsComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
 		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
-			return DoubleCompare.compare(o1.timeInSeconds, o2.timeInSeconds);
+			return Double.compare(o1.timeInSeconds, o2.timeInSeconds);
 		}
 	}
 	
 	public static class AllDataTestErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
 		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
-			return DoubleCompare.compare(o1.allDataTestError, o2.allDataTestError);
+			return Double.compare(o1.allDataTestError, o2.allDataTestError);
 		}
 	}
 	
 	public static class AllDataTrainingErrorComparator implements Comparator<RunDataSummaryRecord> {
 		@Override
 		public int compare(RunDataSummaryRecord o1, RunDataSummaryRecord o2) {
-			return DoubleCompare.compare(o1.allDataTrainingError, o2.allDataTrainingError);
+			return Double.compare(o1.allDataTrainingError, o2.allDataTrainingError);
 		}
 	}
 

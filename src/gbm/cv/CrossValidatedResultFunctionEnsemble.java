@@ -1,9 +1,5 @@
 package gbm.cv;
 
-import gbm.GbmDataset;
-import gbm.GbmParameters;
-import gbm.ResultFunction;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -14,11 +10,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
+import dataset.Attribute;
+import gbm.GbmDataset;
+import gbm.GbmParameters;
+import gbm.ResultFunction;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree;
 import utilities.Matrix;
 import utilities.StopWatch;
-import dataset.Attribute;
 
 public class CrossValidatedResultFunctionEnsemble {
 	public GbmParameters parameters;

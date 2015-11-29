@@ -8,11 +8,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.google.common.collect.ImmutableMap;
+
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.DoubleCompare;
 import utilities.StopWatch;
-
-import com.google.common.collect.ImmutableMap;
 
 
 public class RunDataSummaryRecordFilter {	

@@ -1,8 +1,4 @@
 package parameterTuning;
-import gbm.GbmParameters;
-import gbm.GradientBoostingTree;
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,6 +10,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.Dataset;
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
+import gbm.GradientBoostingTree;
+import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import parameterTuning.plotting.ErrorCurveScriptExecutor;
 import parameterTuning.plotting.ErrorCurveScriptGenerator;
 import parameterTuning.plotting.PredictionGraphGenerator;
@@ -23,8 +24,6 @@ import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
-import dataset.Dataset;
-import dataset.DatasetParameters;
 
 
 public class ParameterTuningTest {

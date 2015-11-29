@@ -10,12 +10,12 @@ import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 
+import dataset.Attribute;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import regressionTree.TreeNode;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.Attribute;
 
 public class ResultFunction {
 	// class members

@@ -1,8 +1,5 @@
 package regressionTree;
 
-import gbm.GbmDataset;
-import gbm.GradientBoostingTree;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -14,10 +11,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import utilities.StopWatch;
-import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
+import gbm.GbmDataset;
+import gbm.GradientBoostingTree;
+import utilities.StopWatch;
+import utilities.SumCountAverage;
 
 public class OptimalSplitFinder implements Callable<BestSplit> {
 	//-----------------------------------------Public Static Methods to getOptimalSplit------------------------------------------------

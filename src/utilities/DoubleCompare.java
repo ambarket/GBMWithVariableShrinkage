@@ -1,11 +1,7 @@
-/**
- * Source: A stackoverflow article. TODO: Track this down again and give proper credit.
- */
 package utilities;
 
-
 public class DoubleCompare {
-	public final static double EPSILON = 0.00001;
+	public final static double EPSILON = 0.000001;
 
 
 	/**
@@ -38,79 +34,4 @@ public class DoubleCompare {
 	public static boolean equals(double a, double b, double epsilon){
 	    return a == b ? true : Math.abs(a - b) < epsilon;
 	}
-
-
-	/**
-	 * Returns true if the first double is considered greater than the second
-	 * double.  Test if the difference of first minus second is greater then
-	 * .00001.  This should be fine when comparing prices, because prices have a
-	 * precision of .001.
-	 *
-	 * @param a first double
-	 * @param b second double
-	 * @return true if the first double is considered greater than the second
-	 *              double
-	 */
-	public static boolean greaterThan(double a, double b){
-	    return greaterThan(a, b, EPSILON);
-	}
-
-
-	/**
-	 * Returns true if the first double is considered greater than the second
-	 * double.  Test if the difference of first minus second is greater then
-	 * a given double (epsilon).  Determining the given epsilon is highly
-	 * dependant on the precision of the doubles that are being compared.
-	 *
-	 * @param a first double
-	 * @param b second double
-	 * @return true if the first double is considered greater than the second
-	 *              double
-	 */
-	public static boolean greaterThan(double a, double b, double epsilon){
-	    return a - b > epsilon;
-	}
-
-
-	/**
-	 * Returns true if the first double is considered less than the second
-	 * double.  Test if the difference of second minus first is greater then
-	 * .00001.  This should be fine when comparing prices, because prices have a
-	 * precision of .001.
-	 *
-	 * @param a first double
-	 * @param b second double
-	 * @return true if the first double is considered less than the second
-	 *              double
-	 */
-	public static boolean lessThan(double a, double b){
-	    return lessThan(a, b, EPSILON);
-	}
-
-
-	/**
-	 * Returns true if the first double is considered less than the second
-	 * double.  Test if the difference of second minus first is greater then
-	 * a given double (epsilon).  Determining the given epsilon is highly
-	 * dependant on the precision of the doubles that are being compared.
-	 *
-	 * @param a first double
-	 * @param b second double
-	 * @return true if the first double is considered less than the second
-	 *              double
-	 */
-	public static boolean lessThan(double a, double b, double epsilon){
-	    return b - a > epsilon;
-	}
-
-	public static int compare(Double arg0, Double arg1) {
-		if (lessThan(arg0, arg1)) {
-			return -1;
-		}
-		if (greaterThan(arg0, arg1)) {
-			return 1;
-		}
-		return 0;
-	}
-	
 }

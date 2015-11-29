@@ -18,17 +18,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.DatasetParameters;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
 import parameterTuning.RunDataSummaryRecordFilter;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.CommandLineExecutor;
-import utilities.DoubleCompare;
 import utilities.MaxAndMin;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.DatasetParameters;
 
 public class RunDataSummaryRecordGraphGenerator {
 	public enum GraphableProperty {TimeInSeconds, AllDataTestError, CvEnsembleTestError, CvValidationError, 
@@ -626,10 +625,10 @@ public class RunDataSummaryRecordGraphGenerator {
 		
 		for (RunDataSummaryRecord record : records) {
 			double value = getPropertyValue(record, property);
-			if (DoubleCompare.lessThan(value, maxAndMin.min)) {
+			if (value < maxAndMin.min) {
 				maxAndMin.min = value;
 			}
-			if (DoubleCompare.greaterThan(value, maxAndMin.max)) {
+			if (value > maxAndMin.max) {
 				maxAndMin.max = value;
 			}
 		}
@@ -776,10 +775,10 @@ public class RunDataSummaryRecordGraphGenerator {
 		@Override
 		public int compareTo(Point that) {
 			for (int i = 0; i < this.values.length; i++) {
-				if (DoubleCompare.lessThan(this.values[i], that.values[i])) {
+				if (this.values[i] < that.values[i]) {
 					return -1;
 				}
-				if (DoubleCompare.greaterThan(this.values[i], that.values[i])) {
+				if (this.values[i] > that.values[i]) {
 					return 1;
 				}
 			}

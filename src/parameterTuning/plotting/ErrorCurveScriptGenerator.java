@@ -1,7 +1,5 @@
 package parameterTuning.plotting;
 
-import gbm.GbmParameters;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -10,14 +8,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 
+import com.google.common.primitives.Doubles;
+
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
-
-import com.google.common.primitives.Doubles;
-
-import dataset.DatasetParameters;
 
 public class ErrorCurveScriptGenerator implements Callable<Void>{
 	DatasetParameters datasetParams;
