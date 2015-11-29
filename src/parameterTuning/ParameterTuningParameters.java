@@ -205,7 +205,7 @@ public class ParameterTuningParameters {
 			test5Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/5/";
 			test5Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			
-			test5Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
+			test5Parameters.locksDirectory = "Z:/GBMWithVariableShrinkage/locks/5/";
 			
 			//test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test5Parameters.datasets = new DatasetParameters[] {crimeCommunitiesParameters, bikeSharingDayParameters, powerPlantParameters, nasaParameters  /*,bikeSharingHourlyParameters*/};
