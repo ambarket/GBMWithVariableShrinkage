@@ -145,7 +145,7 @@ public class ParameterTuningParameters {
 			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
 			test4Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/4/";
 			
-			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
+			test4Parameters.locksDirectory = "Z:/GBMWithVariableShrinkage/locks/4/";
 			
 			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters ,bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;

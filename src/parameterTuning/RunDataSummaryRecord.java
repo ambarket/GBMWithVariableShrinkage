@@ -458,9 +458,10 @@ public class RunDataSummaryRecord {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(new File(paramTuneDir + "BestCVTables.txt")));
 			bw.write("\\begin{table}[!t]\n");
 			bw.write("\\resizebox{\\linewidth}{!}{\n");
-			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  c | }\n");
+			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  | c | }\n");
 			//bw.write("\t\t\\hline\n");
-			bw.write("\t\t\\multicolumn{1}{c}{\textbf{Property}} & \\multicolumn{5}{c}{\textbf{Best 5 Parameters with Constant Shrinkage}} & \\multicolumn{1}{c}{\textbf{Averages}} \\\\ \\hline");
+			bw.write("\t\t\\multicolumn{1}{c}{\\textbf{Property}} & \\multicolumn{5}{c}{\\textbf{Best 5 Parameters with Constant Shrinkage}} & \\multicolumn{1}{c}{\\textbf{Averages}} \\\\ "
+					+ "\\hline");
 			bw.write(getNBestColumns(constantRecords, 5, LearningRatePolicy.CONSTANT));
 			bw.write("\t\\end{tabular}\n");
 			bw.write("\t}\n");
@@ -470,9 +471,9 @@ public class RunDataSummaryRecord {
 			
 			bw.write("\\begin{table}[!t]\n");
 			bw.write("\\resizebox{\\linewidth}{!}{\n");
-			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  c | }\n");
+			bw.write("\t\\begin{tabular}{ | c | c  c  c  c  c  | c | }\n");
 			//bw.write("\t\t\\hline\n");
-			bw.write("\t\t\\multicolumn{1}{c}{\textbf{Property}} & \\multicolumn{5}{c}{\textbf{Best 5 Parameters with Constant Shrinkage}} & \\multicolumn{1}{c}{\textbf{Averages}} \\\\ \\hline");
+			bw.write("\t\t\\multicolumn{1}{c}{\\textbf{}} & \\multicolumn{5}{c}{\\textbf{Best 5 Parameters with Variable Shrinkage}} & \\multicolumn{1}{c}{\\textbf{Averages}} \\\\ \\hline");
 			bw.write(getNBestColumns(variableRecords, 5, LearningRatePolicy.REVISED_VARIABLE));
 			bw.write("\t\\end{tabular}\n");
 			bw.write("\t}\n");
@@ -570,8 +571,8 @@ public class RunDataSummaryRecord {
 		return minIndex;
 	}
 	
-	private static int getAverage(double[] array) {
-		int avg = 0;
+	private static double getAverage(double[] array) {
+		double avg = 0;
 		for (int i = 0; i < array.length; i++){
 			avg += array[i];
 		} 
@@ -660,13 +661,13 @@ public class RunDataSummaryRecord {
 		int minIndex = getIndexWithMin(values), maxIndex = getIndexWithMax(values);
 		for (int j = 0; j < formattedValues.length; j++) {
 			if (j == minIndex && highlightMinAndMaxValue) {
-				retval.append("\\cellcolor{blue!10}" + formattedValues[j]);
+				retval.append("\\cellcolor{gray!10}" + formattedValues[j]);
 			} else if (j == maxIndex && highlightMinAndMaxValue){
-				retval.append("\\cellcolor{blue!30}" + formattedValues[j]);
+				retval.append("\\cellcolor{gray!30}" + formattedValues[j]);
 			} else {
 				retval.append(formattedValues[j]);
 			}
-			if (j != n-1) {
+			if (j != formattedValues.length-1) {
 				retval.append(" & ");
 			}
 		}
