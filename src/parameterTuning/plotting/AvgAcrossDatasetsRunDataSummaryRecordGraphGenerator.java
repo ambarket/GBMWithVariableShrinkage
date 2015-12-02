@@ -65,12 +65,13 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 	
 	public static GraphableProperty[] getXAxes() {
 		return new GraphableProperty[] {
+
+				GraphableProperty.MaxNumberOfSplits, 
+				GraphableProperty.MinExamplesInNode,
+				GraphableProperty.BagFraction, 
 				GraphableProperty.ConstantLearningRate, 
 				GraphableProperty.MinLearningRate, 
-				GraphableProperty.MaxLearningRate, 
-				GraphableProperty.MaxNumberOfSplits, 
-				GraphableProperty.BagFraction, 
-				GraphableProperty.MinExamplesInNode};
+				GraphableProperty.MaxLearningRate};
 	}
 	
 	public static GraphableProperty[] getYAxes() {
@@ -441,7 +442,7 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 		
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(file + ".m"));
-			bw.append("runDataSummaryGraphLegend = LineLegend[{Red, Blue}, {\"Constant Shrinkage\", \"Variable Shrinkage\"}]\n\n");
+			bw.append("runDataSummaryGraphLegend = PointLegend[{Red, Blue}, {\"Constant Shrinkage\", \"Variable Shrinkage\"}]\n\n");
 			bw.append("fileName = \"" + file  + "\"\n");
 			bw.append("Export[fileName <> \".png\", runDataSummaryGraphLegend, ImageResolution -> 300]\n\n");
 			bw.flush();

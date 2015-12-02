@@ -207,8 +207,8 @@ public class ParameterTuningParameters {
 			
 			test5Parameters.locksDirectory = "Z:/GBMWithVariableShrinkage/locks/5/";
 			
-			//test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
-			test5Parameters.datasets = new DatasetParameters[] {crimeCommunitiesParameters, bikeSharingDayParameters, powerPlantParameters, nasaParameters  /*,bikeSharingHourlyParameters*/};
+			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
+			//test5Parameters.datasets = new DatasetParameters[] {crimeCommunitiesParameters, bikeSharingDayParameters, powerPlantParameters, nasaParameters  /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test5Parameters.parametersList = new GbmParameters[test5Parameters.totalNumberOfTests];

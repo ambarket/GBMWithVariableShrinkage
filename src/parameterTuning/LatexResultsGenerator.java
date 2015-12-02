@@ -35,13 +35,13 @@ public class LatexResultsGenerator {
 			}
 			System.out.println("Writing tables");
 			// Write all the tables
-			bw.write("\\clearpage\n");
+			//bw.write("\\clearpage\n");
 			for (DatasetParameters datasetParameters : tuningParameters.datasets) {
 				//writeBestAndWorstConstantAndVariableLatexTable(bw, datasetParameters, tuningParameters);
-				writeBestConstantAndVariableLatexTable(bw, datasetParameters, tuningParameters, 2);
+				writeBestConstantAndVariableLatexTable(bw, datasetParameters, tuningParameters, 1);
 			}
 			System.out.println("Writing plotLegends");
-			bw.write("\\clearpage\n");
+			//bw.write("\\clearpage\n");
 			// Write the plot legends only once
 			writeAllPlotLegends(bw, tuningParameters);
 			
@@ -151,27 +151,27 @@ public class LatexResultsGenerator {
 
 		bw.write("\\begin{table}[!t]\n");
 		bw.write("\\centering\n");
-		bw.write("\\resizebox{0.98\\linewidth}{!}{\n");
-		bw.write("\t\\begin{tabular}{ | c || c | c || c | c || c | }\n");
+		bw.write("\\resizebox*{!}{0.47\\textheight}{\n");
+		bw.write("\t\\begin{tabular}{  l | c  c  |c  }\n");
 		
 		writeNBestConstantAndVariable(bw, "Parameters with lowest CV RMSE", ErrorType.CV, allRecordsCV, n);
 		
-		bw.write("\t\t\\multicolumn{6}{c}{} \\\\\n");
+		bw.write("\t\t\\multicolumn{4}{c}{} \\\\\n");
 		writeNBestConstantAndVariable(bw, "Parameters with lowest ATD Test RMSE", ErrorType.ATD, allRecordsADTE, n);
 		
-		bw.write("\t\t\\multicolumn{6}{c}{} \\\\\n");
+		bw.write("\t\t\\multicolumn{4}{c}{} \\\\\n");
 		writeNBestConstantAndVariable(bw, "Parameters with lowest ABT Test RMSE", ErrorType.ABT, allRecordsCvEnsemble, n);
 
 		bw.write("\t\\end{tabular}\n");
 		bw.write("\t}\n");
-		bw.write("\t\\caption{" + datasetParameters.fullName + ": Parameters resulting in GBMs with the lowest CV RMSE (Top), ATD Test RMSE (Middle), and ABT Test RMSE (Bottom)" + "}\n");
+		bw.write("\t\\caption{" + datasetParameters.fullName + ": Optimal Parameters}\n");
 		bw.write("\t\\label{tab:" + datasetParameters.minimalName + "bestParameters" + "}\n");
 		bw.write("\\end{table}\n\n\n");
 	}
 	
 	public static void writeNBestConstantAndVariable(BufferedWriter bw, String titlePrefix, ErrorType errorType, ArrayList<RunDataSummaryRecord> allRecords, int n) throws IOException {
-		bw.write("\t\t\\multicolumn{1}{c}{\\textbf{Property}} & \\multicolumn{2}{c}{\\textbf{Best Constant}} & \\multicolumn{2}{c}{\\textbf{Best Variable}} & \\multicolumn{1}{c}{\\textbf{Difference}} \\\\ \n"
-				+ "\\hline");
+	//bw.write("\t\t\\multicolumn{3}{c}{\\textbf{" + titlePrefix + "}} & \\multicolumn{1}{c}{\\textbf{Difference}} \\\\ \n" + "\\hline \n");
+		bw.write("\t\t\\multicolumn{3}{c}{\\textbf{" + titlePrefix + "}} & \\multicolumn{1}{c}{\\textbf{\\% Decrease}} \\\\ \n" + "\\hline \n");
 		bw.write(getNBestConstantAndVariableColumns(errorType, allRecords, n));
 		/*
 		bw.write("\t\t\\multicolumn{6}{c}{} \\\\\n");
@@ -399,6 +399,29 @@ public class LatexResultsGenerator {
 		
 		ArrayList<GraphableProperty[]> additionalAxes = AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.getAdditionalAxes();
 
+		bw.append("\\begin{figure}[!htb]\\centering\n");
+		for (GraphableProperty[] add : additionalAxes) {
+			String directory = topDirectory + AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.convertGraphablePropertyAxesArrayToMinimalString(add) + "/";
+			String filePrefix = null;
+			
+			if (new File(directory + "AllAllPoints.png").exists()) {
+				filePrefix = "All";
+			} else if (new File(directory + "ConstAllPoints.png").exists()) {
+				filePrefix = "Const";
+			} else if (new File(directory + "VarAllPoints.png").exists()) {
+				filePrefix = "Var";
+			} else {
+				System.err.println("No graphs exists for directory " + directory);
+				continue;
+			}
+			bw.append("\t\\resizebox{0.49\\linewidth}{!}{\n");
+			bw.append("\t\t\\includegraphics{{" + (directory + filePrefix + "AllPoints")  + "}.png}\n");
+			bw.append("\t}\n");
+		}
+		bw.write("\t\\caption{Cross Validation Error vs. Generalization Error}\n");
+		bw.write("\t\\label{fig:cvVsGeneralization}\n");
+		bw.append("\\end{figure}\n\n");
+		
 		for (GraphableProperty y : yAxes) {
 			bw.append("\\begin{figure}[!htb]\\centering\n");
 			for (GraphableProperty x : xAxes) {
@@ -428,28 +451,7 @@ public class LatexResultsGenerator {
 			bw.write("\t\\label{fig:parametersVs" + y.name() + "}\n");
 			bw.append("\\end{figure}\n\n");
 		}
-		bw.append("\\begin{figure}[!htb]\\centering\n");
-		for (GraphableProperty[] add : additionalAxes) {
-			String directory = topDirectory + AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.convertGraphablePropertyAxesArrayToMinimalString(add) + "/";
-			String filePrefix = null;
-			
-			if (new File(directory + "AllAllPoints.png").exists()) {
-				filePrefix = "All";
-			} else if (new File(directory + "ConstAllPoints.png").exists()) {
-				filePrefix = "Const";
-			} else if (new File(directory + "VarAllPoints.png").exists()) {
-				filePrefix = "Var";
-			} else {
-				System.err.println("No graphs exists for directory " + directory);
-				continue;
-			}
-			bw.append("\t\\resizebox{0.49\\linewidth}{!}{\n");
-			bw.append("\t\t\\includegraphics{{" + (directory + filePrefix + "AllPoints")  + "}.png}\n");
-			bw.append("\t}\n");
-		}
-		bw.write("\t\\caption{Cross Validation Error vs. Generalization Error}\n");
-		bw.write("\t\\label{fig:cvVsGeneralization}\n");
-		bw.append("\\end{figure}\n\n");
+
 	}
 	
 	//-----------------------------------------HELPERS------------------------------------------------------------------
@@ -496,7 +498,8 @@ public class LatexResultsGenerator {
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.MinExamplesInNode, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.MaxSplits, records, n));
 
-		bestRows.append("\t\t \\hline \n");
+		//bestRows.append("\t\t \\hline \n");
+		//bestRows.append("\t\t \\multicolumn{4}{c}{} \\\\ \n");
 		
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.TimeInSeconds, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.Trees, records, n));
@@ -757,7 +760,8 @@ public class LatexResultsGenerator {
 		int minIndex = getIndexWithMin(values), maxIndex = getIndexWithMax(values);
 		for (int j = 0; j < formattedValues.length; j++) {
 			if (j == minIndex && highlightMinAndMaxValue) {
-				retval.append("\\cellcolor{gray!25}" + formattedValues[j]);
+				//retval.append("\\cellcolor{gray!25}" + formattedValues[j]);
+				retval.append("\\textbf{" + formattedValues[j] + "}");
 			/*
 			} else if (j == maxIndex && highlightMinAndMaxValue){
 				retval.append("\\cellcolor{gray!60}" + formattedValues[j]);
@@ -903,21 +907,16 @@ public class LatexResultsGenerator {
 
 		if (percentImprRowTypes.contains(rowType)) {
 			double impr = getPercentImprovementUsingVariable(values);
-			formattedValues[n*2] = (String.format("%f", impr)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+			if (impr >= 0) {
+				formattedValues[n*2] = (String.format("\\textbf{%.2f}", impr)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+			} else {
+				formattedValues[n*2] = (String.format("%.2f", impr)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+			}
 		} else {
 			formattedValues[n*2] = "-";
 		}
-		int minIndex = getIndexWithMin(values), maxIndex = getIndexWithMax(values);
 		for (int j = 0; j < formattedValues.length; j++) {
-			if (j == minIndex && highlightMinAndMaxValue) {
-				retval.append("\\cellcolor{gray!25}" + formattedValues[j]);
-			/*
-			} else if (j == maxIndex && highlightMinAndMaxValue){
-				retval.append("\\cellcolor{gray!60}" + formattedValues[j]);
-			*/
-			} else {
-				retval.append(formattedValues[j]);
-			}
+			retval.append(formattedValues[j]);
 			if (j != formattedValues.length-1) {
 				retval.append(" & ");
 			}
@@ -1125,8 +1124,7 @@ public class LatexResultsGenerator {
 		avgConst /= values.length / 2;
 		avgVar /= values.length / 2;
 		
-		impr = (avgVar - avgConst);
+		impr = ((avgConst - avgVar) / avgConst) * 100;
 		return impr;
 	}
-
 }

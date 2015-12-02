@@ -206,7 +206,7 @@ public class ParameterTuningTest {
 		
 		//ErrorCurveScriptGenerator.generateAndExecutePlotLegend(test.tuningParameters);
 		//SortedResponsePredictionGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
-		RunDataSummaryRecordGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
+		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
 		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndSaveGraphsOfConstantVsVariableLR(test.tuningParameters, "/Averages/", 5);
 		/*
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
