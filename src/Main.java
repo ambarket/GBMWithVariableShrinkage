@@ -1,3 +1,4 @@
+import parameterTuning.LatexResultsGenerator;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.ParameterTuningTest;
 
@@ -22,6 +23,9 @@ public class Main {
 				break;
 			case "processParamTuning5":
 				processParamTuning5();
+				break;
+			case "writeResultsSection":
+				LatexResultsGenerator.writeEntireResultsSection(ParameterTuningParameters.getRangesForTest5());
 				break;
 		}
 	}

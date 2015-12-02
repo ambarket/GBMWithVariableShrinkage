@@ -6,6 +6,53 @@ import regressionTree.RegressionTree.SplitsPolicy;
 import utilities.Logger;
 
 public class GbmParameters {
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		long temp;
+		temp = Double.doubleToLongBits(bagFraction);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + ((learningRatePolicy == null) ? 0 : learningRatePolicy.hashCode());
+		temp = Double.doubleToLongBits(maxLearningRate);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + maxNumberOfSplits;
+		result = prime * result + minExamplesInNode;
+		temp = Double.doubleToLongBits(minLearningRate);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + numOfTrees;
+		result = prime * result + ((splitsPolicy == null) ? 0 : splitsPolicy.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		GbmParameters other = (GbmParameters) obj;
+		if (Double.doubleToLongBits(bagFraction) != Double.doubleToLongBits(other.bagFraction))
+			return false;
+		if (learningRatePolicy != other.learningRatePolicy)
+			return false;
+		if (Double.doubleToLongBits(maxLearningRate) != Double.doubleToLongBits(other.maxLearningRate))
+			return false;
+		if (maxNumberOfSplits != other.maxNumberOfSplits)
+			return false;
+		if (minExamplesInNode != other.minExamplesInNode)
+			return false;
+		if (Double.doubleToLongBits(minLearningRate) != Double.doubleToLongBits(other.minLearningRate))
+			return false;
+		if (numOfTrees != other.numOfTrees)
+			return false;
+		if (splitsPolicy != other.splitsPolicy)
+			return false;
+		return true;
+	}
+
 	// class members
 	public double bagFraction; 
 	// In the case of Constant learning rate, maxLearningRate is used as the learningRate
@@ -144,7 +191,9 @@ public class GbmParameters {
 				+ "%d\t",
 				maxLearningRate, bagFraction, maxNumberOfSplits, minExamplesInNode, numOfTrees);
 	}
-	
+	public String getFileNamePrefix() {
+		return getFileNamePrefix(RunFileType.ParamTuning4);
+	}
 	public String getFileNamePrefix(RunFileType runFileType) {
 		if (runFileType != RunFileType.ParamTuning4) {
 			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
@@ -186,7 +235,9 @@ public class GbmParameters {
 			}
 		}
 	}
-	
+	public String getRunDataSubDirectory() {
+		return getRunDataSubDirectory(RunFileType.ParamTuning4);
+	}
 	public String getRunDataSubDirectory(RunFileType runFileType) {
 		if (runFileType != RunFileType.ParamTuning4) {
 			if (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
@@ -226,6 +277,16 @@ public class GbmParameters {
 				+ "%d\t"
 				+ "%d\t",
 				minLearningRate, maxLearningRate, maxNumberOfSplits, bagFraction, minExamplesInNode, numOfTrees);
+	}
+	
+	public String getLineSeparatedPrintOut() {
+		return
+				learningRatePolicy.toString() + "\n" 
+				+ "MinLearningRate: " + String.format("%f", minLearningRate).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "\n" 
+				+ "MaxLearningRate: " +  String.format("%f", maxLearningRate).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "\n" 
+				+ "MaxNumberOfSplits: " + String.valueOf(maxNumberOfSplits) + "\n" 
+				+ "BagFraction: " +  String.format("%f", bagFraction).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "\n" 
+				+ "MinLeafSize: " +  String.valueOf(minExamplesInNode) + "\n";
 	}
 	
 	public String getErrorCurveLatexCaption(String prefix) {

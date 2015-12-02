@@ -10,6 +10,7 @@ import java.util.TreeSet;
 
 import com.google.common.collect.ImmutableMap;
 
+import gbm.GbmParameters;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import utilities.DoubleCompare;
 import utilities.StopWatch;
@@ -82,6 +83,11 @@ public class RunDataSummaryRecordFilter {
 		for (int i = 0; i < properties.length; i++) {
 			this.filter.put(properties[i], values[i]);
 		}
+	}
+	
+	public RunDataSummaryRecordFilter(LearningRatePolicy lrPolicy, Object minLR, Object maxLR, Object maxNumberOfSplits, Object bagFraction, Object minExamplesInNode) {
+		 this(new FilterableProperty[] {FilterableProperty.LearningRatePolicy, FilterableProperty.MinLearningRate, FilterableProperty.MaxLearningRate, FilterableProperty.MaxNumberOfSplits, FilterableProperty.BagFraction, FilterableProperty.MinExamplesInNode},
+					new Object[] {lrPolicy, minLR, maxLR, maxNumberOfSplits, bagFraction, minExamplesInNode});
 	}
 	
 	public RunDataSummaryRecordFilter(Object minLR, Object maxLR, Object maxNumberOfSplits, Object bagFraction, Object minExamplesInNode) {
@@ -293,6 +299,66 @@ public class RunDataSummaryRecordFilter {
 			new RunDataSummaryRecordFilter(new ImmutableMap.Builder<FilterableProperty, Object>()
 					.put(FilterableProperty.MaxNumberOfSplits, 1).build());
 	
+	public static HashSet<RunDataSummaryRecordFilter> getAllPossibleFiltersForSpecifiedParameters(ParameterTuningParameters tuningParameters, GbmParameters parameters) {
+		HashSet<RunDataSummaryRecordFilter> filters = new HashSet<RunDataSummaryRecordFilter>();
+		Set<Double> possibleMaxLearningRates = new TreeSet<Double>();
+		// both constant and variable use this field, so want to account for all of them. 
+		for (double lr : tuningParameters.constantLearningRates) {
+			possibleMaxLearningRates.add(lr);
+		}
+		for (double lr : tuningParameters.maxLearningRates) {
+			possibleMaxLearningRates.add(lr);
+		}
+		Object minLR, maxLR, numberOfSplits, bagFraction, minExamplesInNode;
+		if (parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			minLR = 0.0;
+		} else {
+			minLR = parameters.minLearningRate;
+		}
+		maxLR = parameters.maxLearningRate;
+		numberOfSplits = parameters.maxNumberOfSplits;
+		bagFraction = parameters.bagFraction;
+		minExamplesInNode = parameters.minExamplesInNode;
+		
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", "ALL"));
+		
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", "ALL", "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", "ALL", "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, "ALL", "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", minExamplesInNode));
+		
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, "ALL", "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, "ALL", "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", "ALL", "ALL"));
+		
+		filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", "ALL"));
+		
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, bagFraction, "ALL"));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, minExamplesInNode));
+		filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, minExamplesInNode));
+		
+		return filters;
+		
+	}
 	public static HashSet<RunDataSummaryRecordFilter> getAllPossibleFilters(ParameterTuningParameters tuningParameters) {
 		HashSet<RunDataSummaryRecordFilter> filters = new HashSet<RunDataSummaryRecordFilter>();
 		Set<Double> possibleMaxLearningRates = new TreeSet<Double>();
@@ -309,22 +375,13 @@ public class RunDataSummaryRecordFilter {
 				for (int numberOfSplits : tuningParameters.maxNumberOfSplts) {
 					for (double bagFraction : tuningParameters.bagFractions) {
 						for (int minExamplesInNode : tuningParameters.minExamplesInNode) {
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, bagFraction, "ALL"));
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", "ALL"));
 							
-							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, bagFraction, minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", bagFraction, minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, "ALL", minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, "ALL"));
-							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", bagFraction, minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, "ALL", minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, "ALL"));
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", "ALL", minExamplesInNode));
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, "ALL"));
-							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", "ALL", "ALL"));
+							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", "ALL", "ALL"));
+							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, "ALL", "ALL"));
+							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", bagFraction, "ALL"));
+							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", minExamplesInNode));
 							
 							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", bagFraction, minExamplesInNode));
 							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, "ALL", minExamplesInNode));
@@ -337,13 +394,22 @@ public class RunDataSummaryRecordFilter {
 							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, "ALL", "ALL"));
 							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", "ALL", "ALL"));
 							
-							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", "ALL", "ALL"));
-							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", "ALL", "ALL"));
-							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, "ALL", "ALL"));
-							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", bagFraction, "ALL"));
-							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", numberOfSplits, bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, "ALL", bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, "ALL", minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", "ALL", bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, "ALL", minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", "ALL", minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", "ALL"));
 							
-							filters.add(new RunDataSummaryRecordFilter("ALL", "ALL", "ALL", "ALL", "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, bagFraction, "ALL"));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, numberOfSplits, "ALL", minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter(minLR, maxLR, "ALL", bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter(minLR, "ALL", numberOfSplits, bagFraction, minExamplesInNode));
+							filters.add(new RunDataSummaryRecordFilter("ALL", maxLR, numberOfSplits, bagFraction, minExamplesInNode));
 						}
 					}
 				}

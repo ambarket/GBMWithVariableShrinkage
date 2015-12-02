@@ -25,7 +25,17 @@ import utilities.Logger;
 import utilities.MersenneTwisterFast;
 import utilities.SumCountAverage;
 public class RegressionTree {
-	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE};
+	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE;
+		public String toString() {
+			if (this == LearningRatePolicy.REVISED_VARIABLE) {
+				return "Variable";
+			} else if (this == LearningRatePolicy.CONSTANT) {
+				return "Constant";
+			} else {
+				return "OldVariable";
+			}
+		};
+	}
 	public enum SplitsPolicy {CONSTANT, INCREASING, RANDOM};
 	// class members
 

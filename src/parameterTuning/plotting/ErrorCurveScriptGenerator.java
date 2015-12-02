@@ -14,6 +14,7 @@ import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.RunDataSummaryRecord;
+import utilities.CommandLineExecutor;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 
@@ -43,23 +44,28 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 	 */
 	public Void call() {
 		StopWatch timer = new StopWatch().start(), perTaskTimer = new StopWatch().start();
-		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurves/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
+		String locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/ErrorCurveGenerator/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
 		new File(locksDir).mkdirs();
-		if (SimpleHostLock.checkDoneLock(locksDir + "errorCurveLock.txt")) {
+		if (SimpleHostLock.checkDoneLock(locksDir + "errorCurveGenerator--doneLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated error curve runData for %s (%d out of %d) in %s. Have been running for %s total.", 
+					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+			return null;
+		}
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + "errorCurveGenerator--hostLock.txt")) {
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Another host claimed generation of error curve script for %s (%d out of %d) in %s. Have been running for %s total.", 
 					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			return null;
 		}
 		
 		double maxRMSE = Double.MIN_VALUE, maxExamplesInNode = Double.MIN_VALUE;
 
-		StringBuilder avgCvTrainingErrorByIteration = new StringBuilder();
-		StringBuilder avgCvValidationErrorByIteration = new StringBuilder();
-		StringBuilder avgCvTestErrorByIteration = new StringBuilder();
+		//StringBuilder CvTrainingErrorByIteration = new StringBuilder();
+		StringBuilder CvValidationErrorByIteration = new StringBuilder();
+		//StringBuilder CvTestErrorByIteration = new StringBuilder();
 		StringBuilder allDataTrainingErrorByIteration  = new StringBuilder();
 		StringBuilder allDataTestErrorByIteration  = new StringBuilder();
-		StringBuilder cvEnsembleTrainingErrorByIteration  = new StringBuilder();
-		StringBuilder cvEnsembleTestErrorByIteration  = new StringBuilder();
+		StringBuilder CvEnsembleTrainingErrorByIteration  = new StringBuilder();
+		StringBuilder CvEnsembleTestErrorByIteration  = new StringBuilder();
 		
 		StringBuilder exampleInNodeMeanByIteration  = new StringBuilder();
 		StringBuilder exampleInNodeStdDevByIteration  = new StringBuilder();
@@ -72,17 +78,17 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		if (record == null) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Run Data Not Found! Failed to generate error curve runData for %s (%d out of %d) in %s. Have been running for %s total.", 
 					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
-			SimpleHostLock.writeDoneLock(locksDir + "errorCurveLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + "errorCurveGenerator--doneLock.txt");
 			return null;
 		}
 		String runDataFilePath = runDataFullDirectory + parameters.getRunDataSubDirectory(record.runFileType) + parameters.getFileNamePrefix(record.runFileType)  + "--runData.txt";
+		int treeNum = 1;
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 			// skip summary info, relative influences, and header
 			while (!(br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError"));
 			// read in error data 
 			String line = null;
-			int treeNum = 1;
 			while ((line = br.readLine()) != null) {
 				String[] components = line.split("\t");
 				double[] tmpErrors = {
@@ -101,13 +107,13 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 				maxRMSE = Math.max(maxRMSE, Doubles.max(tmpErrors));
 				maxExamplesInNode = Math.max(maxExamplesInNode, Doubles.max(tmpExamplesInNode));
 
-				MathematicaListCreator.addToMathematicaList(treeNum, components[1], avgCvTrainingErrorByIteration);
-				MathematicaListCreator.addToMathematicaList(treeNum, components[2], avgCvValidationErrorByIteration);
-				MathematicaListCreator.addToMathematicaList(treeNum, components[3], avgCvTestErrorByIteration);
+				//MathematicaListCreator.addToMathematicaList(treeNum, components[1], CvTrainingErrorByIteration);
+				MathematicaListCreator.addToMathematicaList(treeNum, components[2], CvValidationErrorByIteration);
+				//MathematicaListCreator.addToMathematicaList(treeNum, components[3], CvTestErrorByIteration);
 				MathematicaListCreator.addToMathematicaList(treeNum, components[4], allDataTrainingErrorByIteration);
 				MathematicaListCreator.addToMathematicaList(treeNum, components[5], allDataTestErrorByIteration);
-				MathematicaListCreator.addToMathematicaList(treeNum, components[6], cvEnsembleTrainingErrorByIteration);
-				MathematicaListCreator.addToMathematicaList(treeNum, components[7], cvEnsembleTestErrorByIteration);
+				MathematicaListCreator.addToMathematicaList(treeNum, components[6], CvEnsembleTrainingErrorByIteration);
+				MathematicaListCreator.addToMathematicaList(treeNum, components[7], CvEnsembleTestErrorByIteration);
 				MathematicaListCreator.addToMathematicaList(treeNum, components[8], exampleInNodeMeanByIteration);
 				MathematicaListCreator.addToMathematicaList(treeNum, components[9], exampleInNodeStdDevByIteration);
 				MathematicaListCreator.addToMathematicaList(treeNum, components[10], learningRateMeanByIteration);
@@ -150,12 +156,8 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		saveToFile.append("fileName = \"" + (generatedGraphsFullPathNoExtension + "allDataErrorCurve") + "\"\n");
 		saveToFile.append("Export[fileName <> \".png\", allDataErrorCurve, ImageResolution -> 300]\n\n");
 		
-		saveToFile.append("fileName = \"" + (generatedGraphsFullPathNoExtension + "cvEnsembleErrorCurve") + "\"\n");
-		saveToFile.append("Export[fileName <> \".png\", cvEnsembleErrorCurve, ImageResolution -> 300]\n\n");
-		
-		saveToFile.append("fileName = \"" + (generatedGraphsFullPathNoExtension + "cvErrorCurve") + "\"\n");
-		saveToFile.append("Export[fileName <> \".png\", cvErrorCurve, ImageResolution -> 300]\n\n");
-		//saveToFile.append("*)\n");
+		saveToFile.append("fileName = \"" + (generatedGraphsFullPathNoExtension + "CvEnsembleErrorCurve") + "\"\n");
+		saveToFile.append("Export[fileName <> \".png\", CvEnsembleErrorCurve, ImageResolution -> 300]\n\n");
 		
 		saveToFile.append("fileName = \"" + (generatedGraphsFullPathNoExtension + "examplesInNodeCurve")  + "\"\n");
 		saveToFile.append("Export[fileName <> \".png\", examplesInNodeCurve, ImageResolution -> 300]\n\n");
@@ -167,49 +169,43 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		saveToFile.append("Export[fileName <> \".png\", splitsCurve, ImageResolution -> 300]\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "allDataAndCvEnsembleErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "allDataAndCvEnsembleErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Training Data And CvEnsemble") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllTrainingDataAndCvEnsemble")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "everyErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "everyErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Plots") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllPlots")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "allDataErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "allDataErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("All Training Data") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AllTrainingData")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "cvEnsembleErrorCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "CvEnsembleErrorCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("CvEnsemble") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("CvEnsemble")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "cvErrorCurve")  + "}.png}\n");
-		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getErrorCurveLatexCaption("Avg Cross Validation") + "}\n");
-		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getErrorCurveLatexFigureReference("AvgCrossValidation")  + "}\n");
-		latexCode.append("\\end{figure}\n\n");
-		
-		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "examplesInNodeCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "examplesInNodeCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Examples In Node") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualExamplesInNode")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "learningRateCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "learningRateCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Learning Rates") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualLearningRates")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
 		
 		latexCode.append("\\begin{figure}[!htb]\\centering\n");
-		latexCode.append("\\includegraphics[width=\\lineWidth]{{" + (generatedGraphsFullPathNoExtension + "splitsCurve")  + "}.png}\n");
+		latexCode.append("\\includegraphics[width=\\linewidth]{{" + (generatedGraphsFullPathNoExtension + "splitsCurve")  + "}.png}\n");
 		latexCode.append("\\caption{" + datasetParams.fullName + " " + parameters.getMetaDataCurveLatexCaption("Actual Number Of Splits") + "}\n");
 		latexCode.append("\\label{fig:" +  datasetParams.minimalName + parameters.getMetaDataCurveLatexFigureReference("ActualNumberOfSplits")  + "}\n");
 		latexCode.append("\\end{figure}\n\n");
@@ -217,13 +213,13 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		try {
 			BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicaFileFullPath)));
 			BufferedWriter latex = new BufferedWriter(new PrintWriter(new File(latexFileNameFullPath)));
-			mathematica.write("avgCvTrainingError = " + MathematicaListCreator.closeOutMathematicaList(avgCvTrainingErrorByIteration) + "\n");
-			mathematica.write("avgCvValidationError = " + MathematicaListCreator.closeOutMathematicaList(avgCvValidationErrorByIteration) + "\n");
-			mathematica.write("avgCvTestError = " + MathematicaListCreator.closeOutMathematicaList(avgCvTestErrorByIteration) + "\n");
+			//mathematica.write("CvTrainingError = " + MathematicaListCreator.closeOutMathematicaList(CvTrainingErrorByIteration) + "\n");
+			mathematica.write("CvValidationError = " + MathematicaListCreator.closeOutMathematicaList(CvValidationErrorByIteration) + "\n");
+			//mathematica.write("CvTestError = " + MathematicaListCreator.closeOutMathematicaList(CvTestErrorByIteration) + "\n");
 			mathematica.write("allDataTrainingError = " + MathematicaListCreator.closeOutMathematicaList(allDataTrainingErrorByIteration) + "\n");
 			mathematica.write("allDataTestError = " + MathematicaListCreator.closeOutMathematicaList(allDataTestErrorByIteration) + "\n");
-			mathematica.write("cvEnsembleTrainingError = " + MathematicaListCreator.closeOutMathematicaList(cvEnsembleTrainingErrorByIteration) + "\n");
-			mathematica.write("cvEnsembleTestError = " + MathematicaListCreator.closeOutMathematicaList(cvEnsembleTestErrorByIteration) + "\n");
+			mathematica.write("CvEnsembleTrainingError = " + MathematicaListCreator.closeOutMathematicaList(CvEnsembleTrainingErrorByIteration) + "\n");
+			mathematica.write("CvEnsembleTestError = " + MathematicaListCreator.closeOutMathematicaList(CvEnsembleTestErrorByIteration) + "\n");
 			
 			mathematica.write("exampleInNodeMean = " + MathematicaListCreator.closeOutMathematicaList(exampleInNodeMeanByIteration) + "\n");
 			mathematica.write("exampleInNodeStdDev = " + MathematicaListCreator.closeOutMathematicaList(exampleInNodeStdDevByIteration) + "\n");
@@ -235,69 +231,54 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 			double maxONOT = Doubles.max(record.optimalNumberOfTreesFoundinEachRun);
 			if (minONOT == maxONOT) { minONOT-=0.1; }
 			mathematica.write("optimalNumberOfTreesUpperBound = {{" + minONOT + ", " + (maxRMSE + 1) +"}, {" + maxONOT + ", " + (maxRMSE+1) + "}}\n");
-			mathematica.write("avgOptimalNumberOfTrees = {{" + record.optimalNumberOfTrees + ", " + 0 +"}, {" + record.optimalNumberOfTrees + ", " + maxRMSE + "}}\n");
+			mathematica.write("OptimalNumberOfTrees = {{" + record.optimalNumberOfTrees + ", " + 0 +"}, {" + record.optimalNumberOfTrees + ", " + maxRMSE + "}}\n");
 			
 			
-			mathematica.write("cvValidation = ListLinePlot[{avgCvValidationError}"
-					+ ", PlotLegends -> {\"avgCvValidationError\"}"
+			mathematica.write("cvValidation = ListLinePlot[{CvValidationError}"
+					//+ ", PlotLegends -> {\"Cross Validation\"}"
 					+ ", PlotStyle -> {{Black}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
+					+ ", Epilog -> {Text[Style[\"" + parameters.getLineSeparatedPrintOut() + "\", TextAlignment->Left], Scaled[{" + 0.7  + ", " + 0.8 + "}]]}"
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
-			
-			mathematica.write("cvTraining = ListLinePlot[{avgCvTrainingError}"
-					+ ", PlotLegends -> {\"avgCvTrainingError\"}"
-					+ ", PlotStyle -> {{Lighter[Orange]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
-					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
-					+ ", ImageSize -> Large"
-					+ "]\n\n");
-			
-			mathematica.write("cvTest = ListLinePlot[{avgCvTestError}"
-					+ ", PlotLegends -> {\"avgCvTrainingError\"}"
-					+ ", PlotStyle -> {{Darker[Orange]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
-					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
-					+ ", ImageSize -> Large"
-					+ "]\n\n");
-			
+
 			mathematica.write("allDataTraining = ListLinePlot[{allDataTrainingError}"
-					+ ", PlotLegends -> {\"allDataTrainingError\"}"
+					//+ ", PlotLegends -> {\"ATD Training\"}"
 					+ ", PlotStyle -> {{Lighter[Red]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
 			mathematica.write("allDataTest = ListLinePlot[{allDataTestError}"
-					+ ", PlotLegends -> {\"allDataTestError\"}"
+					//+ ", PlotLegends -> {\"ATD Test\"}"
 					+ ", PlotStyle -> {{Darker[Red]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
-			mathematica.write("cvEnsembleTraining = ListLinePlot[{cvEnsembleTrainingError}"
-					+ ", PlotLegends -> {\"cvEnsembleTrainingError\"}"
+			mathematica.write("CvEnsembleTraining = ListLinePlot[{CvEnsembleTrainingError}"
+					//+ ", PlotLegends -> {\"ABT Training\"}"
 					+ ", PlotStyle -> {{Cyan}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
-			mathematica.write("cvEnsembleTest = ListLinePlot[{cvEnsembleTestError}"
-					+ ", PlotLegends -> {\"cvEnsembleTestError\"}"
+			mathematica.write("CvEnsembleTest = ListLinePlot[{CvEnsembleTestError}"
+					//+ ", PlotLegends -> {\"ABT Test\"}"
 					+ ", PlotStyle -> {{Darker[Blue]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
-			mathematica.write("optimalNumberOfTrees = ListLinePlot[{avgOptimalNumberOfTrees, optimalNumberOfTreesUpperBound}"
-					+ ", PlotLegends -> {\"avgOptimalNumberOfTrees\"}"
+			mathematica.write("optimalNumberOfTrees = ListLinePlot[{OptimalNumberOfTrees, optimalNumberOfTreesUpperBound}"
+					//+ ", PlotLegends -> {\"Optimal Number Of Trees\"}"
 					+ ", PlotStyle -> {Green, Green}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"RMSE\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxRMSE + "}}"
 					+ ", ImageSize -> Large"
 					+ ", Filling -> {2 -> {Axis, RGBColor[0, 1, 0, .3]}}" 
@@ -305,35 +286,32 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 			
 
 			mathematica.write("allDataErrorCurve = Show[cvValidation, allDataTraining, allDataTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
-			mathematica.write("cvEnsembleErrorCurve = Show[cvValidation, cvEnsembleTraining, cvEnsembleTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
-			mathematica.write("cvErrorCurve = Show[cvValidation, cvTraining, cvTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
-			mathematica.write("allDataAndCvEnsembleErrorCurve = Show[cvValidation, allDataTraining, allDataTest, cvEnsembleTraining, cvEnsembleTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
-			mathematica.write("everyErrorCurve = Show[cvValidation, cvTraining, cvTest, allDataTraining, allDataTest, cvEnsembleTraining, cvEnsembleTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
-			
+			mathematica.write("CvEnsembleErrorCurve = Show[cvValidation, CvEnsembleTraining, CvEnsembleTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
+			mathematica.write("everyErrorCurve = Show[cvValidation, allDataTraining, allDataTest, CvEnsembleTraining, CvEnsembleTest, optimalNumberOfTrees, PlotRange -> All]\n\n");
+					
 			mathematica.write("examplesInNodeCurve = ListLinePlot[{exampleInNodeMean,exampleInNodeStdDev}"
-					+ ", PlotLegends -> {\"exampleInNodeStdDev\", \"exampleInNodeMean\"}"
+					+ ", PlotLegends -> {\"Leaf Size Std. Dev\", \"Avg. Leaf Size\"}"
 					+ ", PlotStyle -> {{Darker[Green]}, {Darker[Blue]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"ExamplesInLeafNodes\"}"
+					+ getFrame("Leaf Size")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + maxExamplesInNode + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
 			mathematica.write("learningRateCurve = ListLinePlot[{learningRateMean, learningRateStdDev}"
-					+ ", PlotLegends -> {\"learningRateStdDev\", \"learningRateMean\"}"
+					+ ", PlotLegends -> {\"Shrinkage Std. Dev.\", \"Avg. Shrinkage\"}"
 					+ ", PlotStyle -> {{Darker[Green]}, {Darker[Blue]}}"
-					+ ", AxesLabel->{\"Number Of Trees\", \"LearningRate\"}"
+					+ getFrame("Learning Rate")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + (parameters.maxLearningRate + 0.1) + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
 			
 			mathematica.write("splitsCurve = ListLinePlot[{actualNumberOfSplits}"
-					+ ", PlotLegends -> {\"actualNumberOfSplits\"}"
 					+ ", PlotStyle -> Darker[Blue]"
-					+ ", AxesLabel->{\"Number Of Trees\", \"ActualNumberOfSplits\"}"
+					+ getFrame("Actual Number Of Splits")
 					+ ", PlotRange -> {{Automatic, Automatic}, {0, " + (parameters.maxNumberOfSplits + 1) + "}}"
 					+ ", ImageSize -> Large"
 					+ "]\n\n");
-			
+						
 			mathematica.write(saveToFile.toString());
 			
 			latex.write(latexCode.toString());
@@ -351,7 +329,36 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 			return null;
 		}
 		//new ErrorCurveScriptExecutor(datasetParams, parameters, runDataFullDirectory, tuningParameters, submissionNumber, globalTimer).call();
-		SimpleHostLock.writeDoneLock(locksDir + "errorCurveLock.txt");
+		SimpleHostLock.writeDoneLock(locksDir + "errorCurveGenerator--doneLock.txt");
 		return null;
+	}
+	
+	public static void generateAndExecutePlotLegend(ParameterTuningParameters tuningParameters) {
+		String file = tuningParameters.runDataProcessingDirectory + "/errorCurveLegend";
+		
+		try {
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(file + ".m"));
+			bw.append("errorCurveLegend = LineLegend[{Black, Lighter[Red], Darker[Red], Cyan, Darker[Blue], Green}, {\"Cross Validation\", \"ATD Training\", \"ATD Test\", \"ABT Training\", \"ABT Test\", \"Optimal Number of Trees\"}]\n\n");
+			bw.append("fileName = \"" + (tuningParameters.runDataProcessingDirectory + "errorCurveLegend")  + "\"\n");
+			bw.append("Export[fileName <> \".png\", errorCurveLegend, ImageResolution -> 300]\n\n");
+			bw.flush();
+			bw.close();
+			CommandLineExecutor.executeMathematicaScript(tuningParameters.runDataProcessingDirectory, "errorCurveLegend.m");
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+	
+	private String getFrame(String yAxis) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(", Axes->False ");
+		buffer.append(", Frame->True");
+		buffer.append(", FrameStyle->Black");
+		buffer.append(", FrameTicksStyle->Black");
+		buffer.append(", LabelStyle->{Black, 12}");
+		buffer.append(", FrameLabel->{\"Number of Trees\", \"" + yAxis +"\"}");
+		buffer.append(", FrameTicks->{{Automatic, None}, {Automatic, None}} ");
+		return buffer.toString();
 	}
 }
