@@ -4,7 +4,6 @@ gauss
 godel
 grace
 hamming
-courant
 dijkstra
 galois
 hardy
@@ -33,3 +32,4 @@ peano
 riemann
 wilkes
 zermelo
+notworking-courant
