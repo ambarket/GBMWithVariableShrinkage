@@ -182,7 +182,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 2;
+			test5Parameters.NUMBER_OF_RUNS = 1;
 			test5Parameters.NUMBER_OF_TREES = 150000;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;
@@ -207,8 +207,8 @@ public class ParameterTuningParameters {
 			
 			test5Parameters.locksDirectory = "Z:/GBMWithVariableShrinkage/locks/5/";
 			
-			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
-			//test5Parameters.datasets = new DatasetParameters[] {crimeCommunitiesParameters, bikeSharingDayParameters, powerPlantParameters, nasaParameters  /*,bikeSharingHourlyParameters*/};
+			//test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
+			test5Parameters.datasets = new DatasetParameters[] {crimeCommunitiesParameters, bikeSharingDayParameters, powerPlantParameters, nasaParameters  /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test5Parameters.parametersList = new GbmParameters[test5Parameters.totalNumberOfTests];
