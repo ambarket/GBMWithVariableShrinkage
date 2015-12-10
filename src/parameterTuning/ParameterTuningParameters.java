@@ -1,13 +1,12 @@
 package parameterTuning;
 
+import com.google.common.collect.ImmutableMap;
+
+import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree.LearningRatePolicy;
 import regressionTree.RegressionTree.SplitsPolicy;
-
-import com.google.common.collect.ImmutableMap;
-
-import dataset.DatasetParameters;
 
 
 public class ParameterTuningParameters {
@@ -114,7 +113,7 @@ public class ParameterTuningParameters {
 			
 			test3Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/3/");
 			
-			test3Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingHourlyParameters, crimeCommunitiesParameters, /*bikeSharingDayParameters*/};
+			test3Parameters.datasets = new DatasetParameters[] {/*nasaParameters,*/ powerPlantParameters,  bikeSharingHourlyParameters, crimeCommunitiesParameters, /*bikeSharingDayParameters*/};
 			test3Parameters.runFileType = RunFileType.ParamTuning3;
 		}
 		return test3Parameters;
@@ -123,7 +122,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest4() {
 		if (test4Parameters == null) {
 			test4Parameters = new ParameterTuningParameters();
-			test4Parameters.NUMBER_OF_RUNS = 10;
+			test4Parameters.NUMBER_OF_RUNS = 5;
 			test4Parameters.NUMBER_OF_TREES = 150000;
 			test4Parameters.CV_NUMBER_OF_FOLDS = 4;
 			test4Parameters.CV_STEP_SIZE = 5000;
@@ -148,7 +147,7 @@ public class ParameterTuningParameters {
 			
 			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
 			
-			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters/*, crimeCommunitiesParameters/* ,bikeSharingHourlyParameters*/};
+			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters ,bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test4Parameters.parametersList = new GbmParameters[test4Parameters.totalNumberOfTests];
@@ -165,6 +164,9 @@ public class ParameterTuningParameters {
 										test4Parameters.parametersList[done] = new GbmParameters(minLR, maxLR, numberOfSplits, 
 													bagFraction, minExamplesInNode, test4Parameters.NUMBER_OF_TREES, 
 													learningRatePolicy, splitPolicy);
+										if (test4Parameters.parametersList[done] == null) {
+											System.out.println();
+										}
 										done++;
 									}
 								}
@@ -173,7 +175,6 @@ public class ParameterTuningParameters {
 					}
 				}
 			}
-			
 		}
 		return test4Parameters;
 	}
@@ -182,17 +183,17 @@ public class ParameterTuningParameters {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
 			test5Parameters.NUMBER_OF_RUNS = 5;
-			test5Parameters.NUMBER_OF_TREES = 2;
-			test5Parameters.CV_NUMBER_OF_FOLDS = 4;
-			test5Parameters.CV_STEP_SIZE = 2;
+			test5Parameters.NUMBER_OF_TREES = 150000;
+			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
+			test5Parameters.CV_STEP_SIZE = 500;
 			
-			test5Parameters.constantLearningRates = new double[] {0.1, 0.01, 0.001, 0.0001};
+			test5Parameters.constantLearningRates = new double[] {0.5, 0.2, 0.1, 0.01, 0.001, 0.0001};
 			test5Parameters.minLearningRates = new double[] {0.01, 0.001, 0.0001};
-			test5Parameters.maxLearningRates = new double[] {0.4, 0.1};
-			test5Parameters.maxNumberOfSplts = new int[] {4, 2, 1};
+			test5Parameters.maxLearningRates = new double[] {1, 0.7, 0.4, 0.1};
+			test5Parameters.maxNumberOfSplts = new int[] {128, 64, 32, 16, 8, 4, 2, 1};
 
-			test5Parameters.bagFractions = new double[] {1};
-			test5Parameters.minExamplesInNode = new int[] {250};	
+			test5Parameters.bagFractions = new double[] {0.25, 0.5, 0.75, 1};
+			test5Parameters.minExamplesInNode = new int[] {1, 10, 75, 150};	
 			test5Parameters.learningRatePolicies = new LearningRatePolicy[] {LearningRatePolicy.REVISED_VARIABLE, LearningRatePolicy.CONSTANT};
 			test5Parameters.splitPolicies = new SplitsPolicy[] {SplitsPolicy.CONSTANT};
 			
@@ -201,11 +202,39 @@ public class ParameterTuningParameters {
 					 * test5Parameters.maxNumberOfSplts.length * test5Parameters.bagFractions.length * test5Parameters.minExamplesInNode.length;
 			
 			test5Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
-			test5Parameters.runDataProcessingDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
+			test5Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/5/";
+			test5Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
+			
 			test5Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
 			
-			test5Parameters.datasets = new DatasetParameters[] {bikeSharingHourlyParameters};
+			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
+			
+			test5Parameters.parametersList = new GbmParameters[test5Parameters.totalNumberOfTests];
+			
+			int done = 0;
+			for (LearningRatePolicy learningRatePolicy : test5Parameters.learningRatePolicies) {
+				for (double minLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? test5Parameters.minLearningRates : new double[] {-1}) {
+					for (double maxLR : (learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) ? test5Parameters.maxLearningRates : test5Parameters.constantLearningRates) {
+						for (int numberOfSplits : test5Parameters.maxNumberOfSplts) {
+							for (double bagFraction : test5Parameters.bagFractions) {
+								for (int minExamplesInNode : test5Parameters.minExamplesInNode) {
+									for (SplitsPolicy splitPolicy : test5Parameters.splitPolicies) {
+										// Note minLearningRate will be ignored unless LearningRatePolicy == REVISED_VARIABLE
+										test5Parameters.parametersList[done] = new GbmParameters(minLR, maxLR, numberOfSplits, 
+													bagFraction, minExamplesInNode, test5Parameters.NUMBER_OF_TREES, 
+													learningRatePolicy, splitPolicy);
+										if (test5Parameters.parametersList[done] == null) {
+											System.out.println();
+										}
+										done++;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 		return test5Parameters;
 	}

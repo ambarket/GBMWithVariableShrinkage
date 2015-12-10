@@ -10,13 +10,12 @@ import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 
+import dataset.Attribute;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
 import regressionTree.TreeNode;
-import utilities.DoubleCompare;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.Attribute;
 
 public class ResultFunction {
 	// class members
@@ -100,7 +99,7 @@ public class ResultFunction {
 				new PriorityQueue<Map.Entry<String, Double>>(new Comparator<Map.Entry<String, Double>>() {
 					@Override
 					public int compare(Entry<String, Double> arg0, Entry<String, Double> arg1) {
-						return DoubleCompare.compare(arg1.getValue(), arg0.getValue());
+						return Double.compare(arg1.getValue(), arg0.getValue());
 					}
 				});
 		for (int i = 0; i < relativeInf.length; i++) {

@@ -4,10 +4,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
-import utilities.DoubleCompare;
-import utilities.SumCountAverage;
 import dataset.Attribute;
 import dataset.Attribute.Type;
+import utilities.SumCountAverage;
 
 public class TreeNode {
 	public Attribute.Type splitPredictorType = null;
@@ -32,6 +31,8 @@ public class TreeNode {
 	 */
 	public TreeNode(double meanResponseInParent, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
 		missingTerminalNode = new TerminalNode(meanResponseInParent, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
+		this.leftTerminalNode = new TerminalNode(0,0,0);
+		this.rightTerminalNode = new TerminalNode(0,0,0);
 		this.splitPredictorIndex = -1;
 	}
 	
@@ -104,7 +105,7 @@ public class TreeNode {
 		int whichChild = 0;
 		switch (node.splitPredictorType) {
 			case Numeric:
-				if (DoubleCompare.lessThan(node.numericSplitValue, instance[node.splitPredictorIndex].getNumericValue())) {
+				if (node.numericSplitValue < instance[node.splitPredictorIndex].getNumericValue()) {
 					whichChild = 2;
 				} else {
 					whichChild = 1;
@@ -138,7 +139,9 @@ public class TreeNode {
 			this.rightChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}
 		if (this.missingChild == null) {
-			sca.addData(this.missingTerminalNode.instanceCount);
+			if (this.missingTerminalNode.instanceCount != 0) {
+				sca.addData(this.missingTerminalNode.instanceCount);
+			}
 		} else {
 			this.missingChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}

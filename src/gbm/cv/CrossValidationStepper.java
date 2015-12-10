@@ -1,10 +1,9 @@
 package gbm.cv;
+import java.util.concurrent.Callable;
+
 import gbm.GbmDataset;
 import gbm.GbmParameters;
 import gbm.ResultFunction;
-
-import java.util.concurrent.Callable;
-
 import regressionTree.RegressionTree;
 import utilities.Logger;
 import utilities.RandomSample;

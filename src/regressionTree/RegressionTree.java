@@ -6,24 +6,24 @@ package regressionTree;
 */
 
 
-/*
- *  The following class implements a regression tree
- */
-
-import gbm.GbmDataset;
-import gbm.GbmParameters;
-
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+import dataset.Attribute;
+
+/*
+ *  The following class implements a regression tree
+ */
+
+import gbm.GbmDataset;
+import gbm.GbmParameters;
 import regressionTree.OptimalSplitFinder.TreeNodeAndInParentPair;
 import utilities.Logger;
 import utilities.MersenneTwisterFast;
 import utilities.SumCountAverage;
-import dataset.Attribute;
 public class RegressionTree {
 	public enum LearningRatePolicy {CONSTANT, VARIABLE, REVISED_VARIABLE};
 	public enum SplitsPolicy {CONSTANT, INCREASING, RANDOM};

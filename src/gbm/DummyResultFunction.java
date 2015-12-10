@@ -1,7 +1,7 @@
 package gbm;
 
-import regressionTree.RegressionTree;
 import dataset.Attribute;
+import regressionTree.RegressionTree;
 
 public class DummyResultFunction extends ResultFunction{
 	

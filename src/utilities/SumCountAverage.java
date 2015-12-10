@@ -1,5 +1,7 @@
 package utilities;
 
+import java.util.ArrayList;
+
 
 public class SumCountAverage {
 	private double 	sum = 0.0, sumOfSquares = 0.0, mean = 0.0; 
@@ -37,6 +39,11 @@ public class SumCountAverage {
 	}
 	
 	public double getRootMeanSquaredError() {
+		double retval = Math.sqrt(getMeanSquaredError());
+		//System.out.println(retval);
+		//if (Double.isNaN(retval)) {
+		//	System.out.println();
+		//}
 		return Math.sqrt(getMeanSquaredError());
 	}
 	
@@ -70,6 +77,18 @@ public class SumCountAverage {
 	
 	public SumCountAverage() {
 		
+	}
+	
+	public SumCountAverage(ArrayList<Double> data) {
+		for (double d : data) {
+			addData(d);
+		}
+	}
+	
+	public SumCountAverage(ArrayList<Double> data, double divisor) {
+		for (double d : data) {
+			addData(d / divisor);
+		}
 	}
 	
 	public SumCountAverage(double initialSum, double initialSumOfSquares, int initialCount) {

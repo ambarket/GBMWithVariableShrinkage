@@ -1,7 +1,5 @@
 package parameterTuning.plotting;
 
-import gbm.GbmParameters;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,14 +11,15 @@ import java.util.HashMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 
+import dataset.Attribute;
+import dataset.Dataset;
+import gbm.GbmParameters;
 import parameterTuning.ParameterTuningParameters;
 import utilities.CommandLineExecutor;
 import utilities.MaxAndMin;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
-import dataset.Attribute;
-import dataset.Dataset;
 
 public class PredictionGraphGenerator implements Callable<Void> {
 	Dataset dataset;
@@ -568,7 +567,7 @@ public class PredictionGraphGenerator implements Callable<Void> {
 				throw new IllegalStateException();
 			}
 			return Integer.compare(this.exampleNumber, ((ExampleNumberPredictionGraphPoint)that).exampleNumber);
-			//return DoubleCompare.compare(this.response, ((ExampleNumberPredictionGraphPoint)that).response);
+			//return Double.compare(this.response, ((ExampleNumberPredictionGraphPoint)that).response);
 		}
 		
 		public String getResponseCurveEntry() {

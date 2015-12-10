@@ -1,6 +1,5 @@
 package dataset;
 
-import utilities.DoubleCompare;
 
 public class Attribute implements Comparable<Attribute> {
 
@@ -88,7 +87,7 @@ public class Attribute implements Comparable<Attribute> {
 			return -1;
 		}
 		if (this.type == Type.Numeric) {
-			return DoubleCompare.compare(this.numericValue, that.numericValue);
+			return Double.compare(this.numericValue, that.numericValue);
 		}
 		if (this.type == Type.Categorical) {
 			return customStringCompare(this.categoricalValue, that.categoricalValue);

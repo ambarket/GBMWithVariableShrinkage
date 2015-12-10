@@ -1,9 +1,5 @@
 package gbm.cv;
 
-import gbm.GbmDataset;
-import gbm.GbmParameters;
-import gbm.ResultFunction;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -14,12 +10,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
+import dataset.Attribute;
+import gbm.GbmDataset;
+import gbm.GbmParameters;
+import gbm.ResultFunction;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import regressionTree.RegressionTree;
-import utilities.DoubleCompare;
 import utilities.Matrix;
 import utilities.StopWatch;
-import dataset.Attribute;
 
 public class CrossValidatedResultFunctionEnsemble {
 	public GbmParameters parameters;
@@ -78,7 +76,7 @@ public class CrossValidatedResultFunctionEnsemble {
 				avgCvValidationErrors[i] += cvFunctions[functionIndex].validationError.get(i);
 				avgCvTestErrors[i] += cvFunctions[functionIndex].testError.get(i);
 			}
-			if (DoubleCompare.lessThan(avgCvValidationErrors[i], minAvgValidationError)) {
+			if (avgCvValidationErrors[i] < minAvgValidationError) {
 				minAvgValidationError = avgCvValidationErrors[i];
 				this.optimalNumberOfTrees = i+1;
 			}
@@ -213,7 +211,7 @@ public class CrossValidatedResultFunctionEnsemble {
 				new PriorityQueue<Map.Entry<String, Double>>(new Comparator<Map.Entry<String, Double>>() {
 					@Override
 					public int compare(Entry<String, Double> arg0, Entry<String, Double> arg1) {
-						return DoubleCompare.compare(arg1.getValue(), arg0.getValue());
+						return Double.compare(arg1.getValue(), arg0.getValue());
 					}
 				});
 		for (int i = 0; i < relativeInf.length; i++) {

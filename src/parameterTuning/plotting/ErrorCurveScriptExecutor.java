@@ -1,17 +1,16 @@
 package parameterTuning.plotting;
 
-import gbm.GbmParameters;
-
 import java.io.File;
 import java.util.concurrent.Callable;
 
+import dataset.DatasetParameters;
+import gbm.GbmParameters;
 import parameterTuning.ParameterTuningParameters;
 import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
 import utilities.SimpleHostLock;
 import utilities.StopWatch;
-import dataset.DatasetParameters;
 
 public class ErrorCurveScriptExecutor implements Callable<Void>{
 	DatasetParameters datasetParams;
