@@ -15,8 +15,7 @@ import utilities.StopWatch;
 
 public class Dataset {
 	private static HashSet<String> formsOfMissingValue = new HashSet<String>(Arrays.asList("NA", "N/A", "?", "NULL"));
-	private double trainingSampleFraction;
-	private int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors;
+	private int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors, totalNumberOfExamples;
 	
 	private Attribute.Type[] predictorTypes;
 	private String[] predictorNames;
@@ -38,6 +37,7 @@ public class Dataset {
 	 *  They are sorted in ascending order of instances.get(instanceNum).get(attributeNum)
 	 */
 	private int[][] numericalPredictorSortedIndexMap;
+	private int[] numericalResponseSortedIndexMap;
 	
 	// Map attribute number -> Map< Category, Set<Examples in that category>>>
 	private HashMap<Integer, HashMap<String, HashSet<Integer>>> categoricalPredictorIndexMap = new HashMap<Integer, HashMap<String, HashSet<Integer>>> ();
@@ -57,7 +57,7 @@ public class Dataset {
 		
 		// Read dataset file as strings
 		RawFile file = new RawFile(parameters.fileDirectory + parameters.fileName, parameters.attributeTypeHeader, parameters.attributeNameHeader);
-		this.trainingSampleFraction = trainingSampleFraction;
+		this.totalNumberOfExamples = file.numberOfRecords;
 		this.numberOfTrainingExamples = (int) (file.numberOfRecords * trainingSampleFraction);
 		this.numberOfTestExamples = file.numberOfRecords - numberOfTrainingExamples;
 		this.numberOfPredictors = file.numberOfAttributes - 1;
@@ -100,6 +100,7 @@ public class Dataset {
 		
 		// Read dataset file as strings
 		RawFile file = new RawFile(parameters.fileDirectory + parameters.fileName, parameters.attributeTypeHeader, parameters.attributeNameHeader);
+		this.totalNumberOfExamples = file.numberOfRecords;
 		this.numberOfTrainingExamples = file.numberOfRecords;
 		this.numberOfPredictors = file.numberOfAttributes - 1;
 		
@@ -108,9 +109,8 @@ public class Dataset {
 		extractAndStoreAttributeNames(file, parameters.responseVariableColumn);
 		extractAndStoreExamples(file, parameters.responseVariableColumn);
 		
-		// Pre-process trainingData to improve speed of split calculation
-		buildCategoricalPredictorIndexMap();
-		buildnumericalPredictorSortedIndexMap();
+		// Sort examples by their response for graphing purposes
+		buildNumericalResponseSortedIndexMap();
 		
 		System.out.println(StopWatch.getDateTimeStamp() + "Done processing dataset: " + timer.getElapsedSeconds());
 	}
@@ -271,8 +271,24 @@ public class Dataset {
 		}
 	}
 	
+	// WARNING: Assumes dataset is unshuffled, for graphing purposes only.
+	private void buildNumericalResponseSortedIndexMap() {
+		numericalResponseSortedIndexMap = new int[totalNumberOfExamples];
+		ArrayList<Map.Entry<Integer, Attribute>> sortedInstances = new ArrayList<Map.Entry<Integer, Attribute>>();
+		ResponseAttributeComparator comparator = new ResponseAttributeComparator();
+		for (int i = 0; i < totalNumberOfExamples; i++) {
+			sortedInstances.add(new AbstractMap.SimpleEntry<Integer, Attribute>(i, trainingResponses[i])); // No shuffling/splitting so everything in training responses
+		}
+		Collections.sort(sortedInstances, comparator);
+		
+		for (int i = 0; i < numberOfTrainingExamples; i++) {
+			Map.Entry<Integer, Attribute> entry = sortedInstances.get(i);
+			numericalResponseSortedIndexMap[i] = entry.getKey();
+		}
+	}
 	private void buildnumericalPredictorSortedIndexMap() {
 		numericalPredictorSortedIndexMap = new int[numberOfPredictors][numberOfTrainingExamples];
+
 		for (int attributeNum = 0; attributeNum < numberOfPredictors; attributeNum++) {
 			InstanceAttributeComparator comparator = new InstanceAttributeComparator(attributeNum);
 			ArrayList<Map.Entry<Integer, Attribute[]>> sortedInstances = new ArrayList<Map.Entry<Integer, Attribute[]>>();
@@ -308,7 +324,26 @@ public class Dataset {
 		}
 	}
 	
+	private class ResponseAttributeComparator implements Comparator<Map.Entry<Integer, Attribute>> {
+		@Override
+		public int compare(Map.Entry<Integer, Attribute> arg0, Map.Entry<Integer, Attribute> arg1) {
+			Attribute arg0Value = arg0.getValue();
+			Attribute arg1Value = arg1.getValue();
+			
+			if (arg0Value == null || arg1Value == null) {
+				throw new IllegalStateException("Attribute objects are null in ResponseAttributeComparator, this shouldn't be possible");
+			}
+			// Note missing values are considered equal to eachother and greater than any real value, so they will always
+			//	appear at the end of the numericalPredictorSortedIndexMap
+			return arg0Value.compareTo(arg1Value);
+		}
+	}
+	
 	//-----------------------------GETTERS--------------------------------------------------------
+	public int getNumberOfTotalNumberOfExamples() {
+		return totalNumberOfExamples;
+	}
+	
 	public int getNumberOfTrainingExamples() {
 		return numberOfTrainingExamples;
 	}
@@ -355,6 +390,10 @@ public class Dataset {
 	
 	public int[][] getNumericalPredictorSortedIndexMap() {
 		return numericalPredictorSortedIndexMap;
+	}
+	
+	public int[] getNumericalResponsesSortedIndexMap() {
+		return numericalResponseSortedIndexMap;
 	}
 
 	public Map<Integer, HashMap<String, HashSet<Integer>>> getCategoricalPredictorIndexMap() {

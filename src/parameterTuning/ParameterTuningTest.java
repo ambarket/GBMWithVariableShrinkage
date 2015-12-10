@@ -15,10 +15,10 @@ import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import gbm.GradientBoostingTree;
 import gbm.cv.CrossValidatedResultFunctionEnsemble;
+import parameterTuning.plotting.AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator;
 import parameterTuning.plotting.ErrorCurveScriptExecutor;
 import parameterTuning.plotting.ErrorCurveScriptGenerator;
-import parameterTuning.plotting.PredictionGraphGenerator;
-import parameterTuning.plotting.RunDataSummaryRecordGraphGenerator;
+import parameterTuning.plotting.SortedResponsePredictionGraphGenerator;
 import utilities.CommandLineExecutor;
 import utilities.CompressedTarBallCreator;
 import utilities.RecursiveFileDeleter;
@@ -194,23 +194,30 @@ public class ParameterTuningTest {
 			try {
 				test.averageAllRunData(datasetParams);
 				test.readSortAndSaveRunDataSummaryRecordsFromAverageRunData(datasetParams, "/Averages/");
-				RunDataSummaryRecord.writeBestColumnWiseLatexTable(datasetParams, test.tuningParameters, "/Averages/");
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
 		}
 		
+		//ErrorCurveScriptGenerator.generateAndExecutePlotLegend(test.tuningParameters);
+		//SortedResponsePredictionGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
+		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
+		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndSaveGraphsOfConstantVsVariableLR(test.tuningParameters, "/Averages/", 5);
+		/*
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 			try {
-				test.generateErrorCurveScriptsForAllRunData(datasetParams, "/Averages/");
-				test.executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 50);
-				RunDataSummaryRecordGraphGenerator.generateAndSaveAllGraphs(datasetParams, test.tuningParameters, "/Averages/");
+				test.generateErrorCurveScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 5);
+				test.executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 5);
+				//RunDataSummaryRecordGraphGenerator.generateAndSaveGraphsOfConstantVsVariableLR(datasetParams, test.tuningParameters, "/Averages/", 5);
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.exit(1);
 			}
 		}
+		*/
+		System.out.println("Generating Results Section");
+		LatexResultsGenerator.writeEntireResultsSection(test.tuningParameters);
 	}
 
 	/**
@@ -310,6 +317,7 @@ public class ParameterTuningTest {
 		}
 		
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
+		PriorityQueue<RunDataSummaryRecord> sortedByCvEnsembleTestError = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.CvEnsembleErrorComparator());
 		PriorityQueue<RunDataSummaryRecord> sortedByCvValidationError = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.CvValidationErrorComparator());
 		PriorityQueue<RunDataSummaryRecord> sortedByAllDataTestError = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.AllDataTestErrorComparator());
 		PriorityQueue<RunDataSummaryRecord> sortedByTimeInSeconds = new PriorityQueue<RunDataSummaryRecord>(new RunDataSummaryRecord.TimeInSecondsComparator());
@@ -320,6 +328,7 @@ public class ParameterTuningTest {
 
 			RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
 			if (record != null) {
+				sortedByCvEnsembleTestError.add(record);
 				sortedByCvValidationError.add(record);
 				sortedByAllDataTestError.add(record);
 				sortedByTimeInSeconds.add(record);
@@ -332,6 +341,7 @@ public class ParameterTuningTest {
 		}
 		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByCvValidationError", sortedByCvValidationError);
 		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByAllDataTestError", sortedByAllDataTestError);
+		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByCvEnsembleTestError", sortedByCvEnsembleTestError);
 		RunDataSummaryRecord.saveRunDataSummaryRecords(runDataDirectory, "SortedByTimeInSeconds", sortedByTimeInSeconds);
 		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryLock.txt");
 	}
@@ -432,10 +442,61 @@ public class ParameterTuningTest {
 		System.out.println(StopWatch.getDateTimeStamp() + "Finished executing error curves for all run data.");
 	}
 	
+	public void generateErrorCurveScriptsForBestAndWorstRunData(DatasetParameters datasetParams, String runDataSubDirectory, int n) {
+		ExecutorService executor = Executors.newCachedThreadPool();
+		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + runDataSubDirectory;
+		int submissionNumber = 0;
+		StopWatch globalTimer = new StopWatch().start() ;
+		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
+		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
+		ArrayList<RunDataSummaryRecord> allRecordsADTE = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory, "SortedByAllDataTestError");
+		
+		for (int i = 0; i < n; i++) {
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptGenerator(datasetParams, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptGenerator(datasetParams, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptGenerator(datasetParams, allRecordsADTE.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptGenerator(datasetParams, allRecordsADTE.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			
+			if (futureQueue.size() >= 30) {
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 30 error curve threads, waiting for some to finish");
+				while (futureQueue.size() > 20) {
+					try {
+						futureQueue.poll().get();
+
+					} catch (InterruptedException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
+						e.printStackTrace();
+					} catch (ExecutionException e) {
+						System.err.println(StopWatch.getDateTimeStamp());
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the error curve jobs, just waiting until they are all done.");
+		while (!futureQueue.isEmpty()) {
+			try {
+				futureQueue.poll().get();
+			} catch (InterruptedException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
+				e.printStackTrace();
+			} catch (ExecutionException e) {
+				System.err.println(StopWatch.getDateTimeStamp());
+				e.printStackTrace();
+			}
+		}
+		System.out.println(StopWatch.getDateTimeStamp() + "Finished generating error curves for best and worst run data.");
+	}
+	
 	public void executeErrorCurveAndPerExampleScriptsForBestAndWorstRunData(DatasetParameters datasetParameters, String runDataSubDirectory, int numberOfBestAndWorst) {
 		ExecutorService executor = Executors.newFixedThreadPool(3);
 		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
 		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
+		ArrayList<RunDataSummaryRecord> allRecordsADTE = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory, "SortedByAllDataTestError");
 		
 		int submissionNumber = 0;
 		StopWatch globalTimer = new StopWatch().start() ;
@@ -448,16 +509,32 @@ public class ParameterTuningTest {
 					new ErrorCurveScriptExecutor(datasetParameters, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			futureQueue.add(executor.submit(
 					new ErrorCurveScriptExecutor(datasetParameters, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
-			
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptExecutor(datasetParameters, allRecordsADTE.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new ErrorCurveScriptExecutor(datasetParameters, allRecordsADTE.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			// Don't have per example run data for these due to bug.
 			if (dataset.parameters.minimalName.equals("nasa") || dataset.parameters.minimalName.equals("powerPlant")) {
 				continue;
 			}
+			/*
 			futureQueue.add(executor.submit(
 					new PredictionGraphGenerator(dataset, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
 			futureQueue.add(executor.submit(
 					new PredictionGraphGenerator(dataset, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
-			
+			futureQueue.add(executor.submit(
+					new PredictionGraphGenerator(dataset, allRecordsADTE.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
+			futureQueue.add(executor.submit(
+					new PredictionGraphGenerator(dataset, allRecordsADTE.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer, ParameterTuningParameters.interestingPredictorGraphsByDataset.get(datasetParameters.minimalName))));
+			*/
+			futureQueue.add(executor.submit(
+					new SortedResponsePredictionGraphGenerator(dataset, allRecords.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new SortedResponsePredictionGraphGenerator(dataset, allRecords.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new SortedResponsePredictionGraphGenerator(dataset, allRecordsADTE.get(i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
+			futureQueue.add(executor.submit(
+					new SortedResponsePredictionGraphGenerator(dataset, allRecordsADTE.get(allRecords.size()-1-i).parameters, runDataDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			if (futureQueue.size() >= 30) {
 				System.out.println(StopWatch.getDateTimeStamp() + "Reached 30 error curve executor threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {

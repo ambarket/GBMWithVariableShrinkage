@@ -31,8 +31,8 @@ public class TreeNode {
 	 */
 	public TreeNode(double meanResponseInParent, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
 		missingTerminalNode = new TerminalNode(meanResponseInParent, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
-		this.leftTerminalNode = new TerminalNode(0,0,0);
-		this.rightTerminalNode = new TerminalNode(0,0,0);
+		this.leftTerminalNode = new TerminalNode(0, 0, 0);
+		this.rightTerminalNode = new TerminalNode(0, 0, 0);
 		this.splitPredictorIndex = -1;
 	}
 	
@@ -129,7 +129,12 @@ public class TreeNode {
 	
 	public SumCountAverage sumNumberOfExamplesInTerminalNodes(SumCountAverage sca) {
 		if (this.leftChild == null) {
-			sca.addData(this.leftTerminalNode.instanceCount);
+			try {
+			sca.addData(this.leftTerminalNode.instanceCount);}
+			catch (Exception e) {
+				System.out.println();
+			}
+			
 		} else {
 			this.leftChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}

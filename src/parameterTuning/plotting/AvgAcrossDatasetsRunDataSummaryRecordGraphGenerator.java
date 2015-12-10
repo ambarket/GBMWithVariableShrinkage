@@ -30,9 +30,9 @@ import utilities.SimpleHostLock;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
 
-public class RunDataSummaryRecordGraphGenerator {
+public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 	public enum GraphableProperty {
-		TimeInSeconds("Running Time (Seconds)"), AllDataTestError ("All Training Data GBM RMSE"), CvEnsembleTestError ("Aggregated Boosted Tree RMSE"), CvValidationError ("Cross Validation RMSE"), 
+		TimeInSeconds("Running Time"), AllDataTestError ("All Training Data GBM RMSE"), CvEnsembleTestError ("Aggregated Boosted Tree RMSE"), CvValidationError ("Cross Validation RMSE"), 
 		OptimalNumberOfTrees("Optimal Number of Trees"), AvgNumberOfSplits("Avg. Number of Splits"), StdDevNumberOfSplits("Number of Splits Std. Dev"), AvgLearningRate("Avg. Shrinkage"), StdDevLearningRate("Shrinkage Std. Dev."),  
 		MinLearningRate("Min Shrinkage"), MaxLearningRate("Max Shrinkage"), ConstantLearningRate("Constant Shrinkage"), MaxNumberOfSplits("Max Number of Splits"), BagFraction("Bag Fraction"), MinExamplesInNode("Min Leaf Size");
 		
@@ -52,29 +52,44 @@ public class RunDataSummaryRecordGraphGenerator {
 	public static ArrayList<GraphableProperty[]> getAllAxes() {
 		GraphableProperty[] yAxes = getYAxes();
 	
+	
 		ArrayList<GraphableProperty[]> graphAxes = new ArrayList<GraphableProperty[]> ();
+		
 			for (GraphableProperty y : yAxes) {
 				graphAxes.addAll(getAxesWithSpecifiedYAxis(y));
 		}
+		
+		graphAxes.addAll(getAdditionalAxes());
 		return graphAxes;
 	}
 	
 	public static GraphableProperty[] getXAxes() {
 		return new GraphableProperty[] {
-				GraphableProperty.MinLearningRate, 
-				GraphableProperty.MaxLearningRate, 
-				GraphableProperty.BagFraction, 
-				GraphableProperty.MinExamplesInNode,
+
 				GraphableProperty.MaxNumberOfSplits, 
-			};
+				GraphableProperty.MinExamplesInNode,
+				GraphableProperty.BagFraction, 
+				GraphableProperty.ConstantLearningRate, 
+				GraphableProperty.MinLearningRate, 
+				GraphableProperty.MaxLearningRate};
 	}
 	
 	public static GraphableProperty[] getYAxes() {
 		return new GraphableProperty[] {GraphableProperty.TimeInSeconds, 
-				GraphableProperty.OptimalNumberOfTrees, 
-				GraphableProperty.CvValidationError,
-				GraphableProperty.AllDataTestError, 
-				GraphableProperty.CvEnsembleTestError};
+				//GraphableProperty.AllDataTestError, 
+				//GraphableProperty.CvEnsembleTestError, 
+				GraphableProperty.OptimalNumberOfTrees,
+				GraphableProperty.CvValidationError
+				};
+	}
+	
+	public static ArrayList<GraphableProperty[]> getAdditionalAxes() {
+		ArrayList<GraphableProperty[]> retval = new ArrayList<>();
+		retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.AllDataTestError});
+		retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.CvEnsembleTestError});
+		//retval.add(new GraphableProperty[] {GraphableProperty.AllDataTestError, GraphableProperty.CvEnsembleTestError});
+		//retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.CvValidationError});
+		return retval;
 	}
 	
 	public static ArrayList<GraphableProperty[]> getAxesWithSpecifiedYAxis(GraphableProperty y) {
@@ -87,13 +102,12 @@ public class RunDataSummaryRecordGraphGenerator {
 		return graphAxes;
 	}
 	
-	public static void generateAndSaveGraphsOfConstantVsVariableLR(DatasetParameters datasetParameters, 
-			ParameterTuningParameters tuningParameters, String runDataSubDirectory, int n) {
-		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
-		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
+	public static void generateAndSaveGraphsOfConstantVsVariableLR(ParameterTuningParameters tuningParameters, String runDataSubDirectory, int n) {
+		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.getAverageRecordsAcrossDatasets(tuningParameters, runDataSubDirectory);
+		
 		ExecutorService executor = Executors.newCachedThreadPool();
 		
-		String outputDirectory = runDataDirectory + "graphs/";
+		String outputDirectory = tuningParameters.runDataProcessingDirectory + "avgSummaryGraphs/";
 
 		ArrayList<GraphableProperty[]> graphAxes = getAllAxes();
 		int submissionNumber = 0;
@@ -103,7 +117,7 @@ public class RunDataSummaryRecordGraphGenerator {
 
 		for (GraphableProperty[] axes : graphAxes) {
 			futureQueue.add(executor.submit(
-					new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecords, null, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, totalNumberOfTests, globalTimer, axes)));
+					new RunDataSummaryGraphTask(tuningParameters, allRecords, null, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, totalNumberOfTests, globalTimer, axes)));
 			
 			if (futureQueue.size() >= 8) {
 				System.out.println(StopWatch.getDateTimeStamp() + "Reached 8 run data summary graph threads, waiting for some to finish");
@@ -137,189 +151,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		executor.shutdownNow();
 	}
 	
-	/*
-	public static void generateAndSaveAllGraphsForBestNParameters(DatasetParameters datasetParameters, 
-			ParameterTuningParameters tuningParameters, String runDataSubDirectory, int n) {
-		
-		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
-		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
-		ArrayList<RunDataSummaryRecord> allRecordsADTE = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory, "SortedByAllDataTestError");
-		
-		ExecutorService executor = Executors.newCachedThreadPool();
-		
-		HashSet<RunDataSummaryRecordFilter> filters = new HashSet<>();
-		/*
-		for (int i = 0; i < n; i++) {
-			filters.addAll(RunDataSummaryRecordFilter.getAllPossibleFiltersForSpecifiedParameters(tuningParameters, allRecords.get(i).parameters));
-			filters.addAll(RunDataSummaryRecordFilter.getAllPossibleFiltersForSpecifiedParameters(tuningParameters, allRecords.get(allRecords.size()-1-i).parameters));
-			filters.addAll(RunDataSummaryRecordFilter.getAllPossibleFiltersForSpecifiedParameters(tuningParameters, allRecordsADTE.get(i).parameters));
-			filters.addAll(RunDataSummaryRecordFilter.getAllPossibleFiltersForSpecifiedParameters(tuningParameters, allRecordsADTE.get(allRecords.size()-1-i).parameters));
-		}
-
-		filters.add(RunDataSummaryRecordFilter.learningRatePolicyEqualsConstant);
-		filters.add(RunDataSummaryRecordFilter.learningRatePolicyEqualsRevisedVariable);
-		// Read in all RunDataSummaryRecords
-	
-		String outputDirectory = runDataDirectory + "graphs/";
-		GraphableProperty[] xAxes = new GraphableProperty[] {GraphableProperty.TimeInSeconds, 
-				GraphableProperty.AllDataTestError, 
-				GraphableProperty.CvEnsembleTestError, 
-				GraphableProperty.CvValidationError, 
-				GraphableProperty.OptimalNumberOfTrees, 
-				GraphableProperty.AvgNumberOfSplits, 
-				GraphableProperty.StdDevNumberOfSplits, 
-				GraphableProperty.AvgLearningRate, 
-				GraphableProperty.StdDevLearningRate,  
-				GraphableProperty.MinLearningRate, 
-				GraphableProperty.MaxLearningRate, 
-				GraphableProperty.ConstantLearningRate, 
-				GraphableProperty.MaxNumberOfSplits, 
-				GraphableProperty.BagFraction, 
-				GraphableProperty.MinExamplesInNode};
-		GraphableProperty[] yAxes = new GraphableProperty[] {GraphableProperty.TimeInSeconds, 
-				GraphableProperty.AllDataTestError, 
-				GraphableProperty.CvEnsembleTestError, 
-				GraphableProperty.CvValidationError, 
-				GraphableProperty.OptimalNumberOfTrees};
-	
-		ArrayList<GraphableProperty[]> graphAxes = new ArrayList<GraphableProperty[]> ();
-		for (GraphableProperty x : xAxes) {
-			for (GraphableProperty y : yAxes) {
-				if (!x.equals(y)) {
-					graphAxes.add(new GraphableProperty[] {x, y});
-				}
-			}
-		}
-		graphAxes.add(new GraphableProperty[] {GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.CvValidationError});
-		graphAxes.add(new GraphableProperty[] {GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError});
-		graphAxes.add(new GraphableProperty[] {GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.CvEnsembleTestError});
-
-		int submissionNumber = 0;
-		int totalNumberOfTests = filters.size() * graphAxes.size();
-		StopWatch globalTimer = new StopWatch().start();
-		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
-		
-		//for (RunDataSummaryRecordFilter filter : filters) {
-			for (GraphableProperty[] axes : graphAxes) {
-				futureQueue.add(executor.submit(
-						//new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecords, filter, 
-						//		AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, ++submissionNumber, 
-						//		totalNumberOfTests, globalTimer, axes)));
-						new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecordsADTE, null, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, totalNumberOfTests, globalTimer, axes)));
-				
-				if (futureQueue.size() >= 20) {
-					System.out.println(StopWatch.getDateTimeStamp() + "Reached 8 run data summary graph threads, waiting for some to finish");
-					while (futureQueue.size() > 5) {
-						try {
-							futureQueue.poll().get();
-	
-						} catch (InterruptedException e) {
-							System.err.println(StopWatch.getDateTimeStamp());
-							e.printStackTrace();
-						} catch (ExecutionException e) {
-							System.err.println(StopWatch.getDateTimeStamp());
-							e.printStackTrace();
-						}
-					}
-				}
-			}
-		//}
-		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the run data summary graph jobs, just waiting until they are all done.");
-		while (!futureQueue.isEmpty()) {
-			try {
-				futureQueue.poll().get();
-			} catch (InterruptedException e) {
-				System.err.println(StopWatch.getDateTimeStamp());
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				System.err.println(StopWatch.getDateTimeStamp());
-				e.printStackTrace();
-			}
-		}
-		System.out.println(StopWatch.getDateTimeStamp() + "Finished generating run data summary graph for all filters and axes.");
-		executor.shutdownNow();
-	}
-	*/
-	
-	public static void generateAndSaveAllGraphs(DatasetParameters datasetParameters, 
-			ParameterTuningParameters tuningParameters, String runDataSubDirectory) {
-		String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/";
-		new File(locksDir).mkdirs();
-		if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already Created all RunDataSummaryGraphs", datasetParameters.minimalName));
-			return;
-		}
-		
-		ExecutorService executor = Executors.newCachedThreadPool();
-		
-		// Read in all RunDataSummaryRecords
-		String runDataDirectory = tuningParameters.runDataProcessingDirectory + datasetParameters.minimalName + runDataSubDirectory;
-		ArrayList<RunDataSummaryRecord> allRecords = RunDataSummaryRecord.readRunDataSummaryRecords(runDataDirectory);
-	
-		String outputDirectory = runDataDirectory + "graphs/";
-		HashSet<RunDataSummaryRecordFilter> filters = RunDataSummaryRecordFilter.getAllPossibleFilters(tuningParameters);
-		GraphableProperty[][] graphAxes = new GraphableProperty[][] 
-				{ 
-					{GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MinLearningRate, GraphableProperty.AllDataTestError},
-					{GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.AllDataTestError},
-					{GraphableProperty.AvgNumberOfSplits, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError},
-					{GraphableProperty.BagFraction, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.MinExamplesInNode, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MinLearningRate, GraphableProperty.MaxLearningRate, GraphableProperty.AllDataTestError},
-					{GraphableProperty.MaxNumberOfSplits, GraphableProperty.ConstantLearningRate, GraphableProperty.AllDataTestError}
-				};
-		int submissionNumber = 0;
-		int totalNumberOfTests = filters.size() * graphAxes.length;
-		StopWatch globalTimer = new StopWatch().start();
-		Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
-		
-		for (RunDataSummaryRecordFilter filter : filters) {
-			for (GraphableProperty[] axes : graphAxes) {
-				futureQueue.add(executor.submit(
-						new RunDataSummaryGraphTask(datasetParameters, tuningParameters, allRecords, filter, 
-								AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, ++submissionNumber, 
-								totalNumberOfTests, globalTimer, axes)));
-				
-				if (futureQueue.size() >= 8) {
-					System.out.println(StopWatch.getDateTimeStamp() + "Reached 8 run data summary graph threads, waiting for some to finish");
-					while (futureQueue.size() > 4) {
-						try {
-							futureQueue.poll().get();
-	
-						} catch (InterruptedException e) {
-							System.err.println(StopWatch.getDateTimeStamp());
-							e.printStackTrace();
-						} catch (ExecutionException e) {
-							System.err.println(StopWatch.getDateTimeStamp());
-							e.printStackTrace();
-						}
-					}
-				}
-			}
-		}
-		System.out.println(StopWatch.getDateTimeStamp() + "Submitted the last of the run data summary graph jobs, just waiting until they are all done.");
-		while (!futureQueue.isEmpty()) {
-			try {
-				futureQueue.poll().get();
-			} catch (InterruptedException e) {
-				System.err.println(StopWatch.getDateTimeStamp());
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				System.err.println(StopWatch.getDateTimeStamp());
-				e.printStackTrace();
-			}
-		}
-		SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
-		System.out.println(StopWatch.getDateTimeStamp() + "Finished generating run data summary graph for all filters and axes.");
-		executor.shutdownNow();
-	}
-	
 	private static class RunDataSummaryGraphTask implements Callable<Void>{
-		DatasetParameters datasetParameters;
 		ParameterTuningParameters tuningParameters;
 		List<RunDataSummaryRecord> allRecords; 
 		RunDataSummaryRecordFilter filter;
@@ -330,8 +162,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		int totalNumberOfTests;
 		StopWatch globalTimer;
 		
-		public RunDataSummaryGraphTask(DatasetParameters datasetParameters, 
-				ParameterTuningParameters tuningParameters, 
+		public RunDataSummaryGraphTask(ParameterTuningParameters tuningParameters, 
 				List<RunDataSummaryRecord> allRecords, 
 				RunDataSummaryRecordFilter filter,
 				AxesType axesType,
@@ -340,7 +171,6 @@ public class RunDataSummaryRecordGraphGenerator {
 				int totalNumberOfTests,
 				StopWatch globalTimer,
 				GraphableProperty... axes) {
-			this.datasetParameters = datasetParameters;
 			this.tuningParameters = tuningParameters;
 			this.allRecords = allRecords;
 			this.filter = filter;
@@ -356,11 +186,11 @@ public class RunDataSummaryRecordGraphGenerator {
 		public Void call() {
 			StopWatch timer = new StopWatch().start();
 			String testSubDirectory = ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-			String locksDir = tuningParameters.locksDirectory + datasetParameters.minimalName + "/RunDataSummaryGraphs/" + testSubDirectory;
+			String locksDir = tuningParameters.locksDirectory + "/RunDataSummaryGraphs/" + testSubDirectory;
 			new File(locksDir).mkdirs();
 			if (SimpleHostLock.checkDoneLock(locksDir + "runDataSummaryGraphLock.txt")) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
-						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[AVERAGED] Already generated run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total."
+						, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
 			
@@ -388,31 +218,31 @@ public class RunDataSummaryRecordGraphGenerator {
 			boolean constantRecordsExist = !constantRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.MinLearningRate) < 0 && Arrays.binarySearch(axes, GraphableProperty.MaxLearningRate) < 0;
 			boolean variableRecordsExist = !variableRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.ConstantLearningRate) < 0;
 			if (constantRecordsExist) {
-				constantUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, constantRecords, axes);
-				constantUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.UniquePoints, constantRecords, filter, outputDirectory, axes);
-				constantUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.UniquePoints, filter, outputDirectory, axes);
-				constantAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, constantRecords, axes);
-				constantAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.AllPoints, constantRecords, filter, outputDirectory, axes);
-				constantAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.CONSTANT, GraphType.AllPoints, filter, outputDirectory, axes);
+				constantUniquePointsDataListCode = getMathematicaDataListCode(LearningRatePolicy.CONSTANT, GraphType.UniquePoints, constantRecords, axes);
+				constantUniquePointsPlotCode = getMathematicaPlotCode(tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.UniquePoints, constantRecords, filter, outputDirectory, axes);
+				constantUniquePointsLatexCode = getLatexCode(LearningRatePolicy.CONSTANT, GraphType.UniquePoints, filter, outputDirectory, axes);
+				constantAllPointsDataListCode = getMathematicaDataListCode(LearningRatePolicy.CONSTANT, GraphType.AllPoints, constantRecords, axes);
+				constantAllPointsPlotCode = getMathematicaPlotCode(tuningParameters, LearningRatePolicy.CONSTANT, axesType, GraphType.AllPoints, constantRecords, filter, outputDirectory, axes);
+				constantAllPointsLatexCode = getLatexCode(LearningRatePolicy.CONSTANT, GraphType.AllPoints, filter, outputDirectory, axes);
 			}
 			if (variableRecordsExist) {
-				variableUniquePointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, variableRecords, axes);
-				variableUniquePointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.UniquePoints, variableRecords, filter, outputDirectory, axes);
-				variableUniquePointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, filter, outputDirectory, axes);
-				variableAllPointsDataListCode = getMathematicaDataListCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, variableRecords, axes);
-				variableAllPointsPlotCode = getMathematicaPlotCode(datasetParameters, tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.AllPoints, variableRecords, filter, outputDirectory, axes);
-				variableAllPointsLatexCode = getLatexCode(datasetParameters, LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, filter, outputDirectory, axes);
+				variableUniquePointsDataListCode = getMathematicaDataListCode(LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, variableRecords, axes);
+				variableUniquePointsPlotCode = getMathematicaPlotCode(tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.UniquePoints, variableRecords, filter, outputDirectory, axes);
+				variableUniquePointsLatexCode = getLatexCode(LearningRatePolicy.REVISED_VARIABLE, GraphType.UniquePoints, filter, outputDirectory, axes);
+				variableAllPointsDataListCode = getMathematicaDataListCode(LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, variableRecords, axes);
+				variableAllPointsPlotCode = getMathematicaPlotCode(tuningParameters, LearningRatePolicy.REVISED_VARIABLE, axesType, GraphType.AllPoints, variableRecords, filter, outputDirectory, axes);
+				variableAllPointsLatexCode = getLatexCode(LearningRatePolicy.REVISED_VARIABLE, GraphType.AllPoints, filter, outputDirectory, axes);
 			}
 			if (constantRecordsExist && variableRecordsExist) {
-				combinedAllPointsPlotCode = getMathematicaCombinedPlotCode(datasetParameters, tuningParameters, axesType, GraphType.AllPoints, constantRecords, variableRecords, filter, outputDirectory, axes);
+				combinedAllPointsPlotCode = getMathematicaCombinedPlotCode(tuningParameters, axesType, GraphType.AllPoints, constantRecords, variableRecords, filter, outputDirectory, axes);
 				//combinedAllPointsLatexCode = getLatexCode(datasetParameters, null, GraphType.AllPoints, filter, outputDirectory, axes);
-				combinedUniquePointsPlotCode = getMathematicaCombinedPlotCode(datasetParameters, tuningParameters, axesType, GraphType.UniquePoints, constantRecords, variableRecords, filter, outputDirectory, axes);
+				combinedUniquePointsPlotCode = getMathematicaCombinedPlotCode(tuningParameters, axesType, GraphType.UniquePoints, constantRecords, variableRecords, filter, outputDirectory, axes);
 				//combinedUniquePointsLatexCode = getLatexCode(datasetParameters, null, GraphType.UniquePoints, filter, outputDirectory, axes);
 			}
 			
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
-						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[AVERAGED] No records exist in the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
+						testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
 			} 
@@ -428,15 +258,15 @@ public class RunDataSummaryRecordGraphGenerator {
 				variableRecordsExist = false;
 			}
 			if (!variableRecordsExist && !constantRecordsExist) {
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
-						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[AVERAGED]Both constant and variable graphs would have been pointless so skipping the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
+						testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 				return null;
 			} 
 			
 			String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-			String mathematicaFilePath = fileDirectory + getNotebookDataFileName(datasetParameters, filter, axes);
-			String latexFilePath = fileDirectory + getLatexCodeFileName(datasetParameters, filter, axes);
+			String mathematicaFilePath = fileDirectory + getNotebookDataFileName(filter, axes);
+			String latexFilePath = fileDirectory + getLatexCodeFileName(filter, axes);
 			try {
 				new File(fileDirectory).mkdirs();
 				BufferedWriter mathematica = new BufferedWriter(new PrintWriter(new File(mathematicaFilePath)));
@@ -474,30 +304,30 @@ public class RunDataSummaryRecordGraphGenerator {
 			try {
 				StopWatch mathematicaCurveTimer = new StopWatch().start();
 				mathematicaCurveTimer.printMessageWithTime("Starting execution of " + mathematicaFilePath);
-				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"math", "-script", getNotebookDataFileName(datasetParameters, filter, axes)});
+				CommandLineExecutor.runProgramAndWaitForItToComplete(fileDirectory, new String[] {"math", "-script", getNotebookDataFileName(filter, axes)});
 				//RecursiveFileDeleter.deleteDirectory(new File(mathematicaFilePath));
 				mathematicaCurveTimer.printMessageWithTime("Finished execution of " + mathematicaFilePath);
 			} catch (Exception e) {
 				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
-				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
-						datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[AVERAGED] Failed to execute the mathematica code for the run data summary graph for %s, not writing done lock. (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
+						testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 				return null;
 			}
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
-					datasetParameters.minimalName, testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
+			System.out.println(StopWatch.getDateTimeStamp() + String.format("[AVERAGED] Successfully generated the run data summary graph for %s (%d out of %d) in %.4f minutes. Have been running for %.4f minutes total.", 
+					testSubDirectory, submissionNumber, totalNumberOfTests, timer.getElapsedMinutes(), globalTimer.getElapsedMinutes()));
 			SimpleHostLock.writeDoneLock(locksDir + "runDataSummaryGraphLock.txt");
 			return null;
 		}
 	}
 	
-	private static String getMathematicaDataListCode(DatasetParameters datasetParameters, 
+	private static String getMathematicaDataListCode( 
 			LearningRatePolicy learningRatePolicy, 
 			GraphType graphType,
 			List<RunDataSummaryRecord> filteredRecords, 
 			GraphableProperty[] axes) {
 		
-		String dataListVariableName = getDataListVariableName(datasetParameters, learningRatePolicy, graphType, axes);
+		String dataListVariableName = getDataListVariableName(learningRatePolicy, graphType, axes);
 		TreeSet<Point> points = getPoints(graphType, filteredRecords, axes);
 		int numberOfUniquePoints = countNumberOfUniqueXAndYValues(points);
 		
@@ -546,7 +376,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		return retval;
 	}
 	
-	private static String getMathematicaCombinedPlotCode(DatasetParameters datasetParameters, 
+	private static String getMathematicaCombinedPlotCode(
 			ParameterTuningParameters tuningParameters, 
 			AxesType axesType,
 			GraphType graphType, 
@@ -560,9 +390,9 @@ public class RunDataSummaryRecordGraphGenerator {
 		String ticks = getTicks(tuningParameters, axes);
 		String frame = getFrame(axes);
 		
-		String plotVariableName = getPlotVariableName(datasetParameters, null, graphType, axes);
-		String constantDataListVariableName = getDataListVariableName(datasetParameters,  LearningRatePolicy.CONSTANT, graphType, axes);
-		String variableDataListVariableName =getDataListVariableName(datasetParameters,  LearningRatePolicy.REVISED_VARIABLE, graphType, axes);
+		String plotVariableName = getPlotVariableName(null, graphType, axes);
+		String constantDataListVariableName = getDataListVariableName(LearningRatePolicy.CONSTANT, graphType, axes);
+		String variableDataListVariableName =getDataListVariableName(LearningRatePolicy.REVISED_VARIABLE, graphType, axes);
 		StringBuffer buffer = new StringBuffer();
 
 		String plotCommand = null;
@@ -583,13 +413,14 @@ public class RunDataSummaryRecordGraphGenerator {
 		}
 		String plotRangePadding = "PlotRangePadding->{{Scaled[0.03],Scaled[0.03]}, {Scaled[0.03], Scaled[0.03]}}";
 		String imageMargins = "ImageMargins->{{0,0},{5,5}}";
-		buffer.append(String.format("%s = %s[%s, %s, %s, %s, %s, %s, %s %s]\n", 
+		buffer.append(String.format("%s = %s[%s, %s, %s, %s, %s, %s, %s, %s %s]\n", 
 				plotVariableName, 
 				plotCommand,
 				("{" + constantDataListVariableName + ", " + variableDataListVariableName + "}"), 
 				plotRange, 
 				ticks, 
 				"PlotStyle -> {{Red, Opacity[0.35]}, {Blue, Opacity[0.35]}}",
+				"PlotMarkers -> {Automatic, Medium}",
 				frame,
 				plotRangePadding,
 				imageMargins,
@@ -597,7 +428,7 @@ public class RunDataSummaryRecordGraphGenerator {
 			);
 		
 		String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-		String filePath = fileDirectory + getPlotGraphFileName(datasetParameters, null, graphType, filter, axes);
+		String filePath = fileDirectory + getPlotGraphFileName(null, graphType, filter, axes);
 	
 		buffer.append(String.format("%sFilePath = \"%s\"\n", plotVariableName, filePath));
 		buffer.append(String.format("Export[%sFilePath, %s , ImageResolution -> 300]\n\n", plotVariableName, plotVariableName));
@@ -611,7 +442,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(file + ".m"));
-			bw.append("runDataSummaryGraphLegend = LineLegend[{Red, Blue}, {\"Constant\", \"Variable\"}]\n\n");
+			bw.append("runDataSummaryGraphLegend = PointLegend[{Red, Blue}, {\"Constant Shrinkage\", \"Variable Shrinkage\"}]\n\n");
 			bw.append("fileName = \"" + file  + "\"\n");
 			bw.append("Export[fileName <> \".png\", runDataSummaryGraphLegend, ImageResolution -> 300]\n\n");
 			bw.flush();
@@ -624,7 +455,7 @@ public class RunDataSummaryRecordGraphGenerator {
 
 	}
 	
-	private static String getMathematicaPlotCode(DatasetParameters datasetParameters, 
+	private static String getMathematicaPlotCode(
 			ParameterTuningParameters tuningParameters, 
 			LearningRatePolicy learningRatePolicy, 
 			AxesType axesType,
@@ -638,8 +469,8 @@ public class RunDataSummaryRecordGraphGenerator {
 		String ticks = getTicks(tuningParameters, axes);
 		String frame = getFrame(axes);
 		
-		String plotVariableName = getPlotVariableName(datasetParameters, learningRatePolicy, graphType, axes);
-		String dataListVariableName = getDataListVariableName(datasetParameters, learningRatePolicy, graphType, axes);
+		String plotVariableName = getPlotVariableName(learningRatePolicy, graphType, axes);
+		String dataListVariableName = getDataListVariableName(learningRatePolicy, graphType, axes);
 
 		StringBuffer buffer = new StringBuffer();
 
@@ -663,7 +494,7 @@ public class RunDataSummaryRecordGraphGenerator {
 		String plotStyle = "PlotStyle -> " + ((learningRatePolicy == LearningRatePolicy.CONSTANT) ? "{Red, Opacity[0.35]}" : "{Blue, Opacity[0.35]}");
 		String plotRangePadding = "PlotRangePadding->{{Scaled[0.03],Scaled[0.03]}, {Scaled[0.03], Scaled[0.03]}}";
 		String imageMargins = "ImageMargins->{{0,0},{5,5}}";
-		buffer.append(String.format("%s = %s[%s, %s, %s, %s, %s, %s, %s %s]\n", 
+		buffer.append(String.format("%s = %s[%s, %s, %s, %s, %s, %s, %s, %s %s]\n", 
 				plotVariableName, 
 				plotCommand,
 				dataListVariableName, 
@@ -673,10 +504,11 @@ public class RunDataSummaryRecordGraphGenerator {
 				frame,
 				plotRangePadding,
 				imageMargins,
+				"PlotMarkers -> {Automatic, Medium}",
 				extraCommands)
 			);
 		String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-		String filePath = fileDirectory + getPlotGraphFileName(datasetParameters, learningRatePolicy, graphType, filter, axes);
+		String filePath = fileDirectory + getPlotGraphFileName(learningRatePolicy, graphType, filter, axes);
 	
 		buffer.append(String.format("%sFilePath = \"%s\"\n", plotVariableName, filePath));
 		buffer.append(String.format("Export[%sFilePath, %s , ImageResolution -> 300]\n\n", plotVariableName, plotVariableName));
@@ -690,18 +522,18 @@ public class RunDataSummaryRecordGraphGenerator {
 				"FillingStyle -> Directive[LightGreen, Thick, Opacity[.5]],  ImageSize -> 400";
 	}
 	
-	private static String getLatexCode(DatasetParameters datasetParameters, 
+	private static String getLatexCode(
 			LearningRatePolicy learningRatePolicy, 
 			GraphType graphType,
 			RunDataSummaryRecordFilter filter,
 			String outputDirectory,
 			GraphableProperty[] axes) {
 		StringBuffer buffer = new StringBuffer();
-		String latexCaption = getLatexCaption(datasetParameters, learningRatePolicy, filter, axes);
-		String latexFigureId = getLatexFigureId(datasetParameters, learningRatePolicy, graphType, filter, axes);
+		String latexCaption = getLatexCaption(learningRatePolicy, filter, axes);
+		String latexFigureId = getLatexFigureId(learningRatePolicy, graphType, filter, axes);
 		
 		String fileDirectory = outputDirectory + ((filter == null) ? "NoFilter/" : filter.getSubDirectory()) + convertGraphablePropertyAxesArrayToMinimalString(axes) + "/";
-		String filePath = fileDirectory + getPlotGraphFileName(datasetParameters, learningRatePolicy, graphType, filter, axes);
+		String filePath = fileDirectory + getPlotGraphFileName(learningRatePolicy, graphType, filter, axes);
 		
 		buffer.append("\\begin{figure}[!htb]\\centering\n");
 		buffer.append("\\includegraphics[width=1\\textwidth]{" + filePath + "}\n");
@@ -711,31 +543,31 @@ public class RunDataSummaryRecordGraphGenerator {
 		return buffer.toString();
 	}
 	
-	private static String getDataListVariableName(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, GraphType graphType, GraphableProperty[] axes) {
+	private static String getDataListVariableName(LearningRatePolicy learningRatePolicy, GraphType graphType, GraphableProperty[] axes) {
 		String learningRatePolicyNiceMinimalName = null;
 		if (learningRatePolicy == null) {
 			learningRatePolicyNiceMinimalName = "AllLR";
 		} else {
 			learningRatePolicyNiceMinimalName = (learningRatePolicy == LearningRatePolicy.CONSTANT) ? "ConstantLR" : "VariableLR";
 		}
-		return datasetParameters.minimalName + learningRatePolicyNiceMinimalName + graphType.name() + convertGraphablePropertyAxesArrayToMinimalString(axes);
+		return learningRatePolicyNiceMinimalName + graphType.name() + convertGraphablePropertyAxesArrayToMinimalString(axes);
 	}
 	
-	private static String getPlotVariableName(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, GraphType graphType, GraphableProperty[] axes) {
-		return getDataListVariableName(datasetParameters, learningRatePolicy, graphType, axes) + "Plot";
+	private static String getPlotVariableName(LearningRatePolicy learningRatePolicy, GraphType graphType, GraphableProperty[] axes) {
+		return getDataListVariableName(learningRatePolicy, graphType, axes) + "Plot";
 	}
 	
-	private static String getNotebookDataFileName(DatasetParameters datasetParameters, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+	private static String getNotebookDataFileName(RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		//String filerDescription = (filter==null) ? "noFilter" : filter.getMinimalFilterDescription();
-		return datasetParameters.minimalName + convertGraphablePropertyAxesArrayToMinimalString(axes) + "--NotebookData.m";
+		return convertGraphablePropertyAxesArrayToMinimalString(axes) + "--NotebookData.m";
 	}
 	
-	private static String getLatexCodeFileName(DatasetParameters datasetParameters, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+	private static String getLatexCodeFileName( RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		//String filerDescription = (filter==null) ? "noFilter" : filter.getMinimalFilterDescription();
-		return datasetParameters.minimalName + convertGraphablePropertyAxesArrayToMinimalString(axes) + "--LatexCode.txt";
+		return convertGraphablePropertyAxesArrayToMinimalString(axes) + "--LatexCode.txt";
 	}
 	
-	private static String getPlotGraphFileName(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, GraphType graphType, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+	private static String getPlotGraphFileName(LearningRatePolicy learningRatePolicy, GraphType graphType, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		String learningRateReallyMinimalName = null;
 		if (learningRatePolicy == null) {
 			learningRateReallyMinimalName = "All";
@@ -745,20 +577,20 @@ public class RunDataSummaryRecordGraphGenerator {
 		return learningRateReallyMinimalName + graphType.name() + ".png"; //getDataListVariableName(datasetParameters, learningRatePolicy, graphType, axes) + "--graph.png";
 	}
 	
-	private static String getLatexFigureId(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, GraphType graphType, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+	private static String getLatexFigureId(LearningRatePolicy learningRatePolicy, GraphType graphType, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		String filerDescription = (filter==null) ? "noFilter" : filter.getMinimalFilterDescription();
-		return  getDataListVariableName(datasetParameters, learningRatePolicy, graphType, axes) + "--" + filerDescription;
+		return  getDataListVariableName(learningRatePolicy, graphType, axes) + "--" + filerDescription;
 	}
 	
-	private static String getPlotTitle(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+	private static String getPlotTitle(LearningRatePolicy learningRatePolicy, RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
 		String learningRatePolicyNiceName = (learningRatePolicy == LearningRatePolicy.CONSTANT) ? "Constant LR" : "Variable LR";
 		String axesInfo = convertGraphablePropertyAxesArrayToNiceString(axes);
 		String filterInfo = (filter == null) ? "" : filter.getLongFilterDescription();
-		return datasetParameters.fullName + " " + learningRatePolicyNiceName + " " + axesInfo +  " " + filterInfo;
+		return learningRatePolicyNiceName + " " + axesInfo +  " " + filterInfo;
 	}
 	
-	private static String getLatexCaption(DatasetParameters datasetParameters, LearningRatePolicy learningRatePolicy,  RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
-		return getPlotTitle(datasetParameters, learningRatePolicy, filter, axes);
+	private static String getLatexCaption(LearningRatePolicy learningRatePolicy,  RunDataSummaryRecordFilter filter, GraphableProperty[] axes) {
+		return getPlotTitle(learningRatePolicy, filter, axes);
 	}
 	
 	private static TreeSet<Point> getPoints(GraphType graphType, List<RunDataSummaryRecord> allRecords, GraphableProperty[] axes) {
@@ -819,9 +651,10 @@ public class RunDataSummaryRecordGraphGenerator {
 		}
 		
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("PlotRange->{");
+		buffer.append("PlotRange->{All, {0,1}}");
 		boolean first = true;
 
+		/*
 		for (GraphableProperty property : axes) {
 			
 			if (!first) {
@@ -836,10 +669,11 @@ public class RunDataSummaryRecordGraphGenerator {
 				double extraSpace = 0;//(maxAndMinValueMap.get(property).max - maxAndMinValueMap.get(property).min) / 5;
 				buffer.append(String.format("{%f, %f}", maxAndMinValueMap.get(property).min - extraSpace, maxAndMinValueMap.get(property).max + extraSpace));
 			}
-			*/
+			
 			buffer.append("All");
 		}
 		buffer.append("}");
+		*/
 		return buffer.toString();
 	}
 	
@@ -850,9 +684,11 @@ public class RunDataSummaryRecordGraphGenerator {
 		}
 		
 		StringBuffer buffer = new StringBuffer();
-		buffer.append("PlotRange->{");
+		buffer.append("PlotRange->{All, {0,1}}");
+		/*
 		boolean first = true;
 
+		/*
 		for (GraphableProperty property : axes) {
 			if (!first) {
 				buffer.append(", ");
@@ -865,7 +701,9 @@ public class RunDataSummaryRecordGraphGenerator {
 				buffer.append(String.format("{%f, %f}", maxAndMinValueMap.get(property).min - extraSpace, maxAndMinValueMap.get(property).max + extraSpace));
 			}
 		}
+		
 		buffer.append("}");
+		*/
 		return buffer.toString();
 	}
 	

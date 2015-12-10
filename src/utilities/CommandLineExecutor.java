@@ -41,6 +41,17 @@ public class CommandLineExecutor {
          return stdOutAndError.toString();
     }
     
+	public static boolean executeMathematicaScript(String graphsDirectory, String mathematicaScriptFileName) {
+		try {
+			CommandLineExecutor.runProgramAndWaitForItToComplete(graphsDirectory, new String[] {"cmd", "/c", "math.exe", "-script", mathematicaScriptFileName});
+			return true;
+		} catch (Exception e) {
+			System.err.println(StopWatch.getDateTimeStamp());
+			e.printStackTrace();
+			return false;
+		}
+	}
+    
     
     /*
     public static void runProgramAndWaitForItToComplete(String command) {

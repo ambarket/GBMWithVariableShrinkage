@@ -145,7 +145,7 @@ public class ParameterTuningParameters {
 			test4Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/4/";
 			test4Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/4/";
 			
-			test4Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/4/");
+			test4Parameters.locksDirectory = "Z:/GBMWithVariableShrinkage/locks/4/";
 			
 			test4Parameters.datasets = new DatasetParameters[] {nasaParameters, bikeSharingDayParameters, powerPlantParameters, crimeCommunitiesParameters ,bikeSharingHourlyParameters};
 			test4Parameters.runFileType = RunFileType.ParamTuning4;
@@ -182,7 +182,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 5;
+			test5Parameters.NUMBER_OF_RUNS = 10;
 			test5Parameters.NUMBER_OF_TREES = 150000;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;
@@ -202,10 +202,10 @@ public class ParameterTuningParameters {
 					 * test5Parameters.maxNumberOfSplts.length * test5Parameters.bagFractions.length * test5Parameters.minExamplesInNode.length;
 			
 			test5Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
-			test5Parameters.runDataProcessingDirectory = "Z:/GBMWithVariableShrinkage/parameterTuning/5/";
+			test5Parameters.runDataProcessingDirectory = "/mnt/nfs/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			test5Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			
-			test5Parameters.locksDirectory = (System.getProperty("user.dir") + "/locks/5/");
+			test5Parameters.locksDirectory = "/mnt/nfs/Austin/GBMWithVariableShrinkage/locks/5/";
 			
 			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
