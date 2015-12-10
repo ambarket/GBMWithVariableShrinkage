@@ -187,7 +187,7 @@ public class ParameterTuningParameters {
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;
 			
-			test5Parameters.constantLearningRates = new double[] {0.1, 0.01, 0.001, 0.0001};
+			test5Parameters.constantLearningRates = new double[] {0.5, 0.2, 0.1, 0.01, 0.001, 0.0001};
 			test5Parameters.minLearningRates = new double[] {0.01, 0.001, 0.0001};
 			test5Parameters.maxLearningRates = new double[] {1, 0.7, 0.4, 0.1};
 			test5Parameters.maxNumberOfSplts = new int[] {128, 64, 32, 16, 8, 4, 2, 1};

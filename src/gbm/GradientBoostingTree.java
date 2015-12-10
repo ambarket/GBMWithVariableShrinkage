@@ -1,11 +1,4 @@
 package gbm;
-/*
-* The stochastic gradient boosting method.
-* yorkey: yangchadam AT gmail.com
-* 
-*/
-
-
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
@@ -24,8 +17,8 @@ import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class GradientBoostingTree {
-	public static ExecutorService executor = Executors.newCachedThreadPool();
-	//public static ExecutorService executor = Executors.newFixedThreadPool(3);
+	//public static ExecutorService executor = Executors.newCachedThreadPool();
+	public static ExecutorService executor = Executors.newFixedThreadPool(1);
 	/*
 	 *  fit a regression function using the Gradient Boosting Tree method.
 	 *  On success, return function; otherwise, return null. 

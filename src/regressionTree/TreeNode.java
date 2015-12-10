@@ -31,6 +31,8 @@ public class TreeNode {
 	 */
 	public TreeNode(double meanResponseInParent, double squaredErrorBeforeSplit, int numOfInstancesBeforeSplit) {
 		missingTerminalNode = new TerminalNode(meanResponseInParent, numOfInstancesBeforeSplit, squaredErrorBeforeSplit);
+		this.leftTerminalNode = new TerminalNode(0,0,0);
+		this.rightTerminalNode = new TerminalNode(0,0,0);
 		this.splitPredictorIndex = -1;
 	}
 	
