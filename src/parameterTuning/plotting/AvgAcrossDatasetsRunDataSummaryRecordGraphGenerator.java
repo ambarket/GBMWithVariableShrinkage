@@ -723,6 +723,7 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 				case StdDevNumberOfSplits:
 				case TimeInSeconds:
 				case OptimalNumberOfTrees:
+				case TotalNumberOfIteractions:
 					axesTicks[i].append("Automatic");
 					break;
 				case BagFraction:

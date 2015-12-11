@@ -31,15 +31,24 @@ public class ParameterTuningTest {
 	
 	private ParameterTuningTest(){}
 	
-	public static void runOnAllDatasets(ParameterTuningParameters parameters) {
+	public static void runOnAllDatasets(ParameterTuningParameters parameters) {		
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
 		GradientBoostingTree.executor = Executors.newFixedThreadPool(2);
 		for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
-				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
-				boolean runComplete = test.tryDifferentParameters(dataset, runNumber);
+				String locksDir = parameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+				new File(locksDir).mkdirs();
+				boolean runComplete = SimpleHostLock.checkDoneLock(locksDir + "entireRun--doneLock.txt");
+				
+				if (!runComplete) {
+					Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
+					runComplete = test.tryDifferentParameters(dataset, runNumber);
+				}
+				
 				if (runComplete) {
+					System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Completed all tests in run %d.", datasetParams.minimalName, runNumber));
+					SimpleHostLock.writeDoneLock(locksDir + "entireRun--doneLock.txt");
 					if (compressRunData(datasetParams, test.tuningParameters, runNumber)) {
 						if (scpCompressedRunData(datasetParams, test.tuningParameters, runNumber)) {
 							extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
