@@ -186,8 +186,12 @@ public class ParameterTuningTest {
 
 	
 	public static void processAllDatasets(ParameterTuningParameters parameters) {
+		GradientBoostingTree.executor = Executors.newCachedThreadPool();
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
+		
+		// A lazy hack, should fix this
+		test.tuningParameters.locksDirectory = test.tuningParameters.remoteLocksDirectory;
 		
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 			try {
@@ -199,11 +203,11 @@ public class ParameterTuningTest {
 			}
 		}
 		
-		//ErrorCurveScriptGenerator.generateAndExecutePlotLegend(test.tuningParameters);
-		//SortedResponsePredictionGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
 		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
 		AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.generateAndSaveGraphsOfConstantVsVariableLR(test.tuningParameters, "/Averages/", 5);
 		/*
+		ErrorCurveScriptGenerator.generateAndExecutePlotLegend(test.tuningParameters);
+		SortedResponsePredictionGraphGenerator.generateAndExecutePlotLegend(test.tuningParameters);
 		for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 			try {
 				test.generateErrorCurveScriptsForBestAndWorstRunData(datasetParams, "/Averages/", 5);
@@ -217,6 +221,7 @@ public class ParameterTuningTest {
 		*/
 		System.out.println("Generating Results Section");
 		LatexResultsGenerator.writeEntireResultsSection(test.tuningParameters);
+		GradientBoostingTree.executor.shutdownNow();
 	}
 
 	/**
@@ -272,7 +277,7 @@ public class ParameterTuningTest {
 					new AverageRunDataForParameters(datasetParams, parameters, paramTuningDirectory, tuningParameters, ++submissionNumber, globalTimer)));
 			
 			if (futureQueue.size() >= 35) {
-				System.out.println(StopWatch.getDateTimeStamp() + "Reached 50 threads, waiting for some to finish");
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 35 threads, waiting for some to finish");
 				while (futureQueue.size() > 20) {
 					try {
 						futureQueue.poll().get();
@@ -325,7 +330,7 @@ public class ParameterTuningTest {
 		for (GbmParameters parameters : tuningParameters.parametersList) {
 			timer.start();
 
-			RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters, tuningParameters.runFileType);
+			RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataDirectory, parameters);
 			if (record != null) {
 				sortedByCvEnsembleTestError.add(record);
 				sortedByCvValidationError.add(record);
