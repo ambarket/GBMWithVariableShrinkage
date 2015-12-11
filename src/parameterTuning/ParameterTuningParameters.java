@@ -81,6 +81,7 @@ public class ParameterTuningParameters {
 	
 	public GbmParameters[] parametersList;
 	public String runDataFreenasDirectory;
+	public String remoteLocksDirectory;
 	
 	private static ParameterTuningParameters test5Parameters;
 	private static ParameterTuningParameters test6Parameters;
@@ -115,10 +116,14 @@ public class ParameterTuningParameters {
 					 * test5Parameters.maxNumberOfSplts.length * test5Parameters.bagFractions.length * test5Parameters.minExamplesInNode.length;
 			
 			test5Parameters.runDataOutputDirectory = (System.getProperty("user.dir") + "/parameterTuning/5/");
+			test5Parameters.locksDirectory = System.getProperty("user.dir") + "/locks/5/";
+			
+			test5Parameters.remoteLocksDirectory = "/mnt/nfs/Austin/GBMWithVariableShrinkage/locks/5/";
+			
 			test5Parameters.runDataProcessingDirectory = "/mnt/nfs/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			test5Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			
-			test5Parameters.locksDirectory = System.getProperty("user.dir") + "/locks/5/";
+
 			
 			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;

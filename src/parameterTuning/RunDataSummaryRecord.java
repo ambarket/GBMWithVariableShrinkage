@@ -52,6 +52,8 @@ public class RunDataSummaryRecord {
 	public double totalNumberOfTreesFound;
 	public double[] numberOfTreesFoundInEachRun;
 	public double[] optimalNumberOfTreesFoundinEachRun;
+	public double totalNumberOfInteractionsAtONOT;
+	public double minNumberOfTreesAllRunsHave;
 	
 	public static ArrayList<RunDataSummaryRecord> getAverageRecordsAcrossDatasets(ParameterTuningParameters tuningParameters, String runDataSubDirectory) {
 		HashMap<GbmParameters, ArrayList<RunDataSummaryRecord>> recordsByParametersMap = new HashMap<>();
@@ -199,6 +201,7 @@ public class RunDataSummaryRecord {
 					+ "CvEnsembleTest\t"
 					+ "CvValidation\t"
 					+ "OptimalNumberOfTrees\t"
+					+ "TotoalNumberOfIteractionsAtONOT"
 					+ "AvgNumberOfSplits\t"
 					+ "StdDevNumberOfSplits\t"
 					+ "AvgLearningRate\t"
@@ -210,12 +213,13 @@ public class RunDataSummaryRecord {
 			while (!sortedEnsembles.isEmpty()) {
 				RunDataSummaryRecord record = sortedEnsembles.poll();
 				
-				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.8f\t%.8f\t%.8f\t%.8f\t", 
+				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t.4f\t%.4f\t%.8f\t%.8f\t%.8f\t%.8f\t", 
 						record.timeInSeconds, 
 						record.allDataTestError, 
 						record.cvEnsembleTestError, 
 						record.cvValidationError, 
 						record.optimalNumberOfTrees, 
+						record.totalNumberOfInteractionsAtONOT,
 						record.avgNumberOfSplits, 
 						record.stdDevNumberOfSplits, 
 						record.avgLearningRate, 
@@ -259,20 +263,21 @@ public class RunDataSummaryRecord {
 				record.cvEnsembleTestError = Double.parseDouble(columns[2].trim());
 				record.cvValidationError = Double.parseDouble(columns[3].trim());
 				record.optimalNumberOfTrees = Double.parseDouble(columns[4].trim());
-				record.avgNumberOfSplits = Double.parseDouble(columns[5].trim());
-				record.stdDevNumberOfSplits = Double.parseDouble(columns[6].trim());
-				record.avgLearningRate = Double.parseDouble(columns[7].trim());
-				record.stdDevLearningRate = Double.parseDouble(columns[8].trim());
-				record.avgExamplesInNode = Double.parseDouble(columns[9].trim());
-				record.stdDevExamplesInNode = Double.parseDouble(columns[10].trim());
+				record.totalNumberOfInteractionsAtONOT = Double.parseDouble(columns[5].trim());
+				record.avgNumberOfSplits = Double.parseDouble(columns[6].trim());
+				record.stdDevNumberOfSplits = Double.parseDouble(columns[7].trim());
+				record.avgLearningRate = Double.parseDouble(columns[8].trim());
+				record.stdDevLearningRate = Double.parseDouble(columns[9].trim());
+				record.avgExamplesInNode = Double.parseDouble(columns[10].trim());
+				record.stdDevExamplesInNode = Double.parseDouble(columns[11].trim());
 				record.parameters = new GbmParameters(
-						Double.parseDouble(columns[12].trim()), // MinLR
-						Double.parseDouble(columns[13].trim()), // MaxLR
-						Integer.parseInt(columns[14].trim()), // NOS
-						Double.parseDouble(columns[15].trim()), //BF
-						Integer.parseInt(columns[16].trim()), //MEIN
-						Integer.parseInt(columns[17].trim()), //NOT
-						LearningRatePolicy.valueOf(columns[11].trim()), // LearningRatePolicy
+						Double.parseDouble(columns[13].trim()), // MinLR
+						Double.parseDouble(columns[14].trim()), // MaxLR
+						Integer.parseInt(columns[15].trim()), // NOS
+						Double.parseDouble(columns[16].trim()), //BF
+						Integer.parseInt(columns[17].trim()), //MEIN
+						Integer.parseInt(columns[18].trim()), //NOT
+						LearningRatePolicy.valueOf(columns[12].trim()), // LearningRatePolicy
 						SplitsPolicy.CONSTANT);
 				records.add(record);
 			}
@@ -285,15 +290,8 @@ public class RunDataSummaryRecord {
 		return records;
 	}
 	
-	public static RunDataSummaryRecord readRunDataSummaryRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters, RunFileType expectedRunFileType) {
-		String runDataFilePath = null;
-		try {
-		 runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory(expectedRunFileType) + parameters.getFileNamePrefix(expectedRunFileType)  + "--runData.txt";
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			System.out.println();
-		}
+	public static RunDataSummaryRecord readRunDataSummaryRecordFromRunDataFile(String runDataDirectory, GbmParameters parameters) {
+		String runDataFilePath = runDataDirectory + parameters.getRunDataSubDirectory() + parameters.getFileNamePrefix()  + "--runData.txt";
 		RunDataSummaryRecord record = new RunDataSummaryRecord();
 		
 		if (!new File(runDataFilePath).exists()) {
@@ -312,15 +310,8 @@ public class RunDataSummaryRecord {
 				br.close();
 				return null;
 			}
-			// Added time in seconds after the original parameter tuning test.
-			if (line.contains("Step Size")) {
-				record.runFileType = RunFileType.Original;
-				record.stepSize = Double.parseDouble(line.split(": ")[1].trim());
-			} else {
-				record.timeInSeconds = Double.parseDouble(line.split(": ")[1].trim());
-				record.stepSize = Double.parseDouble(br.readLine().split(": ")[1].trim());
-			}
-			// Always have been the same
+			record.timeInSeconds = Double.parseDouble(line.split(": ")[1].trim());
+			record.stepSize = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.numberOfFolds = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.totalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.optimalNumberOfTrees = Double.parseDouble(br.readLine().split(": ")[1].trim());
@@ -329,33 +320,18 @@ public class RunDataSummaryRecord {
 			record.allDataTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.cvTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			record.allDataTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.cvEnsembleTrainingError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.cvEnsembleTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.avgNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.stdDevNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.avgLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
+			record.stdDevLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			
-			// Changed multiple times
+			// Check if its an averaged run data file
 			line = br.readLine();
-			if (line.contains("CV Relative Influences") && record.runFileType == null) {
-				record.runFileType = RunFileType.ParamTuning2;
-			} else if (line.contains("All Data Avg Number Of Splits")) {
-				record.runFileType = RunFileType.ParamTuning3;
-				record.avgNumberOfSplits = Double.parseDouble(line.split(": ")[1].trim());
-			} else if (line.contains("CV Ensemble")) {
-				record.runFileType = RunFileType.ParamTuning4;
-				record.cvEnsembleTrainingError = Double.parseDouble(line.split(": ")[1].trim());
-			}
-			if (record.runFileType == RunFileType.ParamTuning4) {
-				record.cvEnsembleTestError = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				record.avgNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				record.stdDevNumberOfSplits = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				record.avgLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				record.stdDevLearningRate = Double.parseDouble(br.readLine().split(": ")[1].trim());
-			} 
-			// Check if this is an averaged run data file, if so read the extra data in.
-			line = br.readLine();
-			if (line.startsWith("All Data Avg Examples In Node")) {
-				record.avgExamplesInNode = Double.parseDouble(line.split(": ")[1].trim());
+			if (line.contains("All Data Avg Examples In Node")) {
+				record.avgExamplesInNode = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.stdDevExamplesInNode = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				line = br.readLine();
-			}
-			if (line.contains("Number of runs found")) {
 				record.numberOfRunsRound = Double.parseDouble(line.split(": ")[1].trim());
 				record.totalNumberOfTreesFound = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				String[] numberOfTreesInEachRun = br.readLine().split(": ")[1].split(", ");
@@ -366,6 +342,8 @@ public class RunDataSummaryRecord {
 					record.numberOfTreesFoundInEachRun[i] = Double.parseDouble(numberOfTreesInEachRun[i]);
 					record.optimalNumberOfTreesFoundinEachRun[i] = Double.parseDouble(optimalNumberOfTreesInEachRun[i]);
 				}
+				record.totalNumberOfInteractionsAtONOT = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.minNumberOfTreesAllRunsHave = Double.parseDouble(br.readLine().split(": ")[1].trim());
 			}
 			
 			br.close();
@@ -373,6 +351,8 @@ public class RunDataSummaryRecord {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 		} catch (Exception e) {
+			System.err.println(StopWatch.getDateTimeStamp());
+			e.printStackTrace();
 			System.exit(1);
 		}
 		return record;

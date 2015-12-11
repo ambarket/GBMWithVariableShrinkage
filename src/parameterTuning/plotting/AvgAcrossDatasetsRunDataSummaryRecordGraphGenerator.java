@@ -33,7 +33,8 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 	public enum GraphableProperty {
 		TimeInSeconds("Running Time"), AllDataTestError ("All Training Data GBM RMSE"), CvEnsembleTestError ("Aggregated Boosted Tree RMSE"), CvValidationError ("Cross Validation RMSE"), 
 		OptimalNumberOfTrees("Optimal Number of Trees"), AvgNumberOfSplits("Avg. Number of Splits"), StdDevNumberOfSplits("Number of Splits Std. Dev"), AvgLearningRate("Avg. Shrinkage"), StdDevLearningRate("Shrinkage Std. Dev."),  
-		MinLearningRate("Min Shrinkage"), MaxLearningRate("Max Shrinkage"), ConstantLearningRate("Constant Shrinkage"), MaxNumberOfSplits("Max Number of Splits"), BagFraction("Bag Fraction"), MinExamplesInNode("Min Leaf Size");
+		MinLearningRate("Min Shrinkage"), MaxLearningRate("Max Shrinkage"), ConstantLearningRate("Constant Shrinkage"), MaxNumberOfSplits("Max Number of Splits"), BagFraction("Bag Fraction"), MinExamplesInNode("Min Leaf Size"),
+		TotalNumberOfIteractions("Total Modeled Interactions");
 		
 		String niceName = null;
 		GraphableProperty(String niceName) {
@@ -78,7 +79,8 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 				//GraphableProperty.AllDataTestError, 
 				//GraphableProperty.CvEnsembleTestError, 
 				GraphableProperty.OptimalNumberOfTrees,
-				GraphableProperty.CvValidationError
+				GraphableProperty.CvValidationError,
+				GraphableProperty.TotalNumberOfIteractions
 				};
 	}
 	
@@ -118,9 +120,9 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 			futureQueue.add(executor.submit(
 					new RunDataSummaryGraphTask(tuningParameters, allRecords, null, AxesType.ExtraSpaceBeyondMinAndMax, outputDirectory, submissionNumber, totalNumberOfTests, globalTimer, axes)));
 			
-			if (futureQueue.size() >= 8) {
-				System.out.println(StopWatch.getDateTimeStamp() + "Reached 8 run data summary graph threads, waiting for some to finish");
-				while (futureQueue.size() > 4) {
+			if (futureQueue.size() >= 20) {
+				System.out.println(StopWatch.getDateTimeStamp() + "Reached 20 run data summary graph threads, waiting for some to finish");
+				while (futureQueue.size() > 12) {
 					try {
 						futureQueue.poll().get();
 
@@ -210,10 +212,10 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 			
 			String constantUniquePointsDataListCode = "", constantUniquePointsPlotCode = "", constantUniquePointsLatexCode = "",
 					variableUniquePointsDataListCode = "", variableUniquePointsPlotCode = "", variableUniquePointsLatexCode = "",
-					combinedUniquePointsPlotCode = "", combinedUniquePointsLatexCode = "",
+					combinedUniquePointsPlotCode = "", 
 					constantAllPointsDataListCode = "", constantAllPointsPlotCode = "", constantAllPointsLatexCode = "",
 					variableAllPointsDataListCode = "", variableAllPointsPlotCode = "", variableAllPointsLatexCode = "",
-					combinedAllPointsPlotCode = "", combinedAllPointsLatexCode = "";
+					combinedAllPointsPlotCode = "";
 			boolean constantRecordsExist = !constantRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.MinLearningRate) < 0 && Arrays.binarySearch(axes, GraphableProperty.MaxLearningRate) < 0;
 			boolean variableRecordsExist = !variableRecords.isEmpty() && Arrays.binarySearch(axes, GraphableProperty.ConstantLearningRate) < 0;
 			if (constantRecordsExist) {
@@ -912,6 +914,8 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 				return "StdDevSplits";
 			case TimeInSeconds:
 				return "TIME";
+			case TotalNumberOfIteractions:
+				return "Interactions";
 			default:
 				throw new IllegalArgumentException();
 		}
@@ -949,6 +953,8 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 				return record.stdDevNumberOfSplits;
 			case TimeInSeconds:
 				return record.timeInSeconds;
+			case TotalNumberOfIteractions:
+				return record.totalNumberOfInteractionsAtONOT;
 			default:
 				throw new IllegalArgumentException();
 		}

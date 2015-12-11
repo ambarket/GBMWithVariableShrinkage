@@ -167,11 +167,17 @@ public class GradientBoostingTree {
 			
 			// Check our resource limits.
 			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
-			if (memoryPossiblyAvailableInGigs < .35) {
-				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
+			System.out.println("Max  : " + Runtime.getRuntime().maxMemory() );
+			System.out.println("Total: " + Runtime.getRuntime().totalMemory());
+			System.out.println("FreeM: " + Runtime.getRuntime().freeMemory());
+			System.out.println("Used: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
+			System.out.println("memoryPossiblyAvailableInGigs: " + memoryPossiblyAvailableInGigs);
+			
+			if (memoryPossiblyAvailableInGigs < .05) {
+				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
 				try {
 					BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/parametersThatRanOutOfMemory.txt", true));
-					bw.write(runDataDir + "\n");
+					bw.write("MemoryAvailable: " + memoryPossiblyAvailableInGigs + runDataDir + "\n");
 					bw.flush();
 					bw.close();
 				} catch (IOException e) {
@@ -182,7 +188,7 @@ public class GradientBoostingTree {
 			}
 			
 			if (ensembleTimer.getElapsedSeconds() > 5400) {
-				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we ran out of time!");
+				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we ran out of time!");
 				try {
 					BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/parametersThatRanOutOfTime.txt", true));
 					bw.write(runDataDir + "\n");

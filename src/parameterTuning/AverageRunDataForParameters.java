@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -44,11 +45,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 	public Void call() {
 		StopWatch timer = new StopWatch().start();
 		String locksDir = null;
-		try {
-		locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType);
-		} catch (Exception e) {
-			System.err.println();
-		}
+		locksDir = tuningParameters.locksDirectory + datasetParams.minimalName + "/Averages/" + parameters.getRunDataSubDirectory();
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--averagesLock.txt")) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Already averaged runData for %s (%d out of %d) in %s. Have been running for %s total.", 
@@ -63,7 +60,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				avgNumberOfSplits = 0, stdDevNumberOfSplits = 0,
 				avgLearningRate = 0, stdDevLearningRate = 0,
 				avgExamplesInNode = 0, stdDevExamplesInNode = 0,
-				optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0;
+				optimalNumberOfTrees = 0, totalNumberOfTrees= 0, stepSize = 0, numberOfFolds = 0, 
+				totalNumberOfInteractionsAtONOT = 0;
 		
 		HashMap<String, SumCountAverage> cvEnsembleReltiveInfluences = new HashMap<>();
 		HashMap<String, SumCountAverage> allDataFunctionReltiveInfluences = new HashMap<>();
@@ -91,11 +89,32 @@ public class AverageRunDataForParameters implements Callable<Void>{
 		int numberOfRunsFound = 0;
 		RunFileType runFileType = null;
 		// Read through all the files cooresponding to these parameters and average the data.
+		BufferedWriter suspiciousFiles = null;
+		BufferedWriter missingFiles = null;
+		try {
+			suspiciousFiles = new BufferedWriter(new FileWriter(tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/suspiciousFilesDuringAveraging.txt", true));
+			missingFiles = new BufferedWriter(new FileWriter(tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/missingFilesDuringAveraging.txt", true));
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			System.exit(1);
+		}
 		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+			if (!(new File(tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Run" + runNumber).exists())) {
+				System.err.println("Entire run folder for run " + runNumber + " of " + datasetParams.minimalName + " is missing, continuing anyway");
+				continue;
+			}
+			
 			// Get the summary info at the top of the file.
-			RunDataSummaryRecord summaryInfo = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters, tuningParameters.runFileType);
+			RunDataSummaryRecord summaryInfo = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(paramTuneDir + "Run" + runNumber + "/", parameters);
+			String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber) + parameters.getFileNamePrefix() + "--runData.txt";
 			if (summaryInfo == null) {
 				// Run data file wasn't found. Continue to next iteration.
+				try {
+					missingFiles.write(runDataFilePath + "\n");
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
 				continue;
 			} else {
 				numberOfRunsFound++;
@@ -116,80 +135,69 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			allDataTrainingError += summaryInfo.allDataTrainingError;
 			cvTestError += summaryInfo.cvTestError;
 			allDataTestError += summaryInfo.allDataTestError;
-			// Don't have timeInSeconds for the original runFiles
-			if (runFileType != RunFileType.Original) {
-				timeInSeconds += summaryInfo.timeInSeconds;
-			}
-			if (runFileType == RunFileType.ParamTuning4) {
-				cvEnsembleTrainingError += summaryInfo.cvEnsembleTrainingError;
-				cvEnsembleTestError += summaryInfo.cvEnsembleTestError;
-				avgLearningRate += summaryInfo.avgLearningRate;
-				stdDevLearningRate += summaryInfo.stdDevLearningRate;
-			}
+			timeInSeconds += summaryInfo.timeInSeconds;
+			cvEnsembleTrainingError += summaryInfo.cvEnsembleTrainingError;
+			cvEnsembleTestError += summaryInfo.cvEnsembleTestError;
+			avgLearningRate += summaryInfo.avgLearningRate;
+			stdDevLearningRate += summaryInfo.stdDevLearningRate;
 
 			try {
-				// Already know it exists based on successful creation of RunDataSummaryRecord
-				String runDataFilePath = paramTuneDir + String.format("Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber) + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--runData.txt";
 				String line = null;
 				BufferedReader br = new BufferedReader(new FileReader(runDataFilePath));
 				
-				if (runFileType != RunFileType.ParamTuning4) {
-					// Skip straight to per tree info because per example/relative influence data isn't available.
-					while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError"));
-				} else {
-					// skip summary info because we already read it in as RunDataSummaryRecord above.
-					while (!(line = br.readLine()).startsWith("Training Data [OriginalFileLineNum"));
+				// skip summary info because we already read it in as RunDataSummaryRecord above.
+				while (!(line = br.readLine()).startsWith("Training Data [OriginalFileLineNum"));
+				
+				// Average training data info
+				while (!(line = br.readLine()).startsWith("Test Data [OriginalFileLineNum")) {
+					String[] components = line.split("\t");
+					int originalFileLineNumber = Integer.parseInt(components[0]);
+					PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
 					
-					// Average training data info
-					while (!(line = br.readLine()).startsWith("Test Data [OriginalFileLineNum")) {
-						String[] components = line.split("\t");
-						int originalFileLineNumber = Integer.parseInt(components[0]);
-						PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
-						
-						if (entry == null) {
-							entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
-							perExampleRunData.put(originalFileLineNumber, entry);
-						}
-						entry.predictionAtOptimalNOTAsTrainingData.addData(Double.parseDouble(components[2]));
-						entry.residualAsTrainingData.addData(Double.parseDouble(components[3]));
-						entry.avgLearningRateAsTrainingData.addData(Double.parseDouble(components[4]));
+					if (entry == null) {
+						entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
+						perExampleRunData.put(originalFileLineNumber, entry);
 					}
-					// Average test data info
-					while (!(line = br.readLine()).startsWith("---------CV Ensemble Relative Influences")) {
-						String[] components = line.split("\t");
-						int originalFileLineNumber = Integer.parseInt(components[0]);
-						PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
-						
-						if (entry == null) {
-							entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
-							perExampleRunData.put(originalFileLineNumber, entry);
-						}
-						entry.predictionAtOptimalNOTAsTestData.addData(Double.parseDouble(components[2]));
-						entry.residualAsTestData.addData(Double.parseDouble(components[3]));
-						entry.avgLearningRateAsTestData.addData(Double.parseDouble(components[4]));
+					entry.predictionAtOptimalNOTAsTrainingData.addData(Double.parseDouble(components[2]));
+					entry.residualAsTrainingData.addData(Double.parseDouble(components[3]));
+					entry.avgLearningRateAsTrainingData.addData(Double.parseDouble(components[4]));
+				}
+				// Average test data info
+				while (!(line = br.readLine()).startsWith("---------CV Ensemble Relative Influences")) {
+					String[] components = line.split("\t");
+					int originalFileLineNumber = Integer.parseInt(components[0]);
+					PerExampleRunDataEntry entry = perExampleRunData.get(originalFileLineNumber);
+					
+					if (entry == null) {
+						entry = new PerExampleRunDataEntry(originalFileLineNumber, Double.parseDouble(components[1]));
+						perExampleRunData.put(originalFileLineNumber, entry);
 					}
-					// Average CV Ensemble Relative Influences
-					while (!(line = br.readLine()).startsWith("---------All Data Function Relative Influences")) {
-						String[] components = line.split(": ");
-						SumCountAverage avg = cvEnsembleReltiveInfluences.get(components[0]);
-						if (avg == null) {
-							avg = new SumCountAverage();
-							cvEnsembleReltiveInfluences.put(components[0], avg);
-						}
-						avg.addData(Double.parseDouble(components[1]));
+					entry.predictionAtOptimalNOTAsTestData.addData(Double.parseDouble(components[2]));
+					entry.residualAsTestData.addData(Double.parseDouble(components[3]));
+					entry.avgLearningRateAsTestData.addData(Double.parseDouble(components[4]));
+				}
+				// Average CV Ensemble Relative Influences
+				while (!(line = br.readLine()).startsWith("---------All Data Function Relative Influences")) {
+					String[] components = line.split(": ");
+					SumCountAverage avg = cvEnsembleReltiveInfluences.get(components[0]);
+					if (avg == null) {
+						avg = new SumCountAverage();
+						cvEnsembleReltiveInfluences.put(components[0], avg);
 					}
-					// Average All Data Function Relative Influences
-					while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError")) {
-						String[] components = line.split(": ");
-						SumCountAverage avg = allDataFunctionReltiveInfluences.get(components[0]);
-						if (avg == null) {
-							avg = new SumCountAverage();
-							allDataFunctionReltiveInfluences.put(components[0], avg);
-						}
-						avg.addData(Double.parseDouble(components[1]));
+					avg.addData(Double.parseDouble(components[1]));
+				}
+				// Average All Data Function Relative Influences
+				while (!(line = br.readLine()).startsWith("TreeNumber\tAvgCvTrainingError")) {
+					String[] components = line.split(": ");
+					SumCountAverage avg = allDataFunctionReltiveInfluences.get(components[0]);
+					if (avg == null) {
+						avg = new SumCountAverage();
+						allDataFunctionReltiveInfluences.put(components[0], avg);
 					}
-				} 
-				BufferedWriter suspiciousFiles = new BufferedWriter(new PrintWriter("Z:/suspiciousFilesDuringAveraging"));				// Avg Per Tree RunData
+					avg.addData(Double.parseDouble(components[1]));
+				}
+				
+				
 				int index = 0;
 				while ((line = br.readLine()) != null /*&& !line.isEmpty()*/) {
 					String[] components = line.split("\t");
@@ -205,15 +213,13 @@ public class AverageRunDataForParameters implements Callable<Void>{
 						avgCvTestErrorByIteration.add(Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.add(Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.add(Double.parseDouble(components[5].trim()));
-						if (runFileType == RunFileType.ParamTuning4) {
-							cvEnsembleTrainingErrorByIteration.add(Double.parseDouble(components[6].trim()));
-							cvEnsembleTestErrorByIteration.add(Double.parseDouble(components[7].trim()));
-							examplesInNodeMeanByIteration.add(Double.parseDouble(components[8].trim()));
-							examplesInNodeStdDevByIteration.add(Double.parseDouble(components[9].trim()));
-							learningRateMeanByIteration.add(Double.parseDouble(components[10].trim()));
-							learningRateStdDevByIteration.add(Double.parseDouble(components[11].trim()));
-							actualNumberOfSplitsByIteration.add(Double.parseDouble(components[12].trim()));
-						}
+						cvEnsembleTrainingErrorByIteration.add(Double.parseDouble(components[6].trim()));
+						cvEnsembleTestErrorByIteration.add(Double.parseDouble(components[7].trim()));
+						examplesInNodeMeanByIteration.add(Double.parseDouble(components[8].trim()));
+						examplesInNodeStdDevByIteration.add(Double.parseDouble(components[9].trim()));
+						learningRateMeanByIteration.add(Double.parseDouble(components[10].trim()));
+						learningRateStdDevByIteration.add(Double.parseDouble(components[11].trim()));
+						actualNumberOfSplitsByIteration.add(Double.parseDouble(components[12].trim()));
 						numberOfTreesFound++;
 						index++;
 					} else {
@@ -222,15 +228,13 @@ public class AverageRunDataForParameters implements Callable<Void>{
 						avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) + Double.parseDouble(components[3].trim()));
 						allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) + Double.parseDouble(components[4].trim()));
 						allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) + Double.parseDouble(components[5].trim()));
-						if (runFileType == RunFileType.ParamTuning4) {
-							cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
-							cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
-							examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
-							examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
-							learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
-							learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
-							actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Double.parseDouble(components[12].trim()));
-						}
+						cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) + Double.parseDouble(components[6].trim()));
+						cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) + Double.parseDouble(components[7].trim()));
+						examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) + Double.parseDouble(components[8].trim()));
+						examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) + Double.parseDouble(components[9].trim()));
+						learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) + Double.parseDouble(components[10].trim()));
+						learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) + Double.parseDouble(components[11].trim()));
+						actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) + Double.parseDouble(components[12].trim()));
 						index++;
 					}
 				}
@@ -284,15 +288,13 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsFound);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsFound);
-				if (runFileType == RunFileType.ParamTuning4) {
-					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsFound);
-					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsFound);
-					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsFound);
-					examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsFound);
-					learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsFound);
-					learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsFound);
-					actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsFound);
-				}
+				cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsFound);
+				cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsFound);
+				examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsFound);
+				examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsFound);
+				learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsFound);
+				learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsFound);
+				actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsFound);
 			} else {
 				int numberOfRunsWithThisTree = 0;
 				for (double i : totalNumberOfTreesByRunNumber) {
@@ -303,16 +305,18 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				avgCvTestErrorByIteration.set(index, avgCvTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTrainingErrorByIteration.set(index, allDataTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
 				allDataTestErrorByIteration.set(index, allDataTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
-				if (runFileType == RunFileType.ParamTuning4) {
-					cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
-					cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
-					examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsWithThisTree);
-					examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsWithThisTree);
-					learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsWithThisTree);
-					learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsWithThisTree);
-					actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsWithThisTree);
-				}
+				cvEnsembleTrainingErrorByIteration.set(index, cvEnsembleTrainingErrorByIteration.get(index) / numberOfRunsWithThisTree);
+				cvEnsembleTestErrorByIteration.set(index, cvEnsembleTestErrorByIteration.get(index) / numberOfRunsWithThisTree);
+				examplesInNodeMeanByIteration.set(index, examplesInNodeMeanByIteration.get(index) / numberOfRunsWithThisTree);
+				examplesInNodeStdDevByIteration.set(index, examplesInNodeStdDevByIteration.get(index) / numberOfRunsWithThisTree);
+				learningRateMeanByIteration.set(index, learningRateMeanByIteration.get(index) / numberOfRunsWithThisTree);
+				learningRateStdDevByIteration.set(index, learningRateStdDevByIteration.get(index) / numberOfRunsWithThisTree);
+				actualNumberOfSplitsByIteration.set(index, actualNumberOfSplitsByIteration.get(index) / numberOfRunsWithThisTree);
 			}
+		}
+		
+		for (int i = 0; i < optimalNumberOfTrees; i++) {
+			totalNumberOfInteractionsAtONOT += actualNumberOfSplitsByIteration.get(i);
 		}
 		
 		// Save them to a new file to be processed later.
@@ -344,7 +348,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					+ "Number of runs found: %d\n"
 					+ "Total number of trees found: %d\n"
 					+ "Number of trees found in each run: %s\n"
-					+ "Optimal number of trees of each run: %s\n",
+					+ "Optimal number of trees of each run: %s\n"
+					+ "Total Modeled Interactions @ ONOT (sum of actual splits): %f\n"
+					+ "Number of Trees All Runs Share: %f\n",
 			timeInSeconds,
 			stepSize,
 			numberOfFolds,
@@ -366,7 +372,9 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			numberOfRunsFound,
 			numberOfTreesFound,
 			convertDoubleArrayListToCommaSeparatedString(totalNumberOfTreesByRunNumber),
-			convertDoubleArrayListToCommaSeparatedString(optimalNumberOfTreesByRunNumber)));
+			convertDoubleArrayListToCommaSeparatedString(optimalNumberOfTreesByRunNumber),
+			totalNumberOfInteractionsAtONOT,
+			minNumberOfTreesAllRunsHave));
 
 			bw.write("TreeNumber\t"
 					+ "AvgCvTrainingError\t"
@@ -382,42 +390,21 @@ public class AverageRunDataForParameters implements Callable<Void>{
 					+ "LearningRateStdDev\t"
 					+ "ActualNumberOfSplits\n");
 			
-			if (runFileType == RunFileType.ParamTuning4) {
-				for (int i = 0; i < numberOfTreesFound; i++) {
-					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%.2f\n", 
-							i+1,
-							avgCvTrainingErrorByIteration.get(i),
-							avgCvValidationErrorByIteration.get(i),
-							avgCvTestErrorByIteration.get(i),
-							allDataTrainingErrorByIteration.get(i),
-							allDataTestErrorByIteration.get(i),
-							cvEnsembleTrainingErrorByIteration.get(i),
-							cvEnsembleTestErrorByIteration.get(i),
-							examplesInNodeMeanByIteration.get(i),
-							examplesInNodeStdDevByIteration.get(i),
-							learningRateMeanByIteration.get(i),
-							learningRateStdDevByIteration.get(i),
-							actualNumberOfSplitsByIteration.get(i)));
-				}
-			} else {
-				// THis is an old run data file, still want to print out 0's so that methods that process this data can assume
-				//	something is present.
-				for (int i = 0; i < numberOfTreesFound; i++) {
-					bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%d\n", 
-							i+1,
-							avgCvTrainingErrorByIteration.get(i),
-							avgCvValidationErrorByIteration.get(i),
-							avgCvTestErrorByIteration.get(i),
-							allDataTrainingErrorByIteration.get(i),
-							allDataTestErrorByIteration.get(i),
-							0.0,
-							0.0,
-							0.0,
-							0.0,
-							0.0,
-							0.0,
-							0));
-				}
+			for (int i = 0; i < numberOfTreesFound; i++) {
+				bw.write(String.format("%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.8f\t%.8f\t%.2f\n", 
+						i+1,
+						avgCvTrainingErrorByIteration.get(i),
+						avgCvValidationErrorByIteration.get(i),
+						avgCvTestErrorByIteration.get(i),
+						allDataTrainingErrorByIteration.get(i),
+						allDataTestErrorByIteration.get(i),
+						cvEnsembleTrainingErrorByIteration.get(i),
+						cvEnsembleTestErrorByIteration.get(i),
+						examplesInNodeMeanByIteration.get(i),
+						examplesInNodeStdDevByIteration.get(i),
+						learningRateMeanByIteration.get(i),
+						learningRateStdDevByIteration.get(i),
+						actualNumberOfSplitsByIteration.get(i)));
 			}
 			
 			bw.flush();
@@ -436,7 +423,8 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			for (int i = 0; i < perExampleRunData.size(); i++) {
 				PerExampleRunDataEntry entry = perExampleRunData.get(i);
 				if (entry == null) {
-					System.out.println(StopWatch.getDateTimeStamp() + "WARNING: No per example data found for original file line number " + i + ". "
+					System.err.println(StopWatch.getDateTimeStamp() + "WARNING: No per example data found for original file line number " + i + " for file \n"
+							+ averageRunDataDirectory + "\n"
 							+ "This is possible due to a bug that has since been fixed. "
 							+ "Watch out and make sure this isn't happening on new data."
 							+ "Breaking early because this per example run data is worthless due to that bug.");

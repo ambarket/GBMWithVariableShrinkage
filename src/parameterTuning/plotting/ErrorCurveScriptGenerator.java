@@ -74,7 +74,7 @@ public class ErrorCurveScriptGenerator implements Callable<Void>{
 		StringBuilder actualNumberOfSplitsByIteration  = new StringBuilder();
 		
 		// Read through all the files cooresponding to these parameters and average the data.
-		RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataFullDirectory, parameters, tuningParameters.runFileType);
+		RunDataSummaryRecord record = RunDataSummaryRecord.readRunDataSummaryRecordFromRunDataFile(runDataFullDirectory, parameters);
 		if (record == null) {
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] Run Data Not Found! Failed to generate error curve runData for %s (%d out of %d) in %s. Have been running for %s total.", 
 					datasetParams.minimalName,parameters.getRunDataSubDirectory(tuningParameters.runFileType), submissionNumber, tuningParameters.totalNumberOfTests, timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
