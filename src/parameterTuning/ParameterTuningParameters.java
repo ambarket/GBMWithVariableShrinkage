@@ -82,7 +82,7 @@ public class ParameterTuningParameters {
 	public GbmParameters[] parametersList;
 	public String runDataFreenasDirectory;
 	public String remoteLocksDirectory;
-	private String hostsThatShouldShutdownFile;
+	public String hostsThatShouldShutdownFile;
 	
 	private static ParameterTuningParameters test5Parameters;
 	private static ParameterTuningParameters test6Parameters;

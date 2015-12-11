@@ -51,8 +51,9 @@ public class ParameterTuningTest {
 						}
 					}
 				}
+				// Check if we are being told to shutdown
 				try {
-					BufferedReader br = new BufferedReader(new FileReader(parameters.runDataOutputDirectory + "hostsThatShouldShutdownNow.txt"));
+					BufferedReader br = new BufferedReader(new FileReader(parameters.hostsThatShouldShutdownFile));
 					String hostName = InetAddress.getLocalHost().getHostName(), line = null;;
 					while ((line = br.readLine()) != null) {
 						if (line.contains(hostName)) {
