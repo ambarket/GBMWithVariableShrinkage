@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 
+import parameterTuning.ParameterTuningParameters;
+
 public class SimpleHostLock {
 	public static boolean checkAndClaimHostLock(String hostLockFilePath) {
 		File hostLock;
@@ -62,5 +64,28 @@ public class SimpleHostLock {
 		} 
 		System.err.println(StopWatch.getDateTimeStamp() + "ERROR Shouldnt reach here in writeDoneLock");
 		return false;
+	}
+	
+	public static boolean isTimeToShutdown(ParameterTuningParameters parameters) {
+		if (!new File(parameters.hostsThatShouldShutdownFile).exists()) {
+			System.err.println("WARNING: parameters.hostsThatShouldShutdownFile doesn't exist");
+			return false;
+		}
+		// Check if we are being told to shutdown
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(parameters.hostsThatShouldShutdownFile));
+			String hostName = InetAddress.getLocalHost().getHostName(), line = null;;
+			while ((line = br.readLine()) != null) {
+				if (line.contains(hostName)) {
+					br.close();
+					return true;
+				}
+			}
+			br.close();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return true;
 	}
 }

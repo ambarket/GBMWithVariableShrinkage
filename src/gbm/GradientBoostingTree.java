@@ -73,7 +73,7 @@ public class GradientBoostingTree {
 		return function;
 	}
 	
-	public static IterativeCrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset dataset, ParameterTuningParameters tuningParameters, int runNumber, int submissionNumber) {
+	public static IterativeCrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset dataset, ParameterTuningParameters tuningParameters, int runNumber, int submissionNumber, StopWatch globalTimer) {
 		StopWatch ensembleTimer = new StopWatch().start();
 		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		int numOfFolds = tuningParameters.CV_NUMBER_OF_FOLDS;
@@ -128,6 +128,10 @@ public class GradientBoostingTree {
 		int remainingStepsPastMinimum = 3; // Keep going to collect more error data for graphs.
 		StopWatch timer = new StopWatch().start();
 
+		Runtime runTime = Runtime.getRuntime();
+		double maxMemory = runTime.maxMemory(), totalMemory = runTime.totalMemory(), freeMemory = runTime.freeMemory();
+		double memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory)) / 1000000000.0;
+		
 		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0) {
 			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds+1; i++) {
@@ -163,16 +167,25 @@ public class GradientBoostingTree {
 				}
 			}
 			
-			System.out.println("Completed " + (lastTreeIndex+1) + " iterations in " + timer.getTimeInMostAppropriateUnit() + ". Cv Error: " + newAvgValidationError + ". Run number " + runNumber + " (" + submissionNumber + " out of " + tuningParameters.parametersList.length);
-			
+			// Update memory usage variables
+			maxMemory = runTime.maxMemory() / 1000000000.0;
+			totalMemory = runTime.totalMemory() / 1000000000.0;
+			freeMemory = runTime.freeMemory() / 1000000000.0;
+		    memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory));
+		    
+			// Print a status message at most every two minutes
+			if (timer.getElapsedMinutes() % 2 > 1) {
+				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] [Run%d] [Test %d / %d] [Iterations %d] [CvError %.4f]\n\t"
+						+ "SubDirectory: %s\n\t" 
+						+ "This test running time: %s \t"
+						+ "Total dataset running time: %s \n%s", 
+						dataset.parameters.minimalName, runNumber, submissionNumber, tuningParameters.totalNumberOfTests, (lastTreeIndex+1), newAvgValidationError,
+						parameters.getRunDataSubDirectory(), 
+						timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(),
+						String.format("\tMaxMem: %.2f\tTotalMem: %.2f\tFreeMem: %.2f\tUsedMem: %.2f\tAvailableMem: %.2f",
+								maxMemory, totalMemory, freeMemory, totalMemory - freeMemory, memoryPossiblyAvailableInGigs)));
+			}
 			// Check our resource limits.
-			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
-			System.out.println("Max  : " + Runtime.getRuntime().maxMemory() );
-			System.out.println("Total: " + Runtime.getRuntime().totalMemory());
-			System.out.println("FreeM: " + Runtime.getRuntime().freeMemory());
-			System.out.println("Used: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
-			System.out.println("memoryPossiblyAvailableInGigs: " + memoryPossiblyAvailableInGigs);
-			
 			if (memoryPossiblyAvailableInGigs < .05) {
 				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
 				try {

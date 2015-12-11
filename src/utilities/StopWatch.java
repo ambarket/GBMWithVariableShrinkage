@@ -54,7 +54,7 @@ public class StopWatch {
 	
 	public String getTimeInMostAppropriateUnit() {
 		Unit u = determineMostAppropriateUnit();
-		return getTimeInUnit(u) + " " + u.name();
+		return String.format("%.2f ", getTimeInUnit(u)) + u.name();
 	}
 	
 	public Unit determineMostAppropriateUnit() {

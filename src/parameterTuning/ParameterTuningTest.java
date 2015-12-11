@@ -1,11 +1,6 @@
 package parameterTuning;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
@@ -50,22 +45,6 @@ public class ParameterTuningTest {
 							extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
 						}
 					}
-				}
-				// Check if we are being told to shutdown
-				try {
-					BufferedReader br = new BufferedReader(new FileReader(parameters.hostsThatShouldShutdownFile));
-					String hostName = InetAddress.getLocalHost().getHostName(), line = null;;
-					while ((line = br.readLine()) != null) {
-						if (line.contains(hostName)) {
-							System.out.println("I've been told to shutdown based on the hostsThatShouldShutdownNow.txt file, terminating now");
-							br.close();
-							GradientBoostingTree.executor.shutdownNow();
-							System.exit(1);
-						}
-					}
-					br.close();
-				} catch (IOException e) {
-					e.printStackTrace();
 				}
 			}
 		}
@@ -258,11 +237,17 @@ public class ParameterTuningTest {
 		for (int testNum = 0; testNum < tuningParameters.parametersList.length; testNum++) {
 			GbmParameters parameters = tuningParameters.parametersList[testNum];
 			timer.start();
-			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber, testNum);
+			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber, testNum, globalTimer);
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + resultMessage + "\n\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
 					dataset.parameters.minimalName, parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
 					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
+			
+			if (SimpleHostLock.isTimeToShutdown(tuningParameters)) {
+				System.out.println("I've been told to shutdown gracefully, terminating now");
+				GradientBoostingTree.executor.shutdownNow();
+				System.exit(1);
+			}
 		}
 		for (int i = 0; i < doneList.length; i++) {
 			if (doneList[i] == false) {
@@ -596,7 +581,7 @@ public class ParameterTuningTest {
 	
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
-	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber, int submissionNumber) {
+	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber, int submissionNumber, StopWatch globalTimer) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		
@@ -607,7 +592,7 @@ public class ParameterTuningTest {
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
-		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters, runNumber, submissionNumber);
+		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters, runNumber, submissionNumber, globalTimer);
 		if (ensemble != null) {
 			try {
 				ensemble.saveRunDataToFile(runDataDir, tuningParameters.runFileType);
