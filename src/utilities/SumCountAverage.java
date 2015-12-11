@@ -48,12 +48,11 @@ public class SumCountAverage {
 	}
 	
 	public double getRootMeanSquaredError() {
-		//double retval = Math.sqrt(getMeanSquaredError());
-		//System.out.println(retval);
-		//if (Double.isNaN(retval)) {
-		//	System.out.println();
-		//}
-		return Math.sqrt(getMeanSquaredError());
+		double retval = Math.sqrt(getMeanSquaredError());
+		if (Double.isNaN(retval)) {
+			return 0;
+		} 
+		return retval;
 	}
 	
 	public void addData(double data) {

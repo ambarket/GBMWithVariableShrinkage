@@ -94,7 +94,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 4;
+			test5Parameters.NUMBER_OF_RUNS = 10;
 			test5Parameters.NUMBER_OF_TREES = 150000;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;
@@ -143,9 +143,6 @@ public class ParameterTuningParameters {
 										test5Parameters.parametersList[done] = new GbmParameters(minLR, maxLR, numberOfSplits, 
 													bagFraction, minExamplesInNode, test5Parameters.NUMBER_OF_TREES, 
 													learningRatePolicy, splitPolicy);
-										if (test5Parameters.parametersList[done] == null) {
-											System.out.println();
-										}
 										done++;
 									}
 								}
@@ -222,9 +219,6 @@ public class ParameterTuningParameters {
 										test6Parameters.parametersList[done] = new GbmParameters(minLR, maxLR, numberOfSplits, 
 													bagFraction, minExamplesInNode, test6Parameters.NUMBER_OF_TREES, 
 													learningRatePolicy, splitPolicy);
-										if (test6Parameters.parametersList[done] == null) {
-											System.out.println();
-										}
 										done++;
 									}
 								}

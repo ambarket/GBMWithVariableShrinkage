@@ -129,12 +129,7 @@ public class TreeNode {
 	
 	public SumCountAverage sumNumberOfExamplesInTerminalNodes(SumCountAverage sca) {
 		if (this.leftChild == null) {
-			try {
-			sca.addData(this.leftTerminalNode.instanceCount);}
-			catch (Exception e) {
-				System.out.println();
-			}
-			
+			sca.addData(this.leftTerminalNode.instanceCount);
 		} else {
 			this.leftChild.sumNumberOfExamplesInTerminalNodes(sca);
 		}
