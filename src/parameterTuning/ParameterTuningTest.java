@@ -233,7 +233,7 @@ public class ParameterTuningTest {
 		for (int testNum = 0; testNum < tuningParameters.parametersList.length; testNum++) {
 			GbmParameters parameters = tuningParameters.parametersList[testNum];
 			timer.start();
-			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber);
+			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber, testNum);
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
 			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + resultMessage + "\n\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
 					dataset.parameters.minimalName, parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
@@ -571,7 +571,7 @@ public class ParameterTuningTest {
 	
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
-	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber) {
+	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber, int submissionNumber) {
 		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
 		
@@ -582,7 +582,7 @@ public class ParameterTuningTest {
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
-		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
+		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters, runNumber, submissionNumber);
 		if (ensemble != null) {
 			try {
 				ensemble.saveRunDataToFile(runDataDir, tuningParameters.runFileType);

@@ -1,16 +1,18 @@
 
 package gbm;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import dataset.Dataset;
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import gbm.cv.CrossValidationStepper;
 import gbm.cv.IterativeCrossValidatedResultFunctionEnsemble;
+import parameterTuning.ParameterTuningParameters;
 import regressionTree.RegressionTree;
 import utilities.Logger;
 //import gbt.ranker.RegressionTree.TerminalType;
@@ -71,8 +73,11 @@ public class GradientBoostingTree {
 		return function;
 	}
 	
-	public static IterativeCrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset training, int numOfFolds, int stepSize) {
+	public static IterativeCrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset dataset, ParameterTuningParameters tuningParameters, int runNumber, int submissionNumber) {
 		StopWatch ensembleTimer = new StopWatch().start();
+		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
+		int numOfFolds = tuningParameters.CV_NUMBER_OF_FOLDS;
+		int stepSize = tuningParameters.CV_STEP_SIZE;
 		if (numOfFolds <= 1) {
 			throw new IllegalStateException("Number of folds must be > 1 for cross validation");
 		}
@@ -80,7 +85,7 @@ public class GradientBoostingTree {
 		CrossValidationStepper[] steppers = new CrossValidationStepper[numOfFolds+1];
 
 		// Partition the data set into k folds. All done with boolean index masks into the original dataset
-		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(training.getNumberOfTrainingExamples());
+		int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(dataset.getNumberOfTrainingExamples());
 		int foldSize = shuffledIndices.length / numOfFolds;
 		boolean[][] trainingInEachFold = new boolean[numOfFolds+1][shuffledIndices.length];
 		for (int i = 0; i < numOfFolds; i++) {
@@ -91,15 +96,15 @@ public class GradientBoostingTree {
 			}
 		}
 		// Also simaltaneously train a gbm on the entire training set.
-		for (int i = 0; i < training.getNumberOfTrainingExamples(); i++) {
+		for (int i = 0; i < dataset.getNumberOfTrainingExamples(); i++) {
 			trainingInEachFold[numOfFolds][i] = true;
 		}
 		
 		for (int i = 0; i < numOfFolds+1; i++) {
-			double meanResponse =  training.calcMeanTrainingResponse(trainingInEachFold[i]);
+			double meanResponse =  dataset.calcMeanTrainingResponse(trainingInEachFold[i]);
 			steppers[i] = new CrossValidationStepper(parameters, 
-					new ResultFunction(parameters, meanResponse, training.getPredictorNames()),
-					new MinimalistGbmDataset(training, stepSize, i < numOfFolds),
+					new ResultFunction(parameters, meanResponse, dataset.getPredictorNames()),
+					new MinimalistGbmDataset(dataset, stepSize, i < numOfFolds),
 					trainingInEachFold[i],
 					(numOfFolds-1)*foldSize, 
 					stepSize);
@@ -122,7 +127,8 @@ public class GradientBoostingTree {
 		Queue<Future<Void>> futures = new LinkedList<Future<Void>>();
 		int remainingStepsPastMinimum = 3; // Keep going to collect more error data for graphs.
 		StopWatch timer = new StopWatch().start();
-		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0 && ensembleTimer.getElapsedSeconds() < 5400) {
+
+		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0) {
 			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds+1; i++) {
 				futures.add(executor.submit(steppers[i]));
@@ -156,20 +162,41 @@ public class GradientBoostingTree {
 					Logger.println(LEVELS.INFO, "Reached minimum after " + lastTreeIndex + " iterations");
 				}
 			}
-			// If we have less than a gig left, need to just print out what we got
-			/*
+			
+			System.out.println("Completed " + (lastTreeIndex+1) + " iterations in " + timer.getTimeInMostAppropriateUnit() + ". Cv Error: " + newAvgValidationError + ". Run number " + runNumber + " (" + submissionNumber + " out of " + tuningParameters.parametersList.length);
+			
+			// Check our resource limits.
 			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
-			if (memoryPossiblyAvailableInGigs < 1.0) {
+			if (memoryPossiblyAvailableInGigs < .35) {
 				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
+				try {
+					BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/parametersThatRanOutOfMemory.txt", true));
+					bw.write(runDataDir + "\n");
+					bw.flush();
+					bw.close();
+				} catch (IOException e) {
+					System.err.println("Failed to log that following parameters ran out of memory: " + runDataDir);
+					e.printStackTrace();
+				}
 				break;
 			}
-			*/
 			
-			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds. Cv Error: " + newAvgValidationError);
+			if (ensembleTimer.getElapsedSeconds() > 5400) {
+				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we ran out of time!");
+				try {
+					BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/parametersThatRanOutOfTime.txt", true));
+					bw.write(runDataDir + "\n");
+					bw.flush();
+					bw.close();
+				} catch (IOException e) {
+					System.err.println("Failed to log that following parameters ran out of time: " + runDataDir);
+					e.printStackTrace();
+				}
+				break;
+			}
 		}
-		
-		ensemble.finalizeEnsemble(ensembleTimer);
-		
+
+		ensemble.timeInSeconds = ensembleTimer.getElapsedSeconds();
 		return ensemble;
 	}
 }
