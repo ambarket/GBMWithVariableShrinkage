@@ -14,7 +14,6 @@ import dataset.Dataset;
 import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import gbm.GradientBoostingTree;
-import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import gbm.cv.IterativeCrossValidatedResultFunctionEnsemble;
 import parameterTuning.plotting.AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator;
 import parameterTuning.plotting.ErrorCurveScriptExecutor;

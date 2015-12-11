@@ -13,9 +13,7 @@ import java.util.Scanner;
 import dataset.Attribute;
 import regressionTree.LearningRateTerminalValuePair;
 import regressionTree.RegressionTree;
-import regressionTree.TreeNode;
 import utilities.StopWatch;
-import utilities.SumCountAverage;
 
 public class ResultFunction {
 	public double initialValue;

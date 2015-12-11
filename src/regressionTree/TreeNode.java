@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
-import org.junit.experimental.theories.Theories;
-
 import dataset.Attribute;
 import dataset.Attribute.Type;
 import utilities.SumCountAverage;

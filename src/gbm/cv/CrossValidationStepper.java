@@ -1,7 +1,6 @@
 package gbm.cv;
 import java.util.concurrent.Callable;
 
-import gbm.GbmDataset;
 import gbm.GbmParameters;
 import gbm.MinimalistGbmDataset;
 import gbm.ResultFunction;

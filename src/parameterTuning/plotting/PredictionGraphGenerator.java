@@ -13,7 +13,6 @@ import java.util.concurrent.Callable;
 
 import dataset.Attribute;
 import dataset.Dataset;
-import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import parameterTuning.ParameterTuningParameters;
 import utilities.CommandLineExecutor;

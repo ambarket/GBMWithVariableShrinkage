@@ -12,12 +12,10 @@ import java.util.Map.Entry;
 import java.util.PriorityQueue;
 
 import dataset.Attribute;
-import gbm.GbmDataset;
 import gbm.GbmParameters;
 import gbm.MinimalistGbmDataset;
 import parameterTuning.RunDataSummaryRecord.RunFileType;
 import utilities.StopWatch;
-import utilities.SumCountAverage;
 
 public class IterativeCrossValidatedResultFunctionEnsemble {
 	public String[] predictorNames;

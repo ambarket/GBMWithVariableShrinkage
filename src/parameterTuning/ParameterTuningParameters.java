@@ -1,7 +1,5 @@
 package parameterTuning;
 
-import java.util.HashSet;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
