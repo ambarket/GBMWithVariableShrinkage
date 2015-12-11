@@ -123,8 +123,8 @@ public class PlotGenerator {
 		plot.addLinePlot("Avg CV Training Error", Color.BLACK, iterationNumber, ensemble.avgCvTrainingErrors);
 		plot.addLinePlot("Avg CV Validation Error", Color.BLUE, iterationNumber, ensemble.avgCvValidationErrors);
 		plot.addLinePlot("Avg CV Test Error", Color.RED, iterationNumber, ensemble.avgCvTestErrors);
-		plot.addLinePlot("All Training Data Training Error", Color.YELLOW, iterationNumber, convertArrayListToArray(ensemble.allDataFunction.trainingError));
-		plot.addLinePlot("All Training Data Test Error", Color.MAGENTA, iterationNumber, convertArrayListToArray(ensemble.allDataFunction.testError));
+		plot.addLinePlot("All Training Data Training Error", Color.YELLOW, iterationNumber, convertArrayListToArray(ensemble.allDataGbmDataset.trainingError));
+		plot.addLinePlot("All Training Data Test Error", Color.MAGENTA, iterationNumber, convertArrayListToArray(ensemble.allDataGbmDataset.testError));
 		
 		double[] y = {10};
 		double[] x = {ensemble.optimalNumberOfTrees};

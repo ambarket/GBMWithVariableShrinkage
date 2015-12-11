@@ -10,6 +10,7 @@ import java.util.concurrent.Future;
 import dataset.Dataset;
 import gbm.cv.CrossValidatedResultFunctionEnsemble;
 import gbm.cv.CrossValidationStepper;
+import gbm.cv.IterativeCrossValidatedResultFunctionEnsemble;
 import regressionTree.RegressionTree;
 import utilities.Logger;
 //import gbt.ranker.RegressionTree.TerminalType;
@@ -18,14 +19,13 @@ import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class GradientBoostingTree {
-	//public static ExecutorService executor = Executors.newCachedThreadPool();
-	public static ExecutorService executor = Executors.newFixedThreadPool(1);
+	public static ExecutorService executor = null;
 	/*
 	 *  fit a regression function using the Gradient Boosting Tree method.
 	 *  On success, return function; otherwise, return null. 
 	 */
 	public static ResultFunction buildGradientBoostingMachine(GbmParameters parameters, Dataset basicDataset) {
-		GbmDataset gbmDataset = new GbmDataset(basicDataset);
+		GbmDataset gbmDataset = new GbmDataset(basicDataset, 1);
 				
 		// Initialize the function approximation to the mean response in the training data
 		double meanTrainingResponse = gbmDataset.calcMeanTrainingResponse();
@@ -60,81 +60,18 @@ public class GradientBoostingTree {
 			
 			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample, iterationNum+1);
 			
-			// Update our predictions for each training and validation instance using the new tree.
-			gbmDataset.updatePredictionsWithLearnedValueFromNewTree(tree);
+			// Update our predictions and all error calculations for each training and validation instance using the new tree.
+			gbmDataset.updateAllMetadataBasedOnNewTree(tree);
 
-			// Calculate the training and validation error for this iteration.
-			double trainingRMSE = gbmDataset.calcTrainingRMSE();
-			double testRMSE = gbmDataset.calcTestRMSE();
-			
-			// Add the tree to the function approximation, keep track of the training, validation, and test errors.
-			// Note validation is only used for cross validation. 
-			function.addTree(tree, trainingRMSE, Double.NaN, testRMSE);
+			// Add the tree to the function approximation.
+			function.addTree(tree);
 			
 			Logger.println(Logger.LEVELS.DEBUG, "\tAdded 1 tree in : " + timer.getElapsedSeconds());
 		}
 		return function;
 	}
 	
-	/**
-	 * TODO: Unimplemented
-	 * @param parameters
-	 * @param basicDataset
-	 * @return
-	 */
-	public static ResultFunction standardValidation(GbmParameters parameters, Dataset basicDataset) {
-		GbmDataset gbmDataset = new GbmDataset(basicDataset);
-				
-		// Initialize the function approximation to the mean response in the training data
-		double meanTrainingResponse = gbmDataset.calcMeanTrainingResponse();
-		ResultFunction function = new ResultFunction(parameters, meanTrainingResponse, gbmDataset.getPredictorNames());
-		
-		// Initialize predictions of all instances to the initial function value.
-		gbmDataset.initializePredictions(meanTrainingResponse);
-		int numberOfTrainingExamples = gbmDataset.getNumberOfTrainingExamples();
-		int treeSampleSize = (int)(parameters.bagFraction * numberOfTrainingExamples);
-		if (parameters.minExamplesInNode * 2 > treeSampleSize) {
-			Logger.println(Logger.LEVELS.INFO, "parameters.bagFraction * gbmDataset.getNumberOfTrainingExamples() "
-					+ "must be >= minExamplesInNode * 2 in order to grow a tree "
-					+ "Just returning a function with no trees.");
-			return function;
-		}
-	
-		// begin the boosting process
-		StopWatch timer = (new StopWatch());
-		for (int iterationNum = 0; iterationNum < parameters.numOfTrees; iterationNum++) {
-			timer.start();
-			// Update the current pseudo responses (gradients) of all the training instances.
-			gbmDataset.updatePseudoResponses();
-			
-			// Sample bagFraction * numberOfTrainingExamples to use to grow the next tree.
-			int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(numberOfTrainingExamples);
-			boolean[] inSample = new boolean[numberOfTrainingExamples];
-			for (int i = 0; i < treeSampleSize; i++ ) {
-				inSample[shuffledIndices[i]] = true;
-			}
-			
-			// Fit a regression tree to predict the current pseudo responses on the training data.
-			
-			RegressionTree tree = (new RegressionTree(parameters, treeSampleSize)).build(gbmDataset, inSample, iterationNum+1);
-			
-			// Update our predictions for each training and validation instance using the new tree.
-			gbmDataset.updatePredictionsWithLearnedValueFromNewTree(tree);
-
-			// Calculate the training and validation error for this iteration.
-			double trainingRMSE = gbmDataset.calcTrainingRMSE();
-			double testRMSE = gbmDataset.calcTestRMSE();
-			
-			// Add the tree to the function approximation, keep track of the training, validation, and test errors.
-			// Note validation is only used for cross validation. 
-			function.addTree(tree, trainingRMSE, Double.NaN, testRMSE);
-			
-			Logger.println(Logger.LEVELS.DEBUG, "\tAdded 1 tree in : " + timer.getElapsedSeconds());
-		}
-		return function;
-	}
-	
-	public static CrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset training, int numOfFolds, int stepSize) {
+	public static IterativeCrossValidatedResultFunctionEnsemble crossValidate(GbmParameters parameters, Dataset training, int numOfFolds, int stepSize) {
 		StopWatch ensembleTimer = new StopWatch().start();
 		if (numOfFolds <= 1) {
 			throw new IllegalStateException("Number of folds must be > 1 for cross validation");
@@ -162,13 +99,15 @@ public class GradientBoostingTree {
 			double meanResponse =  training.calcMeanTrainingResponse(trainingInEachFold[i]);
 			steppers[i] = new CrossValidationStepper(parameters, 
 					new ResultFunction(parameters, meanResponse, training.getPredictorNames()),
-					new GbmDataset(training),
+					new MinimalistGbmDataset(training, stepSize, i < numOfFolds),
 					trainingInEachFold[i],
 					(numOfFolds-1)*foldSize, 
 					stepSize);
 			
 			steppers[i].dataset.initializePredictions(meanResponse);
 		}
+		
+		IterativeCrossValidatedResultFunctionEnsemble ensemble = new IterativeCrossValidatedResultFunctionEnsemble(parameters, steppers);
 		
 		int treeSampleSize = (int)(parameters.bagFraction * (numOfFolds-1)*foldSize);
 		if (parameters.minExamplesInNode * 2 > treeSampleSize) {
@@ -180,8 +119,6 @@ public class GradientBoostingTree {
 		
 		int lastTreeIndex = -1;
 		double lastAvgValidationError = Double.MAX_VALUE;
-		double avgValidError = 0.0;
-		double avgTrainingError = 0.0;
 		Queue<Future<Void>> futures = new LinkedList<Future<Void>>();
 		int remainingStepsPastMinimum = 3; // Keep going to collect more error data for graphs.
 		StopWatch timer = new StopWatch().start();
@@ -190,7 +127,6 @@ public class GradientBoostingTree {
 			for (int i = 0; i < numOfFolds+1; i++) {
 				futures.add(executor.submit(steppers[i]));
 			}
-			avgValidError = 0.0;
 			for (int i = 0; i < numOfFolds+1; i++) {
 				try {
 					futures.poll().get();
@@ -199,36 +135,41 @@ public class GradientBoostingTree {
 					e.printStackTrace();
 					System.exit(1);
 				}
-				// Only average the CV folds, not the one using all training data
-				if (i < numOfFolds) {
-					avgValidError += steppers[i].function.validationError.get(lastTreeIndex);
-					avgTrainingError += steppers[i].function.trainingError.get(lastTreeIndex);
-				}
 			}
-			avgValidError /= numOfFolds;
-			avgTrainingError /= numOfFolds;
+			
+			ensemble.updateToReflectLastStepLastCvStop(lastTreeIndex);
+
+			double newAvgValidationError = ensemble.avgCvValidationErrors.get(lastTreeIndex-1);
+			
 			Logger.println(LEVELS.DEBUG, 
-					"Training: " + avgTrainingError + 
+					"Training: " + ensemble.avgCvTrainingErrors.get(lastTreeIndex-1) + 
 					"\nLast Avg Validation Error: " + lastAvgValidationError + 
-					"\nCurrent Avg Validation Error: " + avgValidError + 
-					"\nDifference: " + (lastAvgValidationError - avgValidError));
-			if (avgValidError < lastAvgValidationError) {
-				lastAvgValidationError = avgValidError;
+					"\nCurrent Avg Validation Error: " + newAvgValidationError + 
+					"\nDifference: " + (lastAvgValidationError - newAvgValidationError));
+			
+			if (newAvgValidationError < lastAvgValidationError) {
+				lastAvgValidationError = newAvgValidationError;
 				remainingStepsPastMinimum = 3;
 			} else {
 				remainingStepsPastMinimum--;
-				Logger.println(LEVELS.INFO, "Reached minimum after " + lastTreeIndex + " iterations");
+				if (remainingStepsPastMinimum == 2) {
+					Logger.println(LEVELS.INFO, "Reached minimum after " + lastTreeIndex + " iterations");
+				}
 			}
 			// If we have less than a gig left, need to just print out what we got
+			/*
 			double memoryPossiblyAvailableInGigs = (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())) / 1000000000.0;
 			if (memoryPossiblyAvailableInGigs < 1.0) {
 				System.out.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);
 				break;
 			}
+			*/
 			
-			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds. Cv Error: " + avgValidError);
+			Logger.println(LEVELS.INFO, "Completed " + lastTreeIndex + " iterations in " + timer.getElapsedSeconds() + " seconds. Cv Error: " + newAvgValidationError);
 		}
 		
-		return new CrossValidatedResultFunctionEnsemble(parameters, steppers, lastTreeIndex+1, ensembleTimer.getElapsedSeconds());
+		ensemble.finalizeEnsemble(ensembleTimer);
+		
+		return ensemble;
 	}
 }

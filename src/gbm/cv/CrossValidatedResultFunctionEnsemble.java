@@ -45,6 +45,13 @@ public class CrossValidatedResultFunctionEnsemble {
 	public int numberOfTrainingExamples;
 	public int numberOfTestExamples;
 	
+	/**
+	 * For use by subclasses only
+	 */
+	protected CrossValidatedResultFunctionEnsemble() {
+		
+	}
+	
 	public CrossValidatedResultFunctionEnsemble(GbmParameters parameters, CrossValidationStepper[] steppers, int totalNumberOfTrees, double timeInSeconds) {
 		this.predictorNames = steppers[0].dataset.getPredictorNames();
 		this.parameters = parameters;
@@ -72,9 +79,9 @@ public class CrossValidatedResultFunctionEnsemble {
 		this.avgCvTestErrors = new double[totalNumberOfTrees];
 		for (int i = 0; i < totalNumberOfTrees; i++) {
 			for (int functionIndex = 0; functionIndex < cvFunctions.length; functionIndex++) {
-				avgCvTrainingErrors[i] += cvFunctions[functionIndex].trainingError.get(i);
-				avgCvValidationErrors[i] += cvFunctions[functionIndex].validationError.get(i);
-				avgCvTestErrors[i] += cvFunctions[functionIndex].testError.get(i);
+				avgCvTrainingErrors[i] += cvGbmDatasets[functionIndex].trainingError.get(i);
+				avgCvValidationErrors[i] += cvGbmDatasets[functionIndex].validationError.get(i);
+				avgCvTestErrors[i] += cvGbmDatasets[functionIndex].testError.get(i);
 			}
 			if (avgCvValidationErrors[i] < minAvgValidationError) {
 				minAvgValidationError = avgCvValidationErrors[i];
@@ -82,9 +89,9 @@ public class CrossValidatedResultFunctionEnsemble {
 			}
 		}
 		for (int i = 0; i < totalNumberOfTrees; i++) {
-			avgCvTrainingErrors[i] /= cvFunctions.length;
-			avgCvValidationErrors[i] /= cvFunctions.length;
-			avgCvTestErrors[i] /= cvFunctions.length;
+			avgCvTrainingErrors[i] /= cvGbmDatasets.length;
+			avgCvValidationErrors[i] /= cvGbmDatasets.length;
+			avgCvTestErrors[i] /= cvGbmDatasets.length;
 		}
 	
 		if (optimalNumberOfTrees == totalNumberOfTrees) {
@@ -248,6 +255,11 @@ public class CrossValidatedResultFunctionEnsemble {
 		return relativeInfluences;
 	}
 	
+	public String getRelativeInfluencesSummary() {
+		return getRelativeInfluencesString(optimalNumberOfTrees, "---------CV Ensemble Relative Influences-----------\n")
+		+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees, "---------All Data Function Relative Influences-----------\n");
+	}
+	
 	public String getSummary() {
 		return String.format("Time In Seconds: %f \n"
 						+ "Step Size: %d \n"
@@ -270,18 +282,13 @@ public class CrossValidatedResultFunctionEnsemble {
 				optimalNumberOfTrees, 
 				avgCvValidationErrors[optimalNumberOfTrees-1],
 				avgCvTrainingErrors[optimalNumberOfTrees-1],
-				allDataFunction.trainingError.get(optimalNumberOfTrees-1),
+				allDataGbmDataset.trainingError.get(optimalNumberOfTrees-1),
 				avgCvTestErrors[optimalNumberOfTrees-1],
-				allDataFunction.testError.get(optimalNumberOfTrees-1),
+				allDataGbmDataset.testError.get(optimalNumberOfTrees-1),
 				cvEnsembleTrainingErrors[optimalNumberOfTrees-1],
 				cvEnsembleTestErrors[optimalNumberOfTrees-1],
-				allDataFunction.numberOfSplits.getMean(),
-				allDataFunction.numberOfSplits.getRootMeanSquaredError());
-	}
-	
-	public String getRelativeInfluencesSummary() {
-		return getRelativeInfluencesString(optimalNumberOfTrees, "---------CV Ensemble Relative Influences-----------\n")
-		+ allDataFunction.getRelativeInfluencesString(optimalNumberOfTrees, "---------All Data Function Relative Influences-----------\n");
+				allDataGbmDataset.avgNumberOfSplitsAcrossAllTrees.getMean(),
+				allDataGbmDataset.avgNumberOfSplitsAcrossAllTrees.getRootMeanSquaredError());
 	}
 	
 	public void saveRunDataToFile(String directory, RunFileType runFileType) throws IOException {
@@ -318,8 +325,8 @@ public class CrossValidatedResultFunctionEnsemble {
 						avgCvTrainingErrors[i],
 						avgCvValidationErrors[i],
 						avgCvTestErrors[i],
-						allDataFunction.trainingError.get(i),
-						allDataFunction.testError.get(i),
+						allDataGbmDataset.trainingError.get(i),
+						allDataGbmDataset.testError.get(i),
 						cvEnsembleTrainingErrors[i],
 						cvEnsembleTestErrors[i],
 						allDataGbmDataset.avgExamplesInNodeForEachTree.get(i).getMean(),

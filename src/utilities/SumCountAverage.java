@@ -27,6 +27,15 @@ public class SumCountAverage {
 		return mean;
 	}
 	
+	public SumCountAverage reset() {
+		sum = 0.0;
+		sumOfSquares = 0.0;
+		mean = 0.0; 
+		count = 0;
+		meanOutOfDate = false;
+		return this;
+	}
+	
 	public double getSquaredError() {
 		if (meanOutOfDate) {
 			mean = sum / count;
@@ -39,7 +48,7 @@ public class SumCountAverage {
 	}
 	
 	public double getRootMeanSquaredError() {
-		double retval = Math.sqrt(getMeanSquaredError());
+		//double retval = Math.sqrt(getMeanSquaredError());
 		//System.out.println(retval);
 		//if (Double.isNaN(retval)) {
 		//	System.out.println();

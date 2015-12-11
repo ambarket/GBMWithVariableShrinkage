@@ -202,6 +202,10 @@ public class RegressionTree {
 		return root.sumNumberOfExamplesInTerminalNodes(new SumCountAverage());
 	}
 	
+	public SumCountAverage getAverageNumberOfExamplesInNodeInPlace(SumCountAverage existingSpace) {
+		return root.sumNumberOfExamplesInTerminalNodes(existingSpace.reset());
+	}
+	
 	public void print_nodes() throws IOException {
 		root.printTree(new OutputStreamWriter(System.out));
 	}

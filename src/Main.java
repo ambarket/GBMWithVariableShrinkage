@@ -6,20 +6,11 @@ import parameterTuning.ParameterTuningTest;
 public class Main {
 	public static void main(String[] args) {
 		switch(args[0]) {
-			case "runParamTuning3":
-				runParamTuning3();
-				break;
-			case "processParamTuning3":
-				processParamTuning3();
-				break;
-			case "runParamTuning4":
-				runParamTuning4();
-				break;
-			case "processParamTuning4":
-				processParamTuning4();
-				break;
 			case "runParamTuning5":
 				runParamTuning5();
+				break;
+			case "runParamTuning6":
+				runParamTuning6();
 				break;
 			case "processParamTuning5":
 				processParamTuning5();
@@ -30,25 +21,14 @@ public class Main {
 		}
 	}
 	
-	public static void runParamTuning3() {
-		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest3());
-	}
-	
-	public static void processParamTuning3() {
-		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest3());
-	}
-	
-	public static void runParamTuning4() {
-		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest4());
-	}
-	
-	public static void processParamTuning4() {
-		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest4());
-	}
-	
 	public static void runParamTuning5() {
 		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest5());
 	}
+	
+	public static void runParamTuning6() {
+		ParameterTuningTest.runOnAllDatasets(ParameterTuningParameters.getRangesForTest6());
+	}
+	
 	
 	public static void processParamTuning5() {
 		ParameterTuningTest.processAllDatasets(ParameterTuningParameters.getRangesForTest5());

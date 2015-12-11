@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 
+import org.junit.experimental.theories.Theories;
+
 import dataset.Attribute;
 import dataset.Attribute.Type;
 import utilities.SumCountAverage;
@@ -186,6 +188,20 @@ public class TreeNode {
 					current = current.missingChild;
 					break;
 			}
+		}
+	}
+	
+	public void calcRelativeInfluences(double[] relativeInfluences) {
+		if (this.splitPredictorIndex != -1) {
+			relativeInfluences[this.splitPredictorIndex] += Math.round(((this.getSquaredErrorImprovement())) * 10) / 10.0;
+		}
+		
+		if (this.leftChild != null) {
+			this.leftChild.calcRelativeInfluences(relativeInfluences);
+		}
+		
+		if (this.rightChild != null) {
+			this.rightChild.calcRelativeInfluences(relativeInfluences);
 		}
 	}
 	

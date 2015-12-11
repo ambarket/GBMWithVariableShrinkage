@@ -43,7 +43,7 @@ public class CommandLineExecutor {
     
 	public static boolean executeMathematicaScript(String graphsDirectory, String mathematicaScriptFileName) {
 		try {
-			CommandLineExecutor.runProgramAndWaitForItToComplete(graphsDirectory, new String[] {"cmd", "/c", "math.exe", "-script", mathematicaScriptFileName});
+			CommandLineExecutor.runProgramAndWaitForItToComplete(graphsDirectory, new String[] {"math", "-script", mathematicaScriptFileName});
 			return true;
 		} catch (Exception e) {
 			System.err.println(StopWatch.getDateTimeStamp());

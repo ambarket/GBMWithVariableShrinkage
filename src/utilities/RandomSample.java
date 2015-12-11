@@ -31,4 +31,20 @@ public class RandomSample {
 		}
 		return retval;
 	}
+	
+	public int[] fisherYatesShuffleInPlace(int[] existingSpace) {
+		int length = existingSpace.length;
+		
+		for (int i = 0; i < length; i++) {
+			existingSpace[i] = i;
+		}
+
+		for (int i = length-1, j = 0, tmp = 0; i > 0; i--) {
+			j = rand.nextInt(i);
+			tmp = existingSpace[i];
+			existingSpace[i] = existingSpace[j];
+			existingSpace[j] = tmp;
+		}
+		return existingSpace;
+	}
 }

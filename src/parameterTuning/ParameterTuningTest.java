@@ -15,6 +15,7 @@ import dataset.DatasetParameters;
 import gbm.GbmParameters;
 import gbm.GradientBoostingTree;
 import gbm.cv.CrossValidatedResultFunctionEnsemble;
+import gbm.cv.IterativeCrossValidatedResultFunctionEnsemble;
 import parameterTuning.plotting.AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator;
 import parameterTuning.plotting.ErrorCurveScriptExecutor;
 import parameterTuning.plotting.ErrorCurveScriptGenerator;
@@ -27,15 +28,14 @@ import utilities.StopWatch;
 
 
 public class ParameterTuningTest {
-	private ParameterTuningParameters tuningParameters = ParameterTuningParameters.getRangesForTest3();
+	private ParameterTuningParameters tuningParameters = null;
 	
 	private ParameterTuningTest(){}
 	
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
-		
-		GradientBoostingTree.executor = Executors.newCachedThreadPool();
+		GradientBoostingTree.executor = Executors.newFixedThreadPool(2);
 		for (int runNumber = 0; runNumber < test.tuningParameters.NUMBER_OF_RUNS; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				Dataset dataset = new Dataset(datasetParams, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION);
@@ -582,7 +582,7 @@ public class ParameterTuningTest {
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
-		CrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
+		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters.CV_NUMBER_OF_FOLDS, tuningParameters.CV_STEP_SIZE);
 		if (ensemble != null) {
 			try {
 				ensemble.saveRunDataToFile(runDataDir, tuningParameters.runFileType);

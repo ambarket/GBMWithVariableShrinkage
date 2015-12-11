@@ -1,6 +1,5 @@
 package gbm;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -12,46 +11,22 @@ import regressionTree.RegressionTree;
 import utilities.SumCountAverage;
 
 /**
- * Wraps a Dataset object and adds an array for storing the current predictions and pseudo responses for each
- * instance in the dataset. Allows multiple gbm models to share a single dataset without duplicating data
- * @author ambar_000
- *
+ * Designed to use constant space throughout all iterations, also only tracks learning rates and examples in node info if its for the all data gbm
+ * Tightly coupled with the IterativeCrossValidationResultFunctionEnsemble, but should be much more efficient.
  */
-public class GbmDataset {
+public class MinimalistGbmDataset extends GbmDataset {
+	public SumCountAverage[] avgLearningRatesForEachTree;
+	public SumCountAverage[] avgExamplesInNodeForEachTree;
+	public int[] actualNumberOfSplitsForEachTree;
+	public double[] trainingError;
+	public double[] validationError;
+	public double[] testError;
+	public boolean isForCrossValidation;
 	
-	public double initialValue; 
-	Dataset dataset;
-	
-	
-	public double[] trainingPseudoResponses;
-	public double[][] trainingPredictions;
-	
-	public double[] testPseudoResponses;
-	public double[][] testPredictions;
-	
-	// Should be interesting to see the average learning rate applied to each example in the dataset.
-	public SumCountAverage[] avgTrainingLearningRates;
-	public SumCountAverage[] avgTestLearningRates;
-	
-	public ArrayList<SumCountAverage> avgLearningRatesForEachTree;
-	public ArrayList<SumCountAverage> avgExamplesInNodeForEachTree;
-	public ArrayList<Integer> actualNumberOfSplitsForEachTree;
-	public SumCountAverage avgNumberOfSplitsAcrossAllTrees;
-	
-	public ArrayList<Double> trainingError;
-	public ArrayList<Double> validationError;
-	public ArrayList<Double> testError;
-
-	// Needed to iteratively build the aggregated boosted tree, without requiring the actual trees to be stored. 
-	//	Trying to save space.
-	public int stepSize;
-	
-	public double[][] rawPredictorInfluences;
-	
-	protected GbmDataset() {};
-	public GbmDataset(Dataset dataset, int stepSize) {
+	public MinimalistGbmDataset(Dataset dataset, int stepSize, boolean isForCrossValidation) {
 		this.dataset = dataset;
 		this.stepSize = stepSize;
+		this.isForCrossValidation = isForCrossValidation;
 		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
 		int numberOfTestExamples = dataset.getNumberOfTestExamples();
 		int numberOfPredictors = dataset.getNumberOfPredictors();
@@ -60,25 +35,31 @@ public class GbmDataset {
 		this.trainingPseudoResponses = new double[numberOfTrainingExamples];
 		this.testPredictions = new double[stepSize][numberOfTestExamples];
 		this.testPseudoResponses = new double[numberOfTestExamples];
-		this.avgTrainingLearningRates = new SumCountAverage[numberOfTrainingExamples];
-		for (int i = 0; i < numberOfTrainingExamples; i++) {
-			avgTrainingLearningRates[i] = new SumCountAverage();
-		}
-		this.avgTestLearningRates = new SumCountAverage[numberOfTestExamples];
-		for (int i = 0; i < numberOfTestExamples; i++) {
-			avgTestLearningRates[i] = new SumCountAverage();
-		}
-		avgLearningRatesForEachTree = new ArrayList<SumCountAverage>();
-		avgExamplesInNodeForEachTree = new ArrayList<SumCountAverage>();
-		actualNumberOfSplitsForEachTree = new ArrayList<Integer>();
 		
-		avgNumberOfSplitsAcrossAllTrees = new SumCountAverage();
-		
-		trainingError = new ArrayList<>();
-		validationError = new ArrayList<>();
-		testError = new ArrayList<>();
+		trainingError = new double[stepSize];
+		validationError = new double[stepSize];
+		testError = new double[stepSize];
 		
 		rawPredictorInfluences = new double[stepSize][numberOfPredictors];
+		
+		if (!isForCrossValidation) {
+			this.avgTrainingLearningRates = new SumCountAverage[numberOfTrainingExamples];
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
+				avgTrainingLearningRates[i] = new SumCountAverage();
+			}
+			this.avgTestLearningRates = new SumCountAverage[numberOfTestExamples];
+			for (int i = 0; i < numberOfTestExamples; i++) {
+				avgTestLearningRates[i] = new SumCountAverage();
+			}
+			avgLearningRatesForEachTree = new SumCountAverage[stepSize];
+			avgExamplesInNodeForEachTree = new SumCountAverage[stepSize];
+			for (int i = 0; i < stepSize; i++) {
+				avgLearningRatesForEachTree[i] = new SumCountAverage();
+				avgExamplesInNodeForEachTree[i] = new SumCountAverage();
+			}
+			actualNumberOfSplitsForEachTree = new int[stepSize];
+			avgNumberOfSplitsAcrossAllTrees = new SumCountAverage();
+		}
 	}
 	
 	//-------------------------------Boosting Helper Methods-----------------------------
@@ -95,25 +76,37 @@ public class GbmDataset {
 	}
 	
 	public void updatePredictionsWithLearnedValueFromNewTree(RegressionTree tree, int iterationNumber) {
-		
-		SumCountAverage averageLRForThisTree = new SumCountAverage();
 		Attribute[][] trainingInstances = dataset.getTrainingInstances();
 		Attribute[][] testInstances = dataset.getTestInstances();
 		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
-		for (int i = 0; i < numberOfTrainingExamples; i++) {
-			LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(trainingInstances[i]);
-			trainingPredictions[iterationNumber][i] = trainingPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
-			avgTrainingLearningRates[i].addData(pair.learningRate);
-			averageLRForThisTree.addData(pair.learningRate);
-		}
 		int numberOfTestExamples = dataset.getNumberOfTestExamples();
-		for (int i = 0; i < numberOfTestExamples; i++) {
-			LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(testInstances[i]);
-			testPredictions[iterationNumber][i] = testPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
-			avgTestLearningRates[i].addData(pair.learningRate);
-			averageLRForThisTree.addData(pair.learningRate);
+		// Dupe code but more efficient than checking for every example
+		if (isForCrossValidation) {
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
+				LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(trainingInstances[i]);
+				trainingPredictions[iterationNumber][i] = trainingPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
+			}
+			for (int i = 0; i < numberOfTestExamples; i++) {
+				LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(testInstances[i]);
+				testPredictions[iterationNumber][i] = testPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
+			}
+		} else {
+			avgLearningRatesForEachTree[iterationNumber].reset();
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
+				LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(trainingInstances[i]);
+				trainingPredictions[iterationNumber][i] = trainingPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
+				avgTrainingLearningRates[i].addData(pair.learningRate);
+				avgLearningRatesForEachTree[iterationNumber].addData(pair.learningRate);
+			}
+			
+			for (int i = 0; i < numberOfTestExamples; i++) {
+				LearningRateTerminalValuePair pair = tree.getLearningRateTerminalValuePair(testInstances[i]);
+				testPredictions[iterationNumber][i] = testPredictions[((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1)][i] + pair.learningRate * pair.terminalValue;
+				avgTestLearningRates[i].addData(pair.learningRate);
+				avgLearningRatesForEachTree[iterationNumber].addData(pair.learningRate);
+			}
 		}
-		avgLearningRatesForEachTree.add(averageLRForThisTree);
+
 	}
 
 
@@ -155,15 +148,15 @@ public class GbmDataset {
 	public void updateAllMetadataBasedOnNewTree(RegressionTree newTree, boolean[] inSample, int iterationNumber) {
 		updatePredictionsWithLearnedValueFromNewTree(newTree, iterationNumber);
 
-		this.trainingError.add(calcTrainingRMSE(iterationNumber, inSample));
-		this.validationError.add(calcTrainingRMSE(iterationNumber, inSample, true)); // SecondFlag indicates to negate the inSample array
-		this.testError.add(calcTestRMSE(iterationNumber));
+		this.trainingError[iterationNumber] = calcTrainingRMSE(iterationNumber, inSample);
+		this.validationError[iterationNumber] = calcTrainingRMSE(iterationNumber, inSample, true); // SecondFlag indicates to negate the inSample array
+		this.testError[iterationNumber] = calcTestRMSE(iterationNumber);
 		
-		this.actualNumberOfSplitsForEachTree.add(newTree.actualNumberOfSplits);
-		
-		this.avgNumberOfSplitsAcrossAllTrees.addData(newTree.actualNumberOfSplits);
-		
-		this.avgExamplesInNodeForEachTree.add(newTree.getAverageNumberOfExamplesInNode());
+		if (!isForCrossValidation) {
+			this.actualNumberOfSplitsForEachTree[iterationNumber] = newTree.actualNumberOfSplits;
+			this.avgNumberOfSplitsAcrossAllTrees.addData(newTree.actualNumberOfSplits);
+			this.avgExamplesInNodeForEachTree[iterationNumber] = newTree.getAverageNumberOfExamplesInNodeInPlace(this.avgExamplesInNodeForEachTree[iterationNumber]);
+		}
 		
 		int lastIndex = ((iterationNumber-1 >= 0) ? iterationNumber-1 : stepSize-1);
 		int numberOfPredictors = rawPredictorInfluences[0].length;
@@ -178,12 +171,7 @@ public class GbmDataset {
 	 * @param newTree
 	 */
 	public void updateAllMetadataBasedOnNewTree(RegressionTree newTree) {
-		updatePredictionsWithLearnedValueFromNewTree(newTree, 0);
-
-		this.trainingError.add(calcTrainingRMSE(0));
-		this.validationError.add( Double.NaN);
-		this.testError.add(calcTestRMSE(0));
-		this.avgNumberOfSplitsAcrossAllTrees.addData(newTree.actualNumberOfSplits);
+		throw new UnsupportedOperationException();
 	}
 	
 	public double calcMeanTrainingResponse() {
