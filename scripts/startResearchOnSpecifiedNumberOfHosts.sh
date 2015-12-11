@@ -1,13 +1,13 @@
 hostsFile="allHosts.txt"
-script=$1
-maxHosts=$2
-if [ $# -lt 2 -o $# -gt 3 ] 
+script="runParamTuning.sh"
+maxHosts=$1
+if [ $# -lt 1 -o $# -gt 2 ] 
 then
-    echo "Can only take 2 or 3 arguments"
+    echo "Can only take 1 or 2 arguments"
     echo "Usage ./startResearchOnSpecifiedNumberOfHosts.sh scriptToRun.sh numberOfHostsToUse [killRunningResearchFlag]"
     exit 1
 fi
-killRunningResearch=$3
+killRunningResearch=$2
 if [ -z "$killRunningResearch" ];
 then
     echo "No killRunningResearchFlag specififed, defaulting to true"
