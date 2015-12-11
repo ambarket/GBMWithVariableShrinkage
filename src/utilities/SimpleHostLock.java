@@ -34,7 +34,6 @@ public class SimpleHostLock {
 				return true;
 			} catch (IOException e) {
 				System.err.println(StopWatch.getDateTimeStamp());
-				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 				System.exit(1);
 			} 
@@ -57,7 +56,6 @@ public class SimpleHostLock {
 			bw.close();
 			return true;
 		} catch (IOException e) {
-			System.err.println(StopWatch.getDateTimeStamp());
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
 			System.exit(1);

@@ -1,6 +1,11 @@
 package parameterTuning;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
@@ -45,6 +50,21 @@ public class ParameterTuningTest {
 							extractCompressedRunDataOnRemoteServer(datasetParams, test.tuningParameters, runNumber);
 						}
 					}
+				}
+				try {
+					BufferedReader br = new BufferedReader(new FileReader(parameters.runDataOutputDirectory + "hostsThatShouldShutdownNow.txt"));
+					String hostName = InetAddress.getLocalHost().getHostName(), line = null;;
+					while ((line = br.readLine()) != null) {
+						if (line.contains(hostName)) {
+							System.out.println("I've been told to shutdown based on the hostsThatShouldShutdownNow.txt file, terminating now");
+							br.close();
+							GradientBoostingTree.executor.shutdownNow();
+							System.exit(1);
+						}
+					}
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}

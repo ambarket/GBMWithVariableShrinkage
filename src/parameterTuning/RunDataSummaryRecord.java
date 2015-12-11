@@ -330,9 +330,9 @@ public class RunDataSummaryRecord {
 			// Check if its an averaged run data file
 			line = br.readLine();
 			if (line.contains("All Data Avg Examples In Node")) {
-				record.avgExamplesInNode = Double.parseDouble(br.readLine().split(": ")[1].trim());
+				record.avgExamplesInNode = Double.parseDouble(line.split(": ")[1].trim());
 				record.stdDevExamplesInNode = Double.parseDouble(br.readLine().split(": ")[1].trim());
-				record.numberOfRunsRound = Double.parseDouble(line.split(": ")[1].trim());
+				record.numberOfRunsRound = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				record.totalNumberOfTreesFound = Double.parseDouble(br.readLine().split(": ")[1].trim());
 				String[] numberOfTreesInEachRun = br.readLine().split(": ")[1].split(", ");
 				String[] optimalNumberOfTreesInEachRun = br.readLine().split(": ")[1].split(", ");

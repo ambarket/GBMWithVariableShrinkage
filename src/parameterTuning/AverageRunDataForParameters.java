@@ -111,6 +111,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				// Run data file wasn't found. Continue to next iteration.
 				try {
 					missingFiles.write(runDataFilePath + "\n");
+					missingFiles.flush();
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -240,6 +241,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 				}
 				br.close();
 				suspiciousFiles.close();
+				missingFiles.close();
 			} catch (Exception e) {
 				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();

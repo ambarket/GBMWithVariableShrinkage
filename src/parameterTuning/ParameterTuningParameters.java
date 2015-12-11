@@ -82,6 +82,7 @@ public class ParameterTuningParameters {
 	public GbmParameters[] parametersList;
 	public String runDataFreenasDirectory;
 	public String remoteLocksDirectory;
+	private String hostsThatShouldShutdownFile;
 	
 	private static ParameterTuningParameters test5Parameters;
 	private static ParameterTuningParameters test6Parameters;
@@ -93,7 +94,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 10;
+			test5Parameters.NUMBER_OF_RUNS = 4;
 			test5Parameters.NUMBER_OF_TREES = 150000;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;
@@ -122,8 +123,8 @@ public class ParameterTuningParameters {
 			
 			test5Parameters.runDataProcessingDirectory = "/mnt/nfs/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
 			test5Parameters.runDataFreenasDirectory = "/mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/";
-			
 
+			test5Parameters.hostsThatShouldShutdownFile = System.getProperty("user.dir") + "/scripts/hostsToShutdownAfterCurrentTest.txt";
 			
 			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
