@@ -1,5 +1,7 @@
 package parameterTuning;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -591,14 +593,14 @@ public class ParameterTuningTest {
 	//----------------------------------------------Private Per Parameter Helpers-----------------------------------------------------------------------
 	
 	private String performCrossValidationUsingParameters(GbmParameters parameters, Dataset dataset, int runNumber, int submissionNumber, StopWatch globalTimer) {
-		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
-		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber);
+		String runDataDir = tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(), runNumber);
+		String locksDir = tuningParameters.locksDirectory + dataset.parameters.minimalName + String.format("/Run%d/" + parameters.getRunDataSubDirectory(), runNumber);
 		
 		new File(locksDir).mkdirs();
-		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt")) {
+		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
 			return "Already completed %s on run number %d. (%d out of %d)";
 		}
-		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--hostLock.txt")) {
+		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix() + "--hostLock.txt")) {
 			return "Another host has already claimed %s on run number %d. (%d out of %d)";
 		}
 		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters, runNumber, submissionNumber, globalTimer);
@@ -609,10 +611,19 @@ public class ParameterTuningTest {
 				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
-			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt");
 			return "Finished %s on run number %d. (%d out of %d)";
 		} else {
-			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix(tuningParameters.runFileType) + "--doneLock.txt");
+			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt");
+			try {
+				new File(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/").mkdirs();
+				BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/" + "impossibleParameters.txt", true));
+				bw.write(parameters.getRunDataSubDirectory() +"\n");
+				bw.flush();
+				bw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			return "Failed to build %s on run number %d due to impossible parameters. (%d out of %d)";
 		}
 	}	

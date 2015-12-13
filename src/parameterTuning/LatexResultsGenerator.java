@@ -468,6 +468,7 @@ public class LatexResultsGenerator {
 		
 		bestRows.append(getRowFromBestNRecords(RowType.TimeInSeconds, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.Trees, records, 5));
+		bestRows.append(getRowFromBestNRecords(RowType.TotalInteractions, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.CV_Error, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.ATD_Test_Error, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.ABT_Test_Error, records, 5));
@@ -502,6 +503,7 @@ public class LatexResultsGenerator {
 		
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.TimeInSeconds, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.Trees, records, n));
+		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.TotalInteractions, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.CV_Error, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.ATD_Test_Error, records, n));
 		bestRows.append(getRowFromBestNConstantAndVariableRecords(errorType, RowType.ABT_Test_Error, records, n));
@@ -535,6 +537,7 @@ public class LatexResultsGenerator {
 		
 		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.TimeInSeconds, records));
 		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.Trees, records));
+		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.TotalInteractions, records));
 		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.CV_Error, records));
 		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.ATD_Test_Error, records));
 		bestRows.append(getRowFromBestAndWorstConstantAndVariableRecords(errorType, RowType.ABT_Test_Error, records));
@@ -574,6 +577,7 @@ public class LatexResultsGenerator {
 		
 		bestRows.append(getRowFromBestNRecords(RowType.TimeInSeconds, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.Trees, records, 5));
+		bestRows.append(getRowFromBestNRecords(RowType.TotalInteractions, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.CV_Error, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.ATD_Test_Error, records, 5));
 		bestRows.append(getRowFromBestNRecords(RowType.ABT_Test_Error, records, 5));
@@ -601,7 +605,7 @@ public class LatexResultsGenerator {
 		MaxSplits("MaxSplits"), AvgSplits("Avg. Splits"), StdDevSplits("Std. Dev. Splits"), 
 		AvgShrinkage("Avg. Shrinkage"), StdDevShrinkage("Std. Dev. Shrinkage"), 
 		ATD_Test_Error("ATD Test RMSE"), ABT_Test_Error("ABT Test RMSE"), CV_Error("Cross Validation RMSE"),
-		LearningRatePolicy("Shrinkage Type");
+		LearningRatePolicy("Shrinkage Type"), TotalInteractions("Total Interactions Modeled");
 		
 	    private final String fieldDescription;
 
@@ -737,6 +741,10 @@ public class LatexResultsGenerator {
 					highlightMinAndMaxValue = false;
 					values[i] = Double.POSITIVE_INFINITY; 
 					formattedValues[i] = record.parameters.learningRatePolicy.toString();
+					break;
+				case TotalInteractions:
+					values[i] = record.totalNumberOfInteractionsAtONOT;
+					break;
 				default:
 					break;
 			}
@@ -886,6 +894,10 @@ public class LatexResultsGenerator {
 					highlightMinAndMaxValue = false;
 					values[i] = Double.POSITIVE_INFINITY; 
 					formattedValues[i] = record.parameters.learningRatePolicy.toString();
+					break;
+				case TotalInteractions:
+					values[i] = record.totalNumberOfInteractionsAtONOT;
+					break;
 				default:
 					break;
 			}
@@ -903,6 +915,7 @@ public class LatexResultsGenerator {
 		percentImprRowTypes.add(RowType.CV_Error);
 		percentImprRowTypes.add(RowType.TimeInSeconds);
 		percentImprRowTypes.add(RowType.Trees);
+		percentImprRowTypes.add(RowType.TotalInteractions);
 
 		if (percentImprRowTypes.contains(rowType)) {
 			double impr = getPercentImprovementUsingVariable(values);
@@ -1051,6 +1064,10 @@ public class LatexResultsGenerator {
 					} else {
 						formattedValues[i+1] = record.parameters.learningRatePolicy.toString();
 					}
+					break;
+				case TotalInteractions:
+					values[i] = record.totalNumberOfInteractionsAtONOT;
+					break;
 				default:
 					break;
 			}
@@ -1072,6 +1089,7 @@ public class LatexResultsGenerator {
 		percentImprRowTypes.add(RowType.CV_Error);
 		percentImprRowTypes.add(RowType.TimeInSeconds);
 		percentImprRowTypes.add(RowType.Trees);
+		percentImprRowTypes.add(RowType.TotalInteractions);
 
 		if (percentImprRowTypes.contains(rowType)) {
 			double bestDiff = values[1] - values[0];

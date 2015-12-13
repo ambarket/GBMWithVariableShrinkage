@@ -69,6 +69,7 @@ public class RunDataSummaryRecord {
 			//MaxAndMin abtError = new MaxAndMin();
 			MaxAndMin time = new MaxAndMin();
 			MaxAndMin optTrees = new MaxAndMin();
+			MaxAndMin interactions = new MaxAndMin();
 			for (RunDataSummaryRecord record : allRecords) {
 				error.updateMaxAndMinIfNecessary(record.cvValidationError);
 				error.updateMaxAndMinIfNecessary(record.allDataTestError);
@@ -78,6 +79,7 @@ public class RunDataSummaryRecord {
 				//abtError.updateMaxAndMinIfNecessary(record.cvEnsembleTestError);
 				time.updateMaxAndMinIfNecessary(record.timeInSeconds);
 				optTrees.updateMaxAndMinIfNecessary(record.optimalNumberOfTrees);
+				interactions.updateMaxAndMinIfNecessary(record.totalNumberOfInteractionsAtONOT);
 			}
 			for (RunDataSummaryRecord record : allRecords) {
 				//record.cvValidationError = (record.cvValidationError - cvError.min) / (cvError.max - cvError.min);
@@ -88,6 +90,7 @@ public class RunDataSummaryRecord {
 				record.cvEnsembleTestError = (record.cvEnsembleTestError - error.min) / (error.max - error.min);
 				record.timeInSeconds = (record.timeInSeconds - time.min) / (time.max - time.min);
 				record.optimalNumberOfTrees = (record.optimalNumberOfTrees - optTrees.min) / (optTrees.max - optTrees.min);
+				record.totalNumberOfInteractionsAtONOT = (record.totalNumberOfInteractionsAtONOT - interactions.min) / (interactions.max - interactions.min);
 				if (!recordsByParametersMap.containsKey(record.parameters)) {
 					recordsByParametersMap.put(record.parameters, new ArrayList<>());
 				}
@@ -109,6 +112,7 @@ public class RunDataSummaryRecord {
 			retval.timeInSeconds += record.timeInSeconds;
 			retval.totalNumberOfTrees += record.totalNumberOfTrees;
 			retval.optimalNumberOfTrees += record.optimalNumberOfTrees;
+			retval.totalNumberOfInteractionsAtONOT += record.totalNumberOfInteractionsAtONOT;
 			retval.cvValidationError += record.cvValidationError;
 			retval.cvTrainingError += record.cvTrainingError;
 			retval.allDataTrainingError += record.allDataTrainingError;
@@ -127,6 +131,7 @@ public class RunDataSummaryRecord {
 		retval.timeInSeconds /= records.size();
 		retval.totalNumberOfTrees  /= records.size();
 		retval.optimalNumberOfTrees  /= records.size();
+		retval.totalNumberOfInteractionsAtONOT /= records.size();
 		retval.cvValidationError  /= records.size();
 		retval.cvTrainingError  /= records.size();
 		retval.allDataTrainingError  /= records.size();
@@ -213,7 +218,7 @@ public class RunDataSummaryRecord {
 			while (!sortedEnsembles.isEmpty()) {
 				RunDataSummaryRecord record = sortedEnsembles.poll();
 				
-				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t.4f\t%.4f\t%.8f\t%.8f\t%.8f\t%.8f\t", 
+				String recordString = String.format("%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.8f\t%.8f\t%.8f\t%.8f\t", 
 						record.timeInSeconds, 
 						record.allDataTestError, 
 						record.cvEnsembleTestError, 
