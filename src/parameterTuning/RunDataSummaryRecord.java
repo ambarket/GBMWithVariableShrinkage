@@ -64,9 +64,7 @@ public class RunDataSummaryRecord {
 
 			// First need to 0-1 normalize the comparison attributes 
 			MaxAndMin error = new MaxAndMin();
-			//MaxAndMin cvError = new MaxAndMin();
-			//MaxAndMin atdError = new MaxAndMin();
-			//MaxAndMin abtError = new MaxAndMin();
+
 			MaxAndMin time = new MaxAndMin();
 			MaxAndMin optTrees = new MaxAndMin();
 			MaxAndMin interactions = new MaxAndMin();
@@ -74,17 +72,11 @@ public class RunDataSummaryRecord {
 				error.updateMaxAndMinIfNecessary(record.cvValidationError);
 				error.updateMaxAndMinIfNecessary(record.allDataTestError);
 				error.updateMaxAndMinIfNecessary(record.cvEnsembleTestError);
-				//cvError.updateMaxAndMinIfNecessary(record.cvValidationError);
-				//atdError.updateMaxAndMinIfNecessary(record.allDataTestError);
-				//abtError.updateMaxAndMinIfNecessary(record.cvEnsembleTestError);
 				time.updateMaxAndMinIfNecessary(record.timeInSeconds);
 				optTrees.updateMaxAndMinIfNecessary(record.optimalNumberOfTrees);
 				interactions.updateMaxAndMinIfNecessary(record.totalNumberOfInteractionsAtONOT);
 			}
 			for (RunDataSummaryRecord record : allRecords) {
-				//record.cvValidationError = (record.cvValidationError - cvError.min) / (cvError.max - cvError.min);
-				//record.allDataTestError = (record.cvValidationError - atdError.min) / (atdError.max - atdError.min);
-				//record.cvEnsembleTestError = (record.cvValidationError - abtError.min) / (abtError.max - abtError.min);
 				record.cvValidationError = (record.cvValidationError - error.min) / (error.max - error.min);
 				record.allDataTestError = (record.allDataTestError - error.min) / (error.max - error.min);
 				record.cvEnsembleTestError = (record.cvEnsembleTestError - error.min) / (error.max - error.min);

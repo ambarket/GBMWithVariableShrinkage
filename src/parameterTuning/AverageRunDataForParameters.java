@@ -98,7 +98,7 @@ public class AverageRunDataForParameters implements Callable<Void>{
 			e1.printStackTrace();
 			System.exit(1);
 		}
-		for (int runNumber = 0; runNumber < tuningParameters.NUMBER_OF_RUNS; runNumber++) {
+		for (int runNumber = 10; runNumber < tuningParameters.NUMBER_OF_RUNS + 10; runNumber++) {
 			if (!(new File(tuningParameters.runDataProcessingDirectory + datasetParams.minimalName + "/Run" + runNumber).exists())) {
 				System.err.println("Entire run folder for run " + runNumber + " of " + datasetParams.minimalName + " is missing, continuing anyway");
 				continue;
