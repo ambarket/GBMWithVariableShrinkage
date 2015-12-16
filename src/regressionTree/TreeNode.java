@@ -265,6 +265,42 @@ public class TreeNode {
         }
     }
     
+    public void printLatexTree(StringBuilder output, String indent, double learningRateToExampleCountRatio, double minLearningRate, String[] predictorNames) {
+    	
+    	double leftLearningRate = ((this.leftTerminalNode.instanceCount * learningRateToExampleCountRatio) + minLearningRate);
+    	double rightLearningRate = ((this.rightTerminalNode.instanceCount * learningRateToExampleCountRatio) + minLearningRate);
+    	double missingLearningRate = ((this.missingTerminalNode.instanceCount * learningRateToExampleCountRatio) + minLearningRate);
+    	output.append("\t\t\t child{  \n");
+    	if (this.leftChild == null) {
+	    	output.append(indent + String.format("\t\t\t\t node[draw, align=left] {\\tiny Cnt: %d \\\\[1mm] \\tiny Avg: %f \\\\[1mm] \\tiny Shr: %f}\n", this.leftTerminalNode.instanceCount, this.leftTerminalNode.terminalValue, leftLearningRate));
+    	} else {
+        	output.append(indent + String.format("\t\t\tnode[draw]{\\tiny $%s < %s$}  \n", predictorNames[this.leftChild.splitPredictorIndex], (String.format("%f",this.leftChild.numericSplitValue)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1")));
+        	this.leftChild.printLatexTree(output, "\t", learningRateToExampleCountRatio, minLearningRate, predictorNames);
+    	}
+    	output.append(indent + "\t\t\t\t edge from parent  node[left,fill=white] {\\tiny $True$ \\hspace{3mm}}\n");
+		output.append(indent + "\t\t }  \n");
+
+    	output.append(indent + "\t\t\t child{  \n");
+    	if (this.rightChild == null) {
+        	output.append(indent + String.format("\t\t\t\t node[draw, align=left] {\\tiny Cnt: %d \\\\[1mm] \\tiny Avg: %f \\\\[1mm] \\tiny Shr: %f}\n", this.rightTerminalNode.instanceCount, this.rightTerminalNode.terminalValue, rightLearningRate));
+    	} else {
+        	output.append(indent + String.format("\t\t\tnode[draw]{\\tiny $%s < %s$}  \n", predictorNames[this.rightChild.splitPredictorIndex], (String.format("%f",this.rightChild.numericSplitValue)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1")));
+        	this.rightChild.printLatexTree(output, "\t", learningRateToExampleCountRatio, minLearningRate, predictorNames);
+    	}
+    	output.append(indent + "\t\t\t\t edge from parent  node[midway,fill=white] {\\tiny $False$ \\hspace{3mm}}\n");
+		output.append(indent + "\t\t\t }  \n");
+		
+    	output.append(indent + "\t\t\t child{  \n");
+    	if (this.missingChild == null) {
+        	output.append(indent + String.format("\t\t node[draw, align=left] {\\tiny Cnt: %d \\\\[1mm] \\tiny Avg: %f \\\\[1mm] \\tiny Shr: %f}\n", this.missingTerminalNode.instanceCount, this.missingTerminalNode.terminalValue, missingLearningRate));
+    	} else {
+        	output.append(indent + String.format("\t\t\tnode[draw]{\\tiny $%s < %s$}  \n", predictorNames[this.missingChild.splitPredictorIndex], (String.format("%f",this.missingChild.numericSplitValue)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1")));
+        	this.missingChild.printLatexTree(output, "\t", learningRateToExampleCountRatio, minLearningRate, predictorNames);
+    	}
+    	output.append(indent + "\t\t\t\t edge from parent  node[right,fill=white] {\\tiny $Missing$ \\hspace{3mm}}\n");
+		output.append(indent + "\t\t\t }  \n");
+    }
+    
 	public String toString() {
 		return "SplitAttribute: " + splitPredictorIndex + "\n" +
 				"splitValue: " + numericSplitValue + "\n" +

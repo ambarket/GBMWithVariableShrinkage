@@ -1,5 +1,7 @@
 package gbm;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.AbstractMap.SimpleEntry;
@@ -79,6 +81,25 @@ public class ResultFunction {
 		return result;
 	}
 	
+	public double getLearnedValueString(Attribute[] instance_x, int numberOfTrees, StringBuilder str) {
+		double result = initialValue;
+		str.append(utilities.Logger.formatNice(initialValue) + " ");
+		if (trees.size() == 0) {
+			return result;
+		}
+		if ( numberOfTrees > trees.size()) {
+			System.err.println(StopWatch.getDateTimeStamp() + "ERROR: Cannot predict using " + numberOfTrees + " when only " + trees.size() + " trees exists.");
+		}
+		
+		for (int i = 0; i < numberOfTrees; i++) {
+			str.append("+ ( ");
+			result += trees.get(i).getLearnedValueWithLearningRateAppliedString(instance_x, str);
+			str.append(" ) ");
+		}
+		str.append("= " + utilities.Logger.formatNice(result));
+		return result;
+	}
+	
 	public String getRelativeInfluencesString( String header) {
 		return getRelativeInfluencesString(trees.size(), header);
 	}
@@ -153,11 +174,104 @@ public class ResultFunction {
 			
 			try {
 				this.trees.get(value).root.printTree(new OutputStreamWriter(System.out));
+				//System.out.println(this.trees.get(value).printOneSplitLatexTree());
 			} catch (IOException e) {
 				System.err.println(StopWatch.getDateTimeStamp());
 				e.printStackTrace();
 			}
 		}
 		sc.close();
+	}
+	
+	public String formatNice(double d) {
+		return String.format("%f", d).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+	}
+	
+	public void printFirstTwoTrees(String prefix) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(
+		"\\begin{frame}\n"
+		+ "\\frametitle{" + prefix + "Example: Nasa Air Foil Dataset}\n"
+		+ "\\Wider[4.5em]{\n"
+		);
+		sb.append(
+		"\\resizebox*{\\textwidth}{!}{\n"
+		+	"\\begin{tabular} {|l c |}\n"
+		+		"\t\t\\hline\n"
+		+		"\t\t\\tiny Bag Fraction & \\tiny " + (String.format("%f", parameters.bagFraction)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + " \\\\ \\hline\n"
+		+		"\t\t\\tiny Min Shrinkage & \\tiny " + (String.format("%f", parameters.minLearningRate)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\tiny Max Shrinkage & \\tiny " + (String.format("%f", parameters.maxLearningRate)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\tiny Number of Splits & \\tiny " + (String.format("%d", parameters.maxNumberOfSplits)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\tiny Min Leaf Size & \\tiny " + (String.format("%d", parameters.minExamplesInNode)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\tiny Per Tree Sample Size & \\tiny " + (String.format("%d", this.trees.get(0).sampleSize)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\tiny Avg Training Response & \\tiny " + (String.format("%f", initialValue)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1") + "  \\\\ \\hline\n"
+		+		"\t\t\\end{tabular}\n"
+		);
+		
+		int[][] map = this.trees.get(0).gbmDataset.getNumericalPredictorSortedIndexMap();
+		Attribute[] firstInstance =  this.trees.get(0).gbmDataset.getTrainingInstances()[map[this.trees.get(0).root.splitPredictorIndex][0]];
+		Attribute firstResponse = this.trees.get(0).gbmDataset.getTrainingResponses()[map[this.trees.get(0).root.splitPredictorIndex][0]];;
+		Attribute[] secondInstance =  this.trees.get(0).gbmDataset.getTrainingInstances()[map[this.trees.get(0).root.splitPredictorIndex][map[this.trees.get(0).root.splitPredictorIndex].length-1]];;
+		Attribute secondResponse =  this.trees.get(0).gbmDataset.getTrainingResponses()[map[this.trees.get(0).root.splitPredictorIndex][map[this.trees.get(0).root.splitPredictorIndex].length-1]];;
+		
+		StringBuilder firstFunction = new StringBuilder("$ \\hat{F} = ");
+		double firstPred = getLearnedValueString(firstInstance, 2, firstFunction);
+		double firstResidual = firstResponse.getNumericValue() - firstPred;
+		firstFunction.append("$");
+		StringBuilder secondFunction = new StringBuilder("$ \\hat{F} = ");
+		double secondPred = getLearnedValueString(secondInstance, 2, secondFunction);
+		double secondResidual = secondResponse.getNumericValue() - secondPred;
+		secondFunction.append("$");
+		
+		
+		sb.append(
+			"\\begin{tabular} {|c c c c c c c c c|}\n"
+		+		"\t\t\\hline\n"
+		+		"\t\t \\tiny Example & \\tiny Frequency & \\tiny Angle & \\tiny ChordLength & \\tiny FreeStreamVelocity & \\tiny SuctionSideDisplacment & \\tiny SoundPressureLevel & \\tiny Prediction & \\tiny Squared Error \\\\ \\hline\n"
+		);
+		sb.append("\t\t \\tiny 1 & ");
+		for (int i = 0; i < firstInstance.length; i++) {
+			sb.append("\\tiny " + formatNice(firstInstance[i].getNumericValue()) + " & ");
+		}
+		sb.append("\\tiny " + formatNice(firstResponse.getNumericValue()) + " & ");
+		sb.append("\\tiny " + formatNice(firstPred) + " & ");
+		sb.append("\\tiny " + formatNice(firstResidual * firstResidual) + "  \\\\ \\hline\n");
+		
+		sb.append("\t\t \\tiny 2 & ");
+		for (int i = 0; i < secondInstance.length; i++) {
+			sb.append("\\tiny " + formatNice(secondInstance[i].getNumericValue()) + " & ");
+		}
+		sb.append("\\tiny " + formatNice(secondResponse.getNumericValue()) + " & ");
+		sb.append("\\tiny " + formatNice(secondPred) + " & ");
+		sb.append("\\tiny " + formatNice(secondResidual * secondResidual) + "  \\\\ \\hline\n");
+		
+		sb.append("\\multicolumn{9}{c}{}");
+		sb.append(
+					"\t\t \\\\ \\hline\n"
+			+		"\t\t \\tiny Example & \\multicolumn{6}{c}{\\tiny Function} & & \\\\ \\hline\n"
+			+		"\t\t \\tiny 1 & \\multicolumn{6}{c}{\\tiny" + firstFunction.toString() + "} & & \\\\ \\hline\n"
+			+		"\t\t \\tiny 2 & \\multicolumn{6}{c}{\\tiny" + secondFunction.toString() + "} & & \\\\ \\hline\n"
+			);
+		sb.append("\t\t\\end{tabular}\n");
+		sb.append("}\n");
+		
+		sb.append("\\begin{tabular} {c c}\n");
+		sb.append(this.trees.get(0).printOneSplitLatexTree());
+		sb.append("&\n");
+		sb.append(this.trees.get(1).printOneSplitLatexTree());
+		sb.append("\n\\end{tabular}\n");
+		sb.append("}\n");
+		sb.append("\\end{frame}\n");
+		
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter("/home/amb6470/git/GBMWithVariableShrinkageWrittenWork/Final Report/" + prefix + "example.tex"));
+			bw.write(sb.toString());
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 }

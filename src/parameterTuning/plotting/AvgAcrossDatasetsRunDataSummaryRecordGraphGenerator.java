@@ -65,10 +65,9 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 	
 	public static GraphableProperty[] getXAxes() {
 		return new GraphableProperty[] {
-
-				GraphableProperty.MaxNumberOfSplits, 
-				GraphableProperty.MinExamplesInNode,
 				GraphableProperty.BagFraction, 
+				GraphableProperty.MinExamplesInNode,
+				GraphableProperty.MaxNumberOfSplits, 
 				GraphableProperty.ConstantLearningRate, 
 				GraphableProperty.MinLearningRate, 
 				GraphableProperty.MaxLearningRate};
@@ -80,14 +79,14 @@ public class AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator {
 				//GraphableProperty.CvEnsembleTestError, 
 				GraphableProperty.OptimalNumberOfTrees,
 				GraphableProperty.CvValidationError,
-				GraphableProperty.TotalNumberOfIteractions
+				//GraphableProperty.TotalNumberOfIteractions
 				};
 	}
 	
 	public static ArrayList<GraphableProperty[]> getAdditionalAxes() {
 		ArrayList<GraphableProperty[]> retval = new ArrayList<>();
 		retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.AllDataTestError});
-		retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.CvEnsembleTestError});
+		//retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.CvEnsembleTestError});
 		//retval.add(new GraphableProperty[] {GraphableProperty.AllDataTestError, GraphableProperty.CvEnsembleTestError});
 		//retval.add(new GraphableProperty[] {GraphableProperty.CvValidationError, GraphableProperty.CvValidationError});
 		return retval;

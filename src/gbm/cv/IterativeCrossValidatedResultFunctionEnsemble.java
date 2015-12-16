@@ -50,6 +50,8 @@ public class IterativeCrossValidatedResultFunctionEnsemble {
 	public int optimalNumberOfTrees, totalNumberOfTrees;
 	public double timeInSeconds;
 	
+	public double avgValidationErrorOfLastStep = 0.0;
+	
 	public int numberOfTrainingExamples, numberOfTestExamples, numberOfPredictors;
 
 	public ArrayList<Double> allDataAvgLearningRatesForEachTree;
@@ -113,7 +115,8 @@ public class IterativeCrossValidatedResultFunctionEnsemble {
 		this.totalNumberOfTrees = totalNumberOfTreesSoFar;
 		// Optimal number of trees is the point where average cross validation error is minimized.
 		double minAvgValidationError = Double.MAX_VALUE;
-
+		
+		avgValidationErrorOfLastStep = 0.0;
 		for (int i = 0; i < stepSize; i++) {
 			double training = 0,validation = 0,test = 0;
 			for (int functionIndex = 0; functionIndex < numOfFolds; functionIndex++) {
@@ -127,6 +130,7 @@ public class IterativeCrossValidatedResultFunctionEnsemble {
 			avgCvTrainingErrors.add(training);
 			avgCvValidationErrors.add(validation);
 			avgCvTestErrors.add(test);
+			avgValidationErrorOfLastStep += validation;
 			if (validation < minAvgValidationError) {
 				minAvgValidationError = validation;
 				this.optimalNumberOfTrees = totalNumberOfTrees - stepSize + i + 1;
@@ -140,7 +144,7 @@ public class IterativeCrossValidatedResultFunctionEnsemble {
 			allDataStdDevLearningRatesForEachTree.add(allDataGbmDataset.avgLearningRatesForEachTree[i].getRootMeanSquaredError());
 			allDataStdDevExamplesInNodeForEachTree.add(allDataGbmDataset.avgExamplesInNodeForEachTree[i].getRootMeanSquaredError());
 		}
-		
+		avgValidationErrorOfLastStep /= stepSize;
 		computeCvEnsembleErrorsForLastStep();
 		
 		if (this.optimalNumberOfTrees > (totalNumberOfTrees - stepSize)) {

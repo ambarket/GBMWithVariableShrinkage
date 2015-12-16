@@ -2,6 +2,7 @@ package parameterTuning;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -26,6 +27,8 @@ public class LatexResultsGenerator {
 	public static void writeEntireResultsSection(ParameterTuningParameters tuningParameters) {
 		//tuningParameters.datasets = new DatasetParameters[] {ParameterTuningParameters.crimeCommunitiesParameters};
 		try {
+			LatexResultsGenerator.writeBeamerResults(ParameterTuningParameters.getRangesForTest5());
+			
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(tuningParameters.runDataProcessingDirectory + "entireResultsSection.tex"));
 			System.out.println("Writing directories comment");
 			// Write all the directories comment
@@ -64,6 +67,24 @@ public class LatexResultsGenerator {
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+	
+	public static void writeBeamerResults(ParameterTuningParameters tuningParameters)  {
+		BufferedWriter bw;
+		try {
+			bw = new BufferedWriter(new PrintWriter("/home/amb6470/git/GBMWithVariableShrinkageWrittenWork/Final Report/Graphs.tex"));
+			//bw.write("\\section{Results}\n \\subsection{}");
+			bw.write("\\begin{frame}\n");
+			bw.write("\\frametitle{Cross Validation vs. Generalization Error}\n");
+			writeAllPlotLegends(bw, tuningParameters);
+			writeAverageRunDataSummaryCurvesHorizontal(bw, tuningParameters);
+			bw.flush();
+			bw.close();
+		} catch ( IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 	
 	//-----------------------------------------DIRECTORIES COMMENT OF BEST PARAMETERS------------------------------------------------------------------
@@ -224,7 +245,7 @@ public class LatexResultsGenerator {
 		//writePredicationAndResidualCurveLegend(bw, tuningParameters);
 		writeRunDataSummaryCurveLegend(bw, tuningParameters);
 		//bw.append("\t\\caption{Plot Legends for Error Curves (Left), Residual Curves (Middle), Aggregated Results Curves (Right)" + "}\n");
-		bw.append("\t\\caption{Plot Legend for Pairwise Parameter Influence Plots" + "}\n");
+		bw.append("\t\\caption{Plot Legend for Parameter Influence Plots" + "}\n");
 		bw.append("\t\\label{fig:legends}\n");
 		bw.append("\\end{figure}\n\n");
 	}
@@ -449,6 +470,72 @@ public class LatexResultsGenerator {
 			bw.write("\t\\caption{Parameters vs. " + y.toString()  + "}\n");
 			bw.write("\t\\label{fig:parametersVs" + y.name() + "}\n");
 			bw.append("\\end{figure}\n\n");
+		}
+
+	}
+	
+	private static void writeAverageRunDataSummaryCurvesHorizontal(BufferedWriter bw, ParameterTuningParameters tuningParameters) throws IOException {
+		String topDirectory = tuningParameters.runDataProcessingDirectory + "avgSummaryGraphs/NoFilter/";
+		GraphableProperty[] xAxes = AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.getXAxes();
+		GraphableProperty[] yAxes = AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.getYAxes();
+		
+		ArrayList<GraphableProperty[]> additionalAxes = AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.getAdditionalAxes();
+
+		bw.append("\\begin{figure}[!htb]\\centering\n");
+		for (GraphableProperty[] add : additionalAxes) {
+			String directory = topDirectory + AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.convertGraphablePropertyAxesArrayToMinimalString(add) + "/";
+			String filePrefix = null;
+			
+			if (new File(directory + "AllAllPoints.png").exists()) {
+				filePrefix = "All";
+			} else if (new File(directory + "ConstAllPoints.png").exists()) {
+				filePrefix = "Const";
+			} else if (new File(directory + "VarAllPoints.png").exists()) {
+				filePrefix = "Var";
+			} else {
+				System.err.println("No graphs exists for directory " + directory);
+				continue;
+			}
+			bw.append("\t\\resizebox{0.49\\linewidth}{!}{\n");
+			bw.append("\t\t\\includegraphics{{" + (directory + filePrefix + "AllPoints")  + "}.png}\n");
+			bw.append("\t}\n");
+		}
+		bw.append("\\end{figure}\n\n");
+		bw.write("\\end{frame}\n");
+		
+		for (GraphableProperty x : xAxes) {
+			bw.write("\\begin{frame}\n");
+			bw.write("\\frametitle{" + x.toString() + " vs. Performance Indicators}\n");
+			bw.append("\\begin{figure}[!htb]\\centering\n");
+			StringBuilder allApoints = new StringBuilder();
+			StringBuilder uniquePoints = new StringBuilder();
+			for (GraphableProperty y : yAxes) {
+				String directory = topDirectory + AvgAcrossDatasetsRunDataSummaryRecordGraphGenerator.convertGraphablePropertyAxesArrayToMinimalString(new GraphableProperty[] {x, y}) + "/";
+				String filePrefix = null;
+				
+				if (new File(directory + "AllAllPoints.png").exists()) {
+					filePrefix = "All";
+				} else if (new File(directory + "ConstAllPoints.png").exists()) {
+					filePrefix = "Const";
+				} else if (new File(directory + "VarAllPoints.png").exists()) {
+					filePrefix = "Var";
+				} else {
+					System.err.println("No graphs exists for directory " + directory);
+					continue;
+				}
+				allApoints.append("\t\\resizebox{0.32\\linewidth}{!}{\n");
+				allApoints.append("\t\t\\includegraphics{{" + (directory + filePrefix + "AllPoints")  + "}.png}\n");
+				allApoints.append("\t}\n");
+				//bw.append("\t\\unskip\\ \\vrule\\");
+				uniquePoints.append("\t\\resizebox{0.32\\linewidth}{!}{\n");
+				uniquePoints.append("\t\t\\includegraphics{{" + (directory + filePrefix + "UniquePoints")  + "}.png}\n");
+				uniquePoints.append("\t}\n");
+				//bw.append("\t\\unskip\\ \\hrule\\");
+			}		
+			bw.append(allApoints.toString());
+			bw.append(uniquePoints.toString());
+			bw.append("\\end{figure}\n\n");
+			bw.write("\\end{frame}\n");
 		}
 
 	}

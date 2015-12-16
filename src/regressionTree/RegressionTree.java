@@ -41,7 +41,8 @@ public class RegressionTree {
 
 	
 	private GbmParameters parameters;
-	private int sampleSize;
+	public  GbmDataset gbmDataset;
+	public int sampleSize;
 	private double learningRateToExampleCountRatio;
 	
 	public TreeNode root;
@@ -103,7 +104,25 @@ public class RegressionTree {
 		return learningRate * leaf.terminalValue;
 	}
 	
+	public double getLearnedValueWithLearningRateAppliedString(Attribute[] instance_x, StringBuilder str) {
+		if (root == null) {
+			throw new IllegalStateException("Should never call getLearnedValue on a tree with a null root");
+		}
+		TerminalNode leaf = root.getLearnedTerminalNode(instance_x);
+		double learningRate = 0.0;
+		if (parameters.learningRatePolicy == LearningRatePolicy.CONSTANT) {
+			learningRate = parameters.maxLearningRate;
+		} else if (parameters.learningRatePolicy == LearningRatePolicy.REVISED_VARIABLE) {
+			learningRate = ((leaf.instanceCount * learningRateToExampleCountRatio) + parameters.minLearningRate);
+		} else {
+			learningRate = Math.min(0.5, parameters.maxLearningRate * leaf.instanceCount / sampleSize);
+		} 
+		str.append(Logger.formatNice(learningRate) + " \\cdot " + Logger.formatNice(leaf.terminalValue) + " ");
+		return learningRate * leaf.terminalValue;
+	}
+	
 	public RegressionTree build(GbmDataset dataset, boolean[] inSample, int treeNumber) {
+		this.gbmDataset = dataset;
 		// Calculate error before splitting
 		double mean = dataset.calcMeanTrainingPseudoResponse(inSample);
 		double squaredError = 0.0;
@@ -226,4 +245,23 @@ public class RegressionTree {
 			return (int) Math.signum(that.errorImprovement - this.errorImprovement);
 		}
 	}
+	
+    
+    public String printOneSplitLatexTree() {
+    	String[] predictorNames = gbmDataset.getPredictorNames();
+    	StringBuilder output = new StringBuilder();
+    	output.append("\t\\begin{tikzpicture}[ \n");
+    	output.append("\t\tbaseline, \n");
+    	output.append("\t\tlevel 1/.style={sibling distance=6em, level distance=2cm},  \n");
+    	output.append("\t\tscale=0.9, \n");
+    	output.append("\t\tevery node/.style={scale=0.9}] \n");
+    	
+    	output.append(String.format("\t\t\\node[draw]{\\tiny $%s < %s$}  \n", predictorNames[root.splitPredictorIndex], (String.format("%f",root.numericSplitValue)).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1")));
+		
+    	root.printLatexTree(output, "", learningRateToExampleCountRatio, parameters.minLearningRate, predictorNames);
+		output.append(";");
+		output.append("\t\\end{tikzpicture}");
+		return output.toString();
+    }
+
 }

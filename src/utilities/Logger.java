@@ -30,4 +30,8 @@ public class Logger {
 			System.out.print(s.toString());
 		}
 	}
+	public static String formatNice(double d) {
+		return String.format("%f", d).replaceFirst("\\.0*$|(\\.\\d*?)0+$", "$1");
+	}
 }
+

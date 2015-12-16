@@ -148,17 +148,15 @@ public class GradientBoostingTree {
 			}
 			
 			ensemble.updateToReflectLastStepLastCvStop(lastTreeIndex);
-
-			double newAvgValidationError = ensemble.avgCvValidationErrors.get(lastTreeIndex-1);
 			
 			Logger.println(LEVELS.DEBUG, 
 					"Training: " + ensemble.avgCvTrainingErrors.get(lastTreeIndex-1) + 
 					"\nLast Avg Validation Error: " + lastAvgValidationError + 
-					"\nCurrent Avg Validation Error: " + newAvgValidationError + 
-					"\nDifference: " + (lastAvgValidationError - newAvgValidationError));
+					"\nCurrent Avg Validation Error: " + ensemble.avgValidationErrorOfLastStep + 
+					"\nDifference: " + (lastAvgValidationError - ensemble.avgValidationErrorOfLastStep));
 			
-			if (newAvgValidationError < lastAvgValidationError) {
-				lastAvgValidationError = newAvgValidationError;
+			if (ensemble.avgValidationErrorOfLastStep < lastAvgValidationError) {
+				lastAvgValidationError = ensemble.avgValidationErrorOfLastStep;
 				remainingStepsPastMinimum = 3;
 			} else {
 				remainingStepsPastMinimum--;
@@ -179,7 +177,7 @@ public class GradientBoostingTree {
 						+ "SubDirectory: %s\n\t" 
 						+ "This test running time: %s \t"
 						+ "Total dataset running time: %s \n%s", 
-						dataset.parameters.minimalName, runNumber, submissionNumber, tuningParameters.totalNumberOfTests, (lastTreeIndex+1), newAvgValidationError,
+						dataset.parameters.minimalName, runNumber, submissionNumber, tuningParameters.totalNumberOfTests, (lastTreeIndex+1), ensemble.avgValidationErrorOfLastStep,
 						parameters.getRunDataSubDirectory(), 
 						timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(),
 						String.format("\tMaxMem: %.2f\tTotalMem: %.2f\tFreeMem: %.2f\tUsedMem: %.2f\tAvailableMem: %.2f",
@@ -200,7 +198,7 @@ public class GradientBoostingTree {
 				break;
 			}
 			
-			if (ensembleTimer.getElapsedSeconds() > 5400) {
+			if (ensembleTimer.getElapsedSeconds() > 10800) {
 				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we ran out of time!");
 				try {
 					BufferedWriter bw = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/parametersThatRanOutOfTime.txt", true));

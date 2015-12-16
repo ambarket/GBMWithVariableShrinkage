@@ -1,6 +1,12 @@
+import dataset.Dataset;
+import gbm.GbmParameters;
+import gbm.GradientBoostingTree;
+import gbm.ResultFunction;
 import parameterTuning.LatexResultsGenerator;
 import parameterTuning.ParameterTuningParameters;
 import parameterTuning.ParameterTuningTest;
+import regressionTree.RegressionTree.LearningRatePolicy;
+import regressionTree.RegressionTree.SplitsPolicy;
 
 
 public class Main {
@@ -17,6 +23,19 @@ public class Main {
 				break;
 			case "writeResultsSection":
 				LatexResultsGenerator.writeEntireResultsSection(ParameterTuningParameters.getRangesForTest5());
+				break;
+			case "buildSingleModel":
+				Dataset ds = new Dataset(ParameterTuningParameters.nasaParameters, 0.8);
+				ResultFunction function1 = GradientBoostingTree.buildGradientBoostingMachine(
+						new GbmParameters(0.01, 0.4, 2, 0.75, 1, 2, LearningRatePolicy.REVISED_VARIABLE, SplitsPolicy.CONSTANT), 
+						ds);
+				function1.printFirstTwoTrees("Variable Shrinkage ");
+				LatexResultsGenerator.writeBeamerResults(ParameterTuningParameters.getRangesForTest5());
+				//ResultFunction function2 = GradientBoostingTree.buildGradientBoostingMachine(
+				//		new GbmParameters(0.01, 0.4, 2, 0.75, 1, 2, LearningRatePolicy.CONSTANT, SplitsPolicy.CONSTANT), 
+				//		ds);
+				//function2.printFirstTwoTrees("Constant Shrinkage ");
+				//function.allowUserToPrintTrees();
 				break;
 		}
 	}
