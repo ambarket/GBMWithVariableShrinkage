@@ -147,7 +147,7 @@ public class GradientBoostingTree {
 				}
 			}
 			
-			ensemble.updateToReflectLastStepLastCvStop(lastTreeIndex);
+			ensemble.updateToIncludeTreesFromLastCvStep(lastTreeIndex);
 			
 			Logger.println(LEVELS.DEBUG, 
 					"Training: " + ensemble.avgCvTrainingErrors.get(lastTreeIndex-1) + 
@@ -198,6 +198,7 @@ public class GradientBoostingTree {
 				break;
 			}
 			
+			/*
 			if (ensembleTimer.getElapsedSeconds() > 10800) {
 				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we ran out of time!");
 				try {
@@ -211,6 +212,7 @@ public class GradientBoostingTree {
 				}
 				break;
 			}
+			*/
 		}
 
 		ensemble.timeInSeconds = ensembleTimer.getElapsedSeconds();

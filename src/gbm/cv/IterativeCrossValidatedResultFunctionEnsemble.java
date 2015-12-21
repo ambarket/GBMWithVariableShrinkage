@@ -111,7 +111,15 @@ public class IterativeCrossValidatedResultFunctionEnsemble {
 		this.totalNumberOfTrees = avgCvValidationErrors.size();
 	}
 
-	public void updateToReflectLastStepLastCvStop(int totalNumberOfTreesSoFar) {
+	/**
+	 * This method is the core of reducing the memory footprint of the program. The CrossValidationSteppers and their corresponding GbmDatasets
+	 * use a constant amount of space to store all required data from the last stepSize trees. Here we commit those stepSize trees into the data structures
+	 * tracking the entire run this far. The structures in this class do grow linearly with the number of trees, but we save a lot of space because we no
+	 * longer need to store the data for each cross validation GBM, only the average values across all of them. After this method the structures in the GbmDatasets
+	 * are free to be overwritten for use in the next step of the cross validation algorithm.
+	 * @param totalNumberOfTreesSoFar
+	 */
+	public void updateToIncludeTreesFromLastCvStep(int totalNumberOfTreesSoFar) {
 		this.totalNumberOfTrees = totalNumberOfTreesSoFar;
 		// Optimal number of trees is the point where average cross validation error is minimized.
 		double minAvgValidationError = Double.MAX_VALUE;

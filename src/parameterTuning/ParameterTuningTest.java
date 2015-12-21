@@ -3,6 +3,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
@@ -245,14 +247,54 @@ public class ParameterTuningTest {
 		boolean[] doneList = new boolean[tuningParameters.totalNumberOfTests];
 
 		StopWatch timer = new StopWatch().start(), globalTimer = new StopWatch().start();
+		BufferedWriter runningTimeLog = null;
+		String hostname = null;
+		try {
+			runningTimeLog = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/runningTimeLog.txt", true));
+			hostname = InetAddress.getLocalHost().getHostName();
+		} catch (IOException e) {
+			System.err.println("Failed to create runningTimeLog file or retrive hostname, exiting");
+			e.printStackTrace();
+			System.exit(1);
+		}
+		
+		Runtime runTime = Runtime.getRuntime();
+		double maxMemory = runTime.maxMemory(), totalMemory = runTime.totalMemory(), freeMemory = runTime.freeMemory();
+		double memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory)) / 1000000000.0;
+
 		for (int testNum = 0; testNum < tuningParameters.parametersList.length; testNum++) {
 			GbmParameters parameters = tuningParameters.parametersList[testNum];
 			timer.start();
 			String resultMessage = performCrossValidationUsingParameters(parameters, dataset, runNumber, testNum, globalTimer);
+			
+			maxMemory = runTime.maxMemory() / 1000000000.0;
+			totalMemory = runTime.totalMemory() / 1000000000.0;
+			freeMemory = runTime.freeMemory() / 1000000000.0;
+		    memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory));
+			String statusMessage = StopWatch.getDateTimeStamp() + String.format("[%s] [Run%d] [Test %d / %d] [Host %s]\n\t"
+	    			+ "Result: %s\n\t"
+					+ "SubDirectory: %s\n\t" 
+					+ "This test running time: %s \t"
+					+ "Total dataset running time: %s \n%s", 
+					dataset.parameters.minimalName, runNumber, testNum, tuningParameters.totalNumberOfTests, hostname, 
+					resultMessage,
+					parameters.getRunDataSubDirectory(), 
+					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(),
+					String.format("\tMaxMem: %.2f\tTotalMem: %.2f\tFreeMem: %.2f\tUsedMem: %.2f\tAvailableMem: %.2f",
+							maxMemory, totalMemory, freeMemory, totalMemory - freeMemory, memoryPossiblyAvailableInGigs));
+			System.out.println(statusMessage);
+
+			if (resultMessage.startsWith("Finished")) {
+				try {
+					runningTimeLog.write(statusMessage + "\n");
+				} catch (IOException e) {
+					System.err.println("Failed to append to runningTimeLog file, exiting");
+					e.printStackTrace();
+					System.exit(1);
+				}
+			}
+			
 			doneList[testNum] = resultMessage.startsWith("Already completed") || resultMessage.startsWith("Finished");
-			System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] " + resultMessage + "\n\t This " + dataset.parameters.minimalName + " test in %s. Have been running for %s total.", 
-					dataset.parameters.minimalName, parameters.getRunDataSubDirectory(tuningParameters.runFileType), runNumber, testNum, tuningParameters.totalNumberOfTests, 
-					timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit()));
 			
 			if (SimpleHostLock.isTimeToShutdown(tuningParameters)) {
 				System.out.println("I've been told to shutdown gracefully, terminating now");
