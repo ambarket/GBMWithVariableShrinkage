@@ -172,7 +172,7 @@ public class GradientBoostingTree {
 		    memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory));
 		    
 			// Print a status message at most every two minutes
-			if (timer.getElapsedMinutes() % 2 > 1) {
+			//if (timer.getElapsedMinutes() % 2 > 1) {
 				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] [Run%d] [Test %d / %d] [Iterations %d] [CvError %.4f]\n\t"
 						+ "SubDirectory: %s\n\t" 
 						+ "This test running time: %s \t"
@@ -182,7 +182,7 @@ public class GradientBoostingTree {
 						timer.getTimeInMostAppropriateUnit(), globalTimer.getTimeInMostAppropriateUnit(),
 						String.format("\tMaxMem: %.2f\tTotalMem: %.2f\tFreeMem: %.2f\tUsedMem: %.2f\tAvailableMem: %.2f",
 								maxMemory, totalMemory, freeMemory, totalMemory - freeMemory, memoryPossiblyAvailableInGigs)));
-			}
+			//}
 			// Check our resource limits.
 			if (memoryPossiblyAvailableInGigs < .05) {
 				System.err.println(StopWatch.getDateTimeStamp() + "Breaking early because we are almost out of memory! Memory possibly available: " + memoryPossiblyAvailableInGigs);

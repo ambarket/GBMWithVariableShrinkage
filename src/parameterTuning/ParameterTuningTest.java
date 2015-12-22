@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
@@ -38,11 +37,13 @@ public class ParameterTuningTest {
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {		
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
-		GradientBoostingTree.executor = Executors.newFixedThreadPool(2);
+		GradientBoostingTree.executor = Executors.newFixedThreadPool(12);
 		for (int runNumber = 10; runNumber < test.tuningParameters.NUMBER_OF_RUNS + 10; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				String locksDir = parameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+				String runDataDir = parameters.runDataOutputDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 				new File(locksDir).mkdirs();
+				new File(runDataDir).mkdirs();
 				boolean runComplete = SimpleHostLock.checkDoneLock(locksDir + "entireRun--doneLock.txt");
 				
 				if (!runComplete) {

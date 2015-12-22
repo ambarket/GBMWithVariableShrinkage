@@ -135,6 +135,8 @@ public class MinimalistGbmDataset extends GbmDataset {
 		for (int i = 0; i < numberOfTestExamples; i++) {
 			testPseudoResponses[i] = (testResponses[i].getNumericValue() - testPredictions[lastIndex][i]);
 		}
+		this.meanTrainingPsuedoResponseOutOfDate = true;
+		calcMeanTrainingPseudoResponse(); // Calculate only once per tree
 	}
 	
 	/**
@@ -190,14 +192,19 @@ public class MinimalistGbmDataset extends GbmDataset {
 		return dataset.calcMeanTestResponse(inSample);
 	}
 	
+	private boolean meanTrainingPsuedoResponseOutOfDate = false;
+	private double meanTrainingPsuedoResponse = 0.0;
 	public double calcMeanTrainingPseudoResponse() {
-		double meanY = 0.0;
-		int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
-		for (int i = 0; i < numberOfTrainingExamples; i++) {
-			meanY += trainingPseudoResponses[i];
+		if (meanTrainingPsuedoResponseOutOfDate) {
+			meanTrainingPsuedoResponse = 0.0;
+			int numberOfTrainingExamples = dataset.getNumberOfTrainingExamples();
+			for (int i = 0; i < numberOfTrainingExamples; i++) {
+				meanTrainingPsuedoResponse += trainingPseudoResponses[i];
+			}
+			meanTrainingPsuedoResponse = meanTrainingPsuedoResponse / numberOfTrainingExamples;
 		}
-		meanY = meanY / numberOfTrainingExamples;
-		return meanY;
+
+		return meanTrainingPsuedoResponse;
 	}
 	
 	public double calcMeanTrainingPseudoResponse(boolean[] inSample) {

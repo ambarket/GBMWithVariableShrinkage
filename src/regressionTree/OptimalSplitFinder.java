@@ -352,18 +352,21 @@ public class OptimalSplitFinder implements Callable<BestSplit> {
 
 	// Used only by getOptimalSplit to pass data around without a ton of arguments.
 	private static class SplitSnapshot {
-		public SumCountAverage left = new SumCountAverage(), right = new SumCountAverage(), missing = new SumCountAverage();
+		public SumCountAverage left = null, right = null, missing = null;
 		public double currentLeftError = Double.MAX_VALUE, currentRightError = Double.MAX_VALUE, currentMissingError = Double.MAX_VALUE,
 					currentTotalError = Double.MAX_VALUE, minimumTotalError = Double.MAX_VALUE;
 		
 		SplitSnapshot(double squaredErrorBeforeSplit) {
 			this.minimumTotalError = squaredErrorBeforeSplit;
+			this.left = new SumCountAverage();
+			this.right = new SumCountAverage();
+			this.missing = new SumCountAverage();
 		}
 		
 		public void recomputeErrors() {
-			currentLeftError = left.getSumOfSquares() - (left.getMean() * left.getSum());
-			currentRightError = right.getSumOfSquares() - (right.getMean() * right.getSum());
-			currentMissingError = missing.getSumOfSquares() - (missing.getMean() * missing.getSum());
+			currentLeftError = left.getSquaredError();
+			currentRightError = right.getSquaredError();
+			currentMissingError = missing.getSquaredError();
 			currentTotalError = currentLeftError + currentRightError + currentMissingError;
 		}
 	}

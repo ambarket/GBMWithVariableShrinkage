@@ -126,7 +126,8 @@ public class ParameterTuningParameters {
 
 			test5Parameters.hostsThatShouldShutdownFile = System.getProperty("user.dir") + "/scripts/hostsToShutdownAfterCurrentTest.txt";
 			
-			test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
+			//test5Parameters.datasets = new DatasetParameters[] {powerPlantParameters, nasaParameters, bikeSharingDayParameters, crimeCommunitiesParameters /*,bikeSharingHourlyParameters*/};
+			test5Parameters.datasets = new DatasetParameters[] {bikeSharingDayParameters};
 			test5Parameters.runFileType = RunFileType.ParamTuning4;
 			
 			test5Parameters.parametersList = new GbmParameters[test5Parameters.totalNumberOfTests];

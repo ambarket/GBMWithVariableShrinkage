@@ -1,7 +1,7 @@
 package utilities;
 
 public class DoubleCompare {
-	public final static double EPSILON = 0.000001;
+	public final static double EPSILON = 0.00000001;
 
 
 	/**
