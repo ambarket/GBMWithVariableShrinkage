@@ -131,7 +131,7 @@ public class GradientBoostingTree {
 		Runtime runTime = Runtime.getRuntime();
 		double maxMemory = runTime.maxMemory(), totalMemory = runTime.totalMemory(), freeMemory = runTime.freeMemory();
 		double memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory)) / 1000000000.0;
-		
+		double lastStatusMessageTimeInMinutes = -20;
 		while (lastTreeIndex + stepSize < parameters.numOfTrees && remainingStepsPastMinimum > 0) {
 			lastTreeIndex += stepSize;
 			for (int i = 0; i < numOfFolds+1; i++) {
@@ -172,7 +172,8 @@ public class GradientBoostingTree {
 		    memoryPossiblyAvailableInGigs = (maxMemory- (totalMemory -freeMemory));
 		    
 			// Print a status message at most every two minutes
-			if (timer.getElapsedMinutes() % 2 > 1) {
+			if ((timer.getElapsedMinutes() - lastStatusMessageTimeInMinutes) / 5 > 1) {
+				lastStatusMessageTimeInMinutes = timer.getElapsedMinutes();
 				System.out.println(StopWatch.getDateTimeStamp() + String.format("[%s] [Run%d] [Test %d / %d] [Iterations %d] [CvError %.4f]\n\t"
 						+ "SubDirectory: %s\n\t" 
 						+ "This test running time: %s \t"

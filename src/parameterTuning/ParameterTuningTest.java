@@ -38,11 +38,13 @@ public class ParameterTuningTest {
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {		
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
-		GradientBoostingTree.executor = Executors.newFixedThreadPool(2);
+		GradientBoostingTree.executor = Executors.newFixedThreadPool(12);
 		for (int runNumber = 10; runNumber < test.tuningParameters.NUMBER_OF_RUNS + 10; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				String locksDir = parameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
+				String runDataDir = parameters.runDataOutputDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
 				new File(locksDir).mkdirs();
+				new File(runDataDir).mkdirs();
 				boolean runComplete = SimpleHostLock.checkDoneLock(locksDir + "entireRun--doneLock.txt");
 				
 				if (!runComplete) {
@@ -640,10 +642,10 @@ public class ParameterTuningTest {
 		
 		new File(locksDir).mkdirs();
 		if (SimpleHostLock.checkDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt")) {
-			return "Already completed %s on run number %d. (%d out of %d)";
+			return "Already completed.";
 		}
 		if (!SimpleHostLock.checkAndClaimHostLock(locksDir + parameters.getFileNamePrefix() + "--hostLock.txt")) {
-			return "Another host has already claimed %s on run number %d. (%d out of %d)";
+			return "Already claimed by another host.";
 		}
 		IterativeCrossValidatedResultFunctionEnsemble ensemble = GradientBoostingTree.crossValidate(parameters, dataset, tuningParameters, runNumber, submissionNumber, globalTimer);
 		if (ensemble != null) {
@@ -654,7 +656,7 @@ public class ParameterTuningTest {
 				e.printStackTrace();
 			}
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt");
-			return "Finished %s on run number %d. (%d out of %d)";
+			return "Finished by this host.";
 		} else {
 			SimpleHostLock.writeDoneLock(locksDir + parameters.getFileNamePrefix() + "--doneLock.txt");
 			try {
@@ -666,7 +668,7 @@ public class ParameterTuningTest {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			return "Failed to build %s on run number %d due to impossible parameters. (%d out of %d)";
+			return "Failed due to impossible parameters.";
 		}
 	}	
 }
