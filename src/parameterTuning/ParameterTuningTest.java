@@ -38,7 +38,7 @@ public class ParameterTuningTest {
 	public static void runOnAllDatasets(ParameterTuningParameters parameters) {		
 		ParameterTuningTest test = new ParameterTuningTest();
 		test.tuningParameters = parameters;
-		GradientBoostingTree.executor = Executors.newFixedThreadPool(12);
+		GradientBoostingTree.executor = Executors.newFixedThreadPool(2);
 		for (int runNumber = 10; runNumber < test.tuningParameters.NUMBER_OF_RUNS + 10; runNumber++) {
 			for (DatasetParameters datasetParams : test.tuningParameters.datasets) {
 				String locksDir = parameters.locksDirectory + datasetParams.minimalName + String.format("/Run%d/", runNumber);
