@@ -94,7 +94,7 @@ public class ParameterTuningParameters {
 	public static ParameterTuningParameters getRangesForTest5() {
 		if (test5Parameters == null) {
 			test5Parameters = new ParameterTuningParameters();
-			test5Parameters.NUMBER_OF_RUNS = 10;
+			test5Parameters.NUMBER_OF_RUNS = 30;
 			test5Parameters.NUMBER_OF_TREES = 150000;
 			test5Parameters.CV_NUMBER_OF_FOLDS = 5;
 			test5Parameters.CV_STEP_SIZE = 500;

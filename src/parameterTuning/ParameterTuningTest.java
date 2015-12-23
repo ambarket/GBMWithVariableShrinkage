@@ -133,9 +133,9 @@ public class ParameterTuningTest {
 		}
 		
 		StopWatch timer = new StopWatch().start();
-		// DO task
+
 		try {
-			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
+			String stdOutAndError = CommandLineExecutor.runProgramAndWaitForItToComplete(runDataDir, "scp", "-P 51325", String.format("%sRun%d.tar.gz", datasetParams.minimalName, runNumber), "ambarket.info:" + remoteDataDir);
 			if (stdOutAndError.length() > 0) {
 				System.err.println(StopWatch.getDateTimeStamp() + "\n" + stdOutAndError);
 				timer.printMessageWithTime(String.format("[%s] Failed to scp run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
