@@ -27,7 +27,7 @@ echo "Recompiling project"
 count=0;
 for host in $(cat $hostsFile); do
     load=`ssh "$host" "cd git/GBMWithVariableShrinkage/scripts; ./cpuLoad.sh";`
-    if [ ${load%.*} -lt 10 ];
+    if [ ${load%.*} -lt 65 ];
     then
         if [ $count -lt $maxHosts ];
         then
