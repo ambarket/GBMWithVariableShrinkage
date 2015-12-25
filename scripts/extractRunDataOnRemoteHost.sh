@@ -4,4 +4,4 @@ then
     echo "Usage ./extract[...].sh datasetMinimalName tarGzFIleName"
     exit 1
 fi
-ssh ambarket.info "cd /mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/${1}; tar -xzf ${2}"
+ssh -p 51325 ambarket.info "cd /mnt/raidZ_6TB/Austin/GBMWithVariableShrinkage/parameterTuning/5/${1}; tar -xzf ${2}"
