@@ -249,14 +249,11 @@ public class ParameterTuningTest {
 		boolean[] doneList = new boolean[tuningParameters.totalNumberOfTests];
 
 		StopWatch timer = new StopWatch().start(), globalTimer = new StopWatch().start();
-		BufferedWriter runningTimeLog = null, excessiveRunningTimeLog = null;
 		String hostname = null;
 		try {
-			runningTimeLog = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/runningTimeLog.txt", true));
-			excessiveRunningTimeLog = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/excessiveRunningTimeLog.txt", true));
 			hostname = InetAddress.getLocalHost().getHostName();
 		} catch (IOException e) {
-			System.err.println("Failed to create runningTimeLog file or retrive hostname, exiting");
+			System.err.println("Failed to retrive hostname, exiting");
 			e.printStackTrace();
 			System.exit(1);
 		}
@@ -294,9 +291,15 @@ public class ParameterTuningTest {
 						dataset.parameters.minimalName, runNumber, testNum, tuningParameters.totalNumberOfTests, hostname, 
 						parameters.getRunDataSubDirectory());
 				try {
+					BufferedWriter runningTimeLog = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/runningTimeLog.txt", true));
 					runningTimeLog.write(runningTimeMessage);
+					runningTimeLog.flush();
+					runningTimeLog.close();
 					if (timeInHours > 3) {
+						BufferedWriter excessiveRunningTimeLog = new BufferedWriter(new FileWriter(tuningParameters.runDataOutputDirectory + dataset.parameters.minimalName + "/Run" + runNumber + "/excessiveRunningTimeLog.txt", true));
 						excessiveRunningTimeLog.write(runningTimeMessage);
+						excessiveRunningTimeLog.flush();
+						excessiveRunningTimeLog.close();
 					}
 				} catch (IOException e) {
 					System.err.println("Failed to append to runningTimeLog file, exiting");
