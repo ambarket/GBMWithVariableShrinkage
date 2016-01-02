@@ -190,6 +190,7 @@ public class ParameterTuningTest {
 			}
 			timer.printMessageWithTime(String.format("[%s] Finished extracting run data for run number %d on remote host.", datasetParams.minimalName, runNumber));
 			SimpleHostLock.writeDoneLock(locksDir + "extractRunData--doneLock.txt");
+			RecursiveFileDeleter.deleteDirectory(new File(runDataDir + String.format("/Run%d/", runNumber)));
 		} catch (IOException | InterruptedException e) {
 			System.err.println(StopWatch.getDateTimeStamp());
 			e.printStackTrace();
